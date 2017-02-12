@@ -30,3 +30,4 @@
 
 # Xcode
 *.xcodeproj/xcuserdata
+*.xcodeproj/project.xcworkspace
