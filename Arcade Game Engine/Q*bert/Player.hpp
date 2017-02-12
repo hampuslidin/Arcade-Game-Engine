@@ -18,6 +18,7 @@ public:
   static constexpr Event DidJumpRight = "DidJumpRight";
   static constexpr Event DidJump      = "DidJump";
   
+  PlayerInputComponent();
   void update(World & world);
 };
 
@@ -27,7 +28,7 @@ public:
 class PlayerPhysicsComponent : public PhysicsComponent
 {
 public:
-  void update(World & world);
+  PlayerPhysicsComponent();
 };
 
 /**
@@ -48,6 +49,8 @@ public:
 class Player : public Entity
 {
 public:
+  prop<Vector2> speed;
+  
   Player();
   void init(World * owner);
 };

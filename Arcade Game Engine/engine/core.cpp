@@ -35,11 +35,7 @@ void Notifier::addObserver(Observer * observer, Event event)
 void Notifier::addObserver(Observer * observer, vector<Event> events)
 {
   if (observer == nullptr) return;
-  
-  for (auto event : events)
-  {
-    observers()[event].push_back(observer);
-  }
+  for (auto event : events) { observers()[event].push_back(observer); }
 }
 
 void Notifier::removeObserver(Observer * observer, Event event)
@@ -79,10 +75,14 @@ void Notifier::notify(Entity & entity, Event event)
 /********************************
  * World
  ********************************/
+World::World()
+{
+  scale(1);
+}
+
 bool World::init(const char * title,
                  Dimension2 dimensions,
-                 RGBAColor background_color,
-                 int scale)
+                 RGBAColor background_color)
 {
   // initialize SDL
   if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
@@ -102,8 +102,11 @@ bool World::init(const char * title,
   const int w_pos_x = dimensions.w < 0 ? SDL_WINDOWPOS_UNDEFINED : dimensions.w;
   const int w_pos_y = dimensions.h < 0 ? SDL_WINDOWPOS_UNDEFINED : dimensions.h;
   bounds({-1, -1, dimensions.w, dimensions.h});
-  window(SDL_CreateWindow(title, w_pos_x, w_pos_y,
-                          dimensions.w*scale, dimensions.h*scale,
+  window(SDL_CreateWindow(title,
+                          w_pos_x,
+                          w_pos_y,
+                          dimensions.w*scale(),
+                          dimensions.h*scale(),
                           SDL_WINDOW_SHOWN));
   if (window() == nullptr)
   {
@@ -128,7 +131,6 @@ bool World::init(const char * title,
   SDL_RenderClear(renderer());
   
   // initialize member properties
-  this->scale(scale);
   _keys.up = _keys.down = _keys.left = _keys.right = _keys.fire = false;
   _prev_time = 0;
   _initialized = true;
@@ -212,8 +214,10 @@ bool World::update()
       {
         case SDLK_UP:
           _keys.up = false;
+          break;
         case SDLK_DOWN:
           _keys.down = false;
+          break;
         case SDLK_LEFT:
           _keys.left = false;
           break;
@@ -253,39 +257,47 @@ bool World::resolveCollisions(Entity & collider, bool collision_response)
       if (entity->physics())
       {
         Rectangle entity_cb = entity->physics()->collision_bounds();
-        Vector2 c_pos = collider.pos();
-        Vector2 e_pos = entity->pos();
-        float c_dist_x = c_pos.x + max_x(collider_cb) - e_pos.x;
-        float c_dist_y = c_pos.y + max_y(collider_cb) - e_pos.y;
-        float e_dist_x = e_pos.x + max_x(entity_cb)   - c_pos.x;
-        float e_dist_y = e_pos.y + max_y(entity_cb)   - c_pos.y;
+        Vector2 c_pos = collider.position();
+        Vector2 e_pos = entity->position();
+        float left_overlap  = c_pos.x + max_x(collider_cb) -
+                              (e_pos.x + min_x(entity_cb));
+        float up_overlap    = c_pos.y + max_y(collider_cb) -
+                              (e_pos.y + min_y(entity_cb));
+        float right_overlap = e_pos.x + max_x(entity_cb)   -
+                              (c_pos.x + min_x(collider_cb));
+        float down_overlap  = e_pos.y + max_y(entity_cb)   -
+                              (c_pos.y + min_y(collider_cb));
         
-        if (c_dist_x > 0 && c_dist_y > 0 && e_dist_x > 0 && e_dist_y)
+        if (left_overlap > 0 && up_overlap > 0 && right_overlap > 0 && down_overlap > 0)
         {
           if (!collision_response) return true;
           has_collided = true;
           
           float * min = nullptr;
-          for (auto f : {&c_dist_x, &c_dist_y, &e_dist_x, &e_dist_y})
+          for (auto f : {&left_overlap, &up_overlap, &right_overlap, &down_overlap})
           {
             if (min == 0 || *f < *min) min = f;
           }
           
-          if (min == &c_dist_x)
+          if (min == &left_overlap)
           {
-            collider.moveBy(-c_dist_x, 0);
+            collider.moveBy(-left_overlap, 0);
+            collider.changeHorizontalVelocityTo(0);
           }
-          else if (min == &c_dist_y)
+          else if (min == &up_overlap)
           {
-            collider.moveBy(0, c_dist_y);
+            collider.moveBy(0, -up_overlap);
+            collider.changeVerticalVelocityTo(0);
           }
-          else if (min == &e_dist_x)
+          else if (min == &right_overlap)
           {
-            collider.moveBy(e_dist_x, 0);
+            collider.moveBy(right_overlap, 0);
+            collider.changeHorizontalVelocityTo(0);
           }
-          else if (min == &e_dist_y)
+          else if (min == &down_overlap)
           {
-            collider.moveBy(0, -e_dist_y);
+            collider.moveBy(0, down_overlap);
+            collider.changeVerticalVelocityTo(0);
           }
         }
       }
@@ -344,26 +356,46 @@ void Entity::update(World & world)
 
 void Entity::moveTo(float x, float y)
 {
-  pos().x = x;
-  pos().y = y;
+  position().x = x;
+  position().y = y;
+}
+
+void Entity::moveHorizontallyTo(float x)
+{
+  position().x = x;
+}
+
+void Entity::moveVerticallyTo(float y)
+{
+  position().y = y;
 }
 
 void Entity::moveBy(float dx, float dy)
 {
-  pos().x += dx;
-  pos().y += dy;
+  position().x += dx;
+  position().y += dy;
 }
 
 void Entity::changeVelocityTo(float vx, float vy)
 {
-  vel().x = vx;
-  vel().y = vy;
+  velocity().x = vx;
+  velocity().y = vy;
+}
+
+void Entity::changeHorizontalVelocityTo(float vx)
+{
+  velocity().x = vx;
+}
+
+void Entity::changeVerticalVelocityTo(float vy)
+{
+  velocity().y = vy;
 }
 
 void Entity::changeVelocityBy(float dvx, float dvy)
 {
-  vel().x += dvx;
-  vel().y += dvy;
+  velocity().x += dvx;
+  velocity().y += dvy;
 }
 
 
@@ -373,15 +405,6 @@ void Entity::changeVelocityBy(float dvx, float dvy)
 void Component::init(Entity * owner)
 {
   entity(owner);
-}
-
-
-/********************************
- * PhysicsComponent
- ********************************/
-PhysicsComponent::PhysicsComponent(Rectangle collision_bounds)
-{
-  this->collision_bounds(collision_bounds);
 }
 
 

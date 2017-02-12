@@ -1,9 +1,11 @@
 //
-//  types.h
+//  types.hpp
 //  Game Engine
 //
 
 #pragma once
+
+#include <stdlib.h>
 
 /**
  *  Defines an event for the notify-observe pattern.
@@ -95,21 +97,21 @@ inline float max_y(Rectangle r) { return r.pos.y + r.dim.h; }
 
 /* read and write */
 template <typename T>
-struct prop {
+class prop {
   T _v;
 public:
-  inline T & operator()() { return _v; };
-  inline void operator()(T v) { _v = v; };
+  T & operator()() { return _v; };
+  void operator()(T v) { _v = v; };
   
 };
 
 /* read-only */
 template <class C, typename T>
-struct prop_r {
+class prop_r {
   friend C;
   T _v;
 public:
-  inline T & operator()() { return _v; };
+  T & operator()() { return _v; };
 private:
-  inline void operator()(T v) { _v = v; };
+  void operator()(T v) { _v = v; };
 };

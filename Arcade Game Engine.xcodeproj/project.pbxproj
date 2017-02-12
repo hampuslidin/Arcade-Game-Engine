@@ -31,7 +31,6 @@
 /* Begin PBXFileReference section */
 		D29DC52B1E509D120005EC95 /* Q*bert */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "Q*bert"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D29DC5381E509D780005EC95 /* core.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = core.hpp; path = engine/core.hpp; sourceTree = "<group>"; };
-		D29DC5391E509D780005EC95 /* physics.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = physics.hpp; path = engine/physics.hpp; sourceTree = "<group>"; };
 		D29DC53A1E509D780005EC95 /* types.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = types.hpp; path = engine/types.hpp; sourceTree = "<group>"; };
 		D29DC53B1E509D780005EC95 /* core.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = core.cpp; path = engine/core.cpp; sourceTree = "<group>"; };
 		D29DC53C1E509D780005EC95 /* physics.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = physics.cpp; path = engine/physics.cpp; sourceTree = "<group>"; };
@@ -49,8 +48,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				D29DC54E1E509F680005EC95 /* SDL2.framework in Frameworks */,
-				D29DC54C1E509F680005EC95 /* SDL2_image.framework in Frameworks */,
 				D29DC54D1E509F680005EC95 /* SDL2_ttf.framework in Frameworks */,
+				D29DC54C1E509F680005EC95 /* SDL2_image.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -97,7 +96,6 @@
 			isa = PBXGroup;
 			children = (
 				D29DC5381E509D780005EC95 /* core.hpp */,
-				D29DC5391E509D780005EC95 /* physics.hpp */,
 				D29DC53A1E509D780005EC95 /* types.hpp */,
 			);
 			name = include;
@@ -300,9 +298,9 @@
 				CLANG_WARN_DOCUMENTATION_COMMENTS = NO;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/Arcade\\ Game\\ Engine/lib",
+					"$(PROJECT_DIR)/Arcade\\ Game\\ Engine/external",
 				);
-				LD_RUNPATH_SEARCH_PATHS = "$(PROJECT_DIR)/Arcade\\ Game\\ Engine/lib";
+				LD_RUNPATH_SEARCH_PATHS = "$(PROJECT_DIR)/Arcade\\ Game\\ Engine/external";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -313,9 +311,9 @@
 				CLANG_WARN_DOCUMENTATION_COMMENTS = NO;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/Arcade\\ Game\\ Engine/lib",
+					"$(PROJECT_DIR)/Arcade\\ Game\\ Engine/external",
 				);
-				LD_RUNPATH_SEARCH_PATHS = "$(PROJECT_DIR)/Arcade\\ Game\\ Engine/lib";
+				LD_RUNPATH_SEARCH_PATHS = "$(PROJECT_DIR)/Arcade\\ Game\\ Engine/external";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;

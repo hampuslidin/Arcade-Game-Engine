@@ -8,27 +8,54 @@
 /********************************
  * PlayerInputComponent
  ********************************/
+PlayerInputComponent::PlayerInputComponent()
+{
+  jumping(false);
+}
+
 void PlayerInputComponent::update(World & world)
 {
+  Player * const player = (Player*)(entity());
   World::KeyStatus keys;
   world.getKeyStatus(keys);
   
-  if (keys.up && !jumping())         notify(*entity(), DidJumpUp);
-  else if (keys.down && !jumping())  notify(*entity(), DidJumpDown);
-  else if (keys.left && !jumping())  notify(*entity(), DidJumpLeft);
-  else if (keys.right && !jumping()) notify(*entity(), DidJumpRight);
-  jumping(keys.up || keys.down || keys.left || keys.right);
+  const Vector2 speed = player->speed();
+  if (keys.up && !jumping())
+  {
+    entity()->changeVerticalVelocityTo(-speed.y);
+    notify(*player, DidJumpUp);
+  }
+  if (keys.down && !jumping())
+  {
+    entity()->changeVerticalVelocityTo(speed.y);
+    notify(*player, DidJumpDown);
+  }
+  if (keys.left && !jumping())
+  {
+    player->changeHorizontalVelocityTo(-speed.x);
+    notify(*player, DidJumpLeft);
+  }
+  if (keys.right && !jumping())
+  {
+    player->changeHorizontalVelocityTo(speed.x);
+    notify(*entity(), DidJumpRight);
+  }
+  if (!(keys.left || keys.right))
+  {
+    jumping(false);
+    auto velocity_y = player->velocity().y;
+    player->changeVelocityTo(0, velocity_y);
+  }
 }
-
 
 /********************************
  * PlayerPhysicsComponent
  ********************************/
-void PlayerPhysicsComponent::update(World & world)
+PlayerPhysicsComponent::PlayerPhysicsComponent()
+  : PhysicsComponent()
 {
-  world.resolveCollisions(*entity());
+  collision_bounds({0, 0, 16, 16});
 }
-
 
 /********************************
  * PlayerGraphicsComponent
@@ -36,18 +63,16 @@ void PlayerPhysicsComponent::update(World & world)
 void PlayerGraphicsComponent::init(Entity * owner)
 {
   Component::init(owner);
-  Notifier * input_notifier = dynamic_cast<Notifier*>(this->entity()->input());
-  if (input_notifier != 0)
-  {
-    auto events = {
-      PlayerInputComponent::DidJumpUp,
-      PlayerInputComponent::DidJumpDown,
-      PlayerInputComponent::DidJumpLeft,
-      PlayerInputComponent::DidJumpRight
-    };
-    input_notifier->addObserver(this, events);
-  }
-  resizeTo(32, 32);
+  
+  auto events = {
+    PlayerInputComponent::DidJumpUp,
+    PlayerInputComponent::DidJumpDown,
+    PlayerInputComponent::DidJumpLeft,
+    PlayerInputComponent::DidJumpRight
+  };
+  dynamic_cast<Notifier*>(this->entity()->input())->addObserver(this, events);
+  
+  resizeTo(16, 16);
 }
 
 void PlayerGraphicsComponent::update(World & world)
@@ -66,7 +91,7 @@ void PlayerGraphicsComponent::update(World & world)
     };
     initSprites(*world.renderer(), files);
   }
-  Vector2 entity_pos = entity()->pos();
+  Vector2 entity_pos = entity()->position();
   int scale = world.scale();
   current_sprite()->draw(entity_pos.x + bounds().pos.x,
                          entity_pos.y + bounds().pos.y,
@@ -77,10 +102,24 @@ void PlayerGraphicsComponent::update(World & world)
 
 void PlayerGraphicsComponent::onNotify(Entity & entity, Event event)
 {
-  if (event == PlayerInputComponent::DidJumpRight) current_sprite(sprites()[0]);
-  if (event == PlayerInputComponent::DidJumpDown)  current_sprite(sprites()[1]);
-  if (event == PlayerInputComponent::DidJumpUp)    current_sprite(sprites()[2]);
-  if (event == PlayerInputComponent::DidJumpLeft)  current_sprite(sprites()[3]);
+  if (sprites().size())
+  {
+    if (event == PlayerInputComponent::DidJumpRight) {
+      current_sprite(sprites()[0]);
+    }
+    if (event == PlayerInputComponent::DidJumpDown)
+    {
+      current_sprite(sprites()[1]);
+    }
+    if (event == PlayerInputComponent::DidJumpUp)
+    {
+      current_sprite(sprites()[2]);
+    }
+    if (event == PlayerInputComponent::DidJumpLeft)
+    {
+      current_sprite(sprites()[3]);
+    }
+  }
 }
 
 
@@ -91,7 +130,9 @@ Player::Player()
   : Entity(new PlayerInputComponent(),
            new PlayerPhysicsComponent(),
            new PlayerGraphicsComponent())
-{}
+{
+  speed({100, 200});
+}
 
 void Player::init(World * owner)
 {

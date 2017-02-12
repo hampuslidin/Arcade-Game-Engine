@@ -30,7 +30,6 @@ class PhysicsComponent;
 class GraphicsComponent;
 
 
-
 /**
  *  A container for collision data.
  */
@@ -94,7 +93,7 @@ public:
   prop_r<World, vector<Entity*>> entities;
   prop_r<World,           float> delta_time;
   prop_r<World,       Rectangle> bounds;
-  prop_r<World,             int> scale;
+  prop<float> scale;
   
   /**
    *  Defines the status of each input type.
@@ -104,10 +103,10 @@ public:
     bool up, down, left, right, fire;
   };
   
+  World();
   bool init(const char * title,
             Dimension2 dimensions,
-            RGBAColor background_color = {0xAA, 0xAA, 0xAA, 0xFF},
-            int scale = 1);
+            RGBAColor background_color = {0xAA, 0xAA, 0xAA, 0xFF});
   void destroy();
   void addEntity(Entity * entity);
   void removeEntity(Entity * entity);
@@ -131,8 +130,8 @@ public:
   prop_r<Entity,    InputComponent*> input;
   prop_r<Entity,  PhysicsComponent*> physics;
   prop_r<Entity, GraphicsComponent*> graphics;
-  prop_r<Entity,            Vector2> pos;
-  prop_r<Entity,            Vector2> vel;
+  prop_r<Entity,            Vector2> position;
+  prop_r<Entity,            Vector2> velocity;
   prop<bool> is_dynamic;
   
   Entity(InputComponent * input,
@@ -142,8 +141,12 @@ public:
   virtual void init(World * owner);
   void update(World & world);
   void moveTo(float x, float y);
+  void moveHorizontallyTo(float x);
+  void moveVerticallyTo(float y);
   void moveBy(float dx, float dy);
   void changeVelocityTo(float vx, float vy);
+  void changeHorizontalVelocityTo(float vx);
+  void changeVerticalVelocityTo(float vy);
   void changeVelocityBy(float dvs, float dvy);
 };
 
@@ -180,10 +183,12 @@ class PhysicsComponent : public Component
 {
 public:
   prop<Rectangle> collision_bounds;
+  prop<     bool> dynamic;
+  prop<    float> gravity;
   
-  PhysicsComponent() {};
-  PhysicsComponent(Rectangle collision_bounds);
+  PhysicsComponent();
   virtual ~PhysicsComponent() {};
+  void update(World & world);
 };
 
 
