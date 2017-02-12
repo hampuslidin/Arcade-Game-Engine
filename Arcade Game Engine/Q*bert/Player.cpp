@@ -131,7 +131,7 @@ Player::Player()
            new PlayerPhysicsComponent(),
            new PlayerGraphicsComponent())
 {
-  speed({100, 200});
+  speed({250, 500});
 }
 
 void Player::init(World * owner)

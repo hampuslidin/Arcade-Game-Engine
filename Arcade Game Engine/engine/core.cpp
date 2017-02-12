@@ -133,7 +133,6 @@ bool World::init(const char * title,
   // initialize member properties
   _keys.up = _keys.down = _keys.left = _keys.right = _keys.fire = false;
   _prev_time = 0;
-  _initialized = true;
   
   // initialize entities
   for (auto entity : entities())
@@ -173,137 +172,83 @@ void World::removeEntity(Entity * entity)
 bool World::update()
 {
   // record time
-  float start_time = getElapsedTime();
+  double start_time = getElapsedTime();
   delta_time(start_time - _prev_time);
   _prev_time = start_time;
   
-  // check user input
-  SDL_Event event;
-  bool should_continue = true;
-  while (SDL_PollEvent(&event))
+  // check if initialized
+  if (_initialized)
   {
-    if (event.type == SDL_QUIT)
+    // check user input
+    SDL_Event event;
+    bool should_continue = true;
+    while (SDL_PollEvent(&event))
     {
-      should_continue = false;
-      break;
-    }
-    if (event.type == SDL_KEYDOWN)
-    {
-      switch (event.key.keysym.sym)
+      if (event.type == SDL_QUIT)
       {
-        case SDLK_UP:
-          _keys.up = true;
-          break;
-        case SDLK_DOWN:
-          _keys.down = true;
-          break;
-        case SDLK_LEFT:
-          _keys.left = true;
-          break;
-        case SDLK_RIGHT:
-          _keys.right = true;
-          break;
-        case SDLK_SPACE:
-          _keys.fire = true;
-          break;
+        should_continue = false;
+        break;
       }
-    }
-    if (event.type == SDL_KEYUP)
-    {
-      switch (event.key.keysym.sym)
+      if (event.type == SDL_KEYDOWN)
       {
-        case SDLK_UP:
-          _keys.up = false;
-          break;
-        case SDLK_DOWN:
-          _keys.down = false;
-          break;
-        case SDLK_LEFT:
-          _keys.left = false;
-          break;
-        case SDLK_RIGHT:
-          _keys.right = false;
-          break;
-        case SDLK_SPACE:
-          _keys.fire = false;
-          break;
-        case SDLK_ESCAPE:
-        case SDLK_q:
-          should_continue = false;
-          break;
-      }
-    }
-  }
-  
-  // update entities
-  for (auto entity : entities()) (entity->update(*this));
-  
-  // clear screen
-  SDL_RenderPresent(renderer());
-  SDL_RenderClear(renderer());
-  
-  return should_continue;
-}
-
-bool World::resolveCollisions(Entity & collider, bool collision_response)
-{
-  bool has_collided = false;
-  if (collider.physics())
-  {
-    Rectangle collider_cb = collider.physics()->collision_bounds();
-    for (auto entity : entities())
-    {
-      if (entity == &collider) continue;
-      if (entity->physics())
-      {
-        Rectangle entity_cb = entity->physics()->collision_bounds();
-        Vector2 c_pos = collider.position();
-        Vector2 e_pos = entity->position();
-        float left_overlap  = c_pos.x + max_x(collider_cb) -
-                              (e_pos.x + min_x(entity_cb));
-        float up_overlap    = c_pos.y + max_y(collider_cb) -
-                              (e_pos.y + min_y(entity_cb));
-        float right_overlap = e_pos.x + max_x(entity_cb)   -
-                              (c_pos.x + min_x(collider_cb));
-        float down_overlap  = e_pos.y + max_y(entity_cb)   -
-                              (c_pos.y + min_y(collider_cb));
-        
-        if (left_overlap > 0 && up_overlap > 0 && right_overlap > 0 && down_overlap > 0)
+        switch (event.key.keysym.sym)
         {
-          if (!collision_response) return true;
-          has_collided = true;
-          
-          float * min = nullptr;
-          for (auto f : {&left_overlap, &up_overlap, &right_overlap, &down_overlap})
-          {
-            if (min == 0 || *f < *min) min = f;
-          }
-          
-          if (min == &left_overlap)
-          {
-            collider.moveBy(-left_overlap, 0);
-            collider.changeHorizontalVelocityTo(0);
-          }
-          else if (min == &up_overlap)
-          {
-            collider.moveBy(0, -up_overlap);
-            collider.changeVerticalVelocityTo(0);
-          }
-          else if (min == &right_overlap)
-          {
-            collider.moveBy(right_overlap, 0);
-            collider.changeHorizontalVelocityTo(0);
-          }
-          else if (min == &down_overlap)
-          {
-            collider.moveBy(0, down_overlap);
-            collider.changeVerticalVelocityTo(0);
-          }
+          case SDLK_UP:
+            _keys.up = true;
+            break;
+          case SDLK_DOWN:
+            _keys.down = true;
+            break;
+          case SDLK_LEFT:
+            _keys.left = true;
+            break;
+          case SDLK_RIGHT:
+            _keys.right = true;
+            break;
+          case SDLK_SPACE:
+            _keys.fire = true;
+            break;
+        }
+      }
+      if (event.type == SDL_KEYUP)
+      {
+        switch (event.key.keysym.sym)
+        {
+          case SDLK_UP:
+            _keys.up = false;
+            break;
+          case SDLK_DOWN:
+            _keys.down = false;
+            break;
+          case SDLK_LEFT:
+            _keys.left = false;
+            break;
+          case SDLK_RIGHT:
+            _keys.right = false;
+            break;
+          case SDLK_SPACE:
+            _keys.fire = false;
+            break;
+          case SDLK_ESCAPE:
+          case SDLK_q:
+            should_continue = false;
+            break;
         }
       }
     }
+  
+    // update entities
+    for (auto entity : entities()) (entity->update(*this));
+    
+    // clear screen
+    SDL_RenderPresent(renderer());
+    SDL_RenderClear(renderer());
+    
+    return should_continue;
   }
-  return has_collided;
+  _initialized = true;
+  
+  return true;
 }
 
 void World::getKeyStatus(World::KeyStatus & keys)
@@ -315,7 +260,7 @@ void World::getKeyStatus(World::KeyStatus & keys)
   keys.fire  = this->_keys.fire;
 }
 
-float World::getElapsedTime()
+double World::getElapsedTime()
 {
   return SDL_GetTicks() / 1000.f;
 }
@@ -354,45 +299,45 @@ void Entity::update(World & world)
   if (graphics()) graphics()->update(world);
 }
 
-void Entity::moveTo(float x, float y)
+void Entity::moveTo(double x, double y)
 {
   position().x = x;
   position().y = y;
 }
 
-void Entity::moveHorizontallyTo(float x)
+void Entity::moveHorizontallyTo(double x)
 {
   position().x = x;
 }
 
-void Entity::moveVerticallyTo(float y)
+void Entity::moveVerticallyTo(double y)
 {
   position().y = y;
 }
 
-void Entity::moveBy(float dx, float dy)
+void Entity::moveBy(double dx, double dy)
 {
   position().x += dx;
   position().y += dy;
 }
 
-void Entity::changeVelocityTo(float vx, float vy)
+void Entity::changeVelocityTo(double vx, double vy)
 {
   velocity().x = vx;
   velocity().y = vy;
 }
 
-void Entity::changeHorizontalVelocityTo(float vx)
+void Entity::changeHorizontalVelocityTo(double vx)
 {
   velocity().x = vx;
 }
 
-void Entity::changeVerticalVelocityTo(float vy)
+void Entity::changeVerticalVelocityTo(double vy)
 {
   velocity().y = vy;
 }
 
-void Entity::changeVelocityBy(float dvx, float dvy)
+void Entity::changeVelocityBy(double dvx, double dvy)
 {
   velocity().x += dvx;
   velocity().y += dvy;

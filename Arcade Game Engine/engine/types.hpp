@@ -36,34 +36,34 @@ struct RGBAColor
  */
 struct Vector2
 {
-  float x, y;
+  double x, y;
 };
 
-inline Vector2 operator+(Vector2 l, Vector2 r)  { return {l.x+r.x, l.y+r.y}; }
-inline Vector2 operator+(Vector2 l, float c)    { return {l.x+c, l.y+c}; }
-inline Vector2 operator+(float c, Vector2 r)    { return {r.x+c, r.y+c}; }
-inline Vector2 operator+=(Vector2 l, Vector2 r) { return l = l + r; }
-inline Vector2 operator+=(Vector2 l, float c)   { return l = l + c; }
+inline Vector2 operator+(Vector2 l, Vector2 r)   { return {l.x+r.x, l.y+r.y}; }
+inline Vector2 operator+(Vector2 l, double c)    { return {l.x+c, l.y+c}; }
+inline Vector2 operator+(double c, Vector2 r)    { return {r.x+c, r.y+c}; }
+inline Vector2 operator+=(Vector2 l, Vector2 r)  { return l = l + r; }
+inline Vector2 operator+=(Vector2 l, double c)   { return l = l + c; }
 
-inline Vector2 operator-(Vector2 v)             { return {-v.x, -v.y}; }
-inline Vector2 operator-(Vector2 l, Vector2 r)  { return l + (-r); }
-inline Vector2 operator-(Vector2 l, float c)    { return l + (-c); }
-inline Vector2 operator-(float c, Vector2 r)    { return c + (-r); }
-inline Vector2 operator-=(Vector2 l, Vector2 r) { return l += -r; }
-inline Vector2 operator-=(Vector2 l, float c)   { return l += -c; }
+inline Vector2 operator-(Vector2 v)              { return {-v.x, -v.y}; }
+inline Vector2 operator-(Vector2 l, Vector2 r)   { return l + (-r); }
+inline Vector2 operator-(Vector2 l, double c)    { return l + (-c); }
+inline Vector2 operator-(double c, Vector2 r)    { return c + (-r); }
+inline Vector2 operator-=(Vector2 l, Vector2 r)  { return l += -r; }
+inline Vector2 operator-=(Vector2 l, double c)   { return l += -c; }
 
-inline Vector2 operator*(Vector2 l, Vector2 r)  { return {l.x*r.x, l.y*r.y}; }
-inline Vector2 operator*(Vector2 l, float c)    { return {l.x*c, l.y*c}; }
-inline Vector2 operator*(float c, Vector2 r)    { return {r.x*c, r.y*c}; }
-inline Vector2 operator*=(Vector2 l, Vector2 r) { return l = l * r; }
-inline Vector2 operator*=(Vector2 l, float c)   { return l = l * c; }
+inline Vector2 operator*(Vector2 l, Vector2 r)   { return {l.x*r.x, l.y*r.y}; }
+inline Vector2 operator*(Vector2 l, double c)    { return {l.x*c, l.y*c}; }
+inline Vector2 operator*(double c, Vector2 r)    { return {r.x*c, r.y*c}; }
+inline Vector2 operator*=(Vector2 l, Vector2 r)  { return l = l * r; }
+inline Vector2 operator*=(Vector2 l, double c)   { return l = l * c; }
 
-inline Vector2 recip(Vector2 v)                 { return {1.f/v.x, 1.f/v.y}; }
-inline Vector2 operator/(Vector2 l, Vector2 r)  { return l * recip(r); }
-inline Vector2 operator/(Vector2 l, float c)    { return l * (1.f/c); }
-inline Vector2 operator/(float c, Vector2 r)    { return c * recip(r); }
-inline Vector2 operator/=(Vector2 l, Vector2 r) { return l = l / r; }
-inline Vector2 operator/=(Vector2 l, float c)   { return l = l / c; }
+inline Vector2 recip(Vector2 v)                  { return {1.f/v.x, 1.f/v.y}; }
+inline Vector2 operator/(Vector2 l, Vector2 r)   { return l * recip(r); }
+inline Vector2 operator/(Vector2 l, double c)    { return l * (1.f/c); }
+inline Vector2 operator/(double c, Vector2 r)    { return c * recip(r); }
+inline Vector2 operator/=(Vector2 l, Vector2 r)  { return l = l / r; }
+inline Vector2 operator/=(Vector2 l, double c)   { return l = l / c; }
 
 
 /**
@@ -71,7 +71,7 @@ inline Vector2 operator/=(Vector2 l, float c)   { return l = l / c; }
  */
 struct Dimension2
 {
-  float w, h;
+  double w, h;
 };
 
 
@@ -84,10 +84,10 @@ struct Rectangle
   Dimension2 dim;
 };
 
-inline float min_x(Rectangle r) { return r.pos.x; }
-inline float min_y(Rectangle r) { return r.pos.y; }
-inline float max_x(Rectangle r) { return r.pos.x + r.dim.w; }
-inline float max_y(Rectangle r) { return r.pos.y + r.dim.h; }
+inline double min_x(Rectangle r) { return r.pos.x; }
+inline double min_y(Rectangle r) { return r.pos.y; }
+inline double max_x(Rectangle r) { return r.pos.x + r.dim.w; }
+inline double max_y(Rectangle r) { return r.pos.y + r.dim.h; }
 
 
 /**

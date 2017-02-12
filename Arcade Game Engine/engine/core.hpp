@@ -31,15 +31,6 @@ class GraphicsComponent;
 
 
 /**
- *  A container for collision data.
- */
-struct Collision {
-  Entity * collider, *collided_entity;
-  float overlap_distance;
-};
-
-
-/**
  *  Defines a sprite and methods for drawing it to a SDL rendering context.
  */
 class Sprite
@@ -91,9 +82,9 @@ public:
   prop_r<World,     SDL_Window*> window;
   prop_r<World,   SDL_Renderer*> renderer;
   prop_r<World, vector<Entity*>> entities;
-  prop_r<World,           float> delta_time;
+  prop_r<World,          double> delta_time;
   prop_r<World,       Rectangle> bounds;
-  prop<float> scale;
+  prop<int> scale;
   
   /**
    *  Defines the status of each input type.
@@ -113,10 +104,10 @@ public:
   bool update();
   bool resolveCollisions(Entity & collider, bool collision_response = true);
   void getKeyStatus(KeyStatus & keys);
-  float getElapsedTime();
+  double getElapsedTime();
 private:
   KeyStatus _keys;
-  float _prev_time;
+  double _prev_time;
   bool _initialized;
 };
 
@@ -140,14 +131,14 @@ public:
   ~Entity();
   virtual void init(World * owner);
   void update(World & world);
-  void moveTo(float x, float y);
-  void moveHorizontallyTo(float x);
-  void moveVerticallyTo(float y);
-  void moveBy(float dx, float dy);
-  void changeVelocityTo(float vx, float vy);
-  void changeHorizontalVelocityTo(float vx);
-  void changeVerticalVelocityTo(float vy);
-  void changeVelocityBy(float dvs, float dvy);
+  void moveTo(double x, double y);
+  void moveHorizontallyTo(double x);
+  void moveVerticallyTo(double y);
+  void moveBy(double dx, double dy);
+  void changeVelocityTo(double vx, double vy);
+  void changeHorizontalVelocityTo(double vx);
+  void changeVerticalVelocityTo(double vy);
+  void changeVelocityBy(double dvs, double dvy);
 };
 
 
@@ -183,8 +174,9 @@ class PhysicsComponent : public Component
 {
 public:
   prop<Rectangle> collision_bounds;
-  prop<     bool> dynamic;
-  prop<    float> gravity;
+  prop<        bool> dynamic;
+  prop<       double> gravity;
+  prop<unsigned int> pixels_per_meter;
   
   PhysicsComponent();
   virtual ~PhysicsComponent() {};
