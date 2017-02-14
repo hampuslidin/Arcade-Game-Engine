@@ -8,9 +8,47 @@
 #include <stdlib.h>
 
 /**
+ *  Defines a functor that enables classes to have class properties accessible
+ *  by other types, while still preserving encapsulation.
+ */
+
+/* read and write */
+template <typename PropertyType>
+class prop {
+  PropertyType _v;
+public:
+  PropertyType & operator()() { return _v; };
+  void operator()(const PropertyType & v) { _v = v; };
+  
+};
+
+/* read-only */
+template <class Owner, typename PropertyType>
+class prop_r {
+  friend Owner;
+  PropertyType _v;
+public:
+  PropertyType & operator()() { return _v; };
+private:
+  void operator()(const PropertyType & v) { _v = v; };
+};
+
+
+/**
  *  Defines an event for the notify-observe pattern.
  */
-typedef const char * Event;
+class Event
+{
+  const char * _id;
+public:
+  typedef int Parameter;
+  prop_r<Event, Parameter> parameter;
+  
+  Event(const char * id);
+  Event(const Event & event, const Parameter & parameter);
+  bool operator==(const Event & event) const;
+  bool operator<(const Event & event) const;
+};
 
 
 /**
@@ -39,31 +77,31 @@ struct Vector2
   double x, y;
 };
 
-inline Vector2 operator+(Vector2 l, Vector2 r)   { return {l.x+r.x, l.y+r.y}; }
-inline Vector2 operator+(Vector2 l, double c)    { return {l.x+c, l.y+c}; }
-inline Vector2 operator+(double c, Vector2 r)    { return {r.x+c, r.y+c}; }
-inline Vector2 operator+=(Vector2 l, Vector2 r)  { return l = l + r; }
-inline Vector2 operator+=(Vector2 l, double c)   { return l = l + c; }
+inline Vector2 operator+ (Vector2   l, Vector2 r) { return {l.x+r.x, l.y+r.y}; }
+inline Vector2 operator+ (Vector2   l, double  c) { return {l.x+c, l.y+c}; }
+inline Vector2 operator+ (double    c, Vector2 r) { return {r.x+c, r.y+c}; }
+inline Vector2 operator+=(Vector2 & l, Vector2 r) { return l = l + r; }
+inline Vector2 operator+=(Vector2 & l, double  c) { return l = l + c; }
 
-inline Vector2 operator-(Vector2 v)              { return {-v.x, -v.y}; }
-inline Vector2 operator-(Vector2 l, Vector2 r)   { return l + (-r); }
-inline Vector2 operator-(Vector2 l, double c)    { return l + (-c); }
-inline Vector2 operator-(double c, Vector2 r)    { return c + (-r); }
-inline Vector2 operator-=(Vector2 l, Vector2 r)  { return l += -r; }
-inline Vector2 operator-=(Vector2 l, double c)   { return l += -c; }
+inline Vector2 operator- (Vector2   v)            { return {-v.x, -v.y}; }
+inline Vector2 operator- (Vector2   l, Vector2 r) { return l + (-r); }
+inline Vector2 operator- (Vector2   l, double  c) { return l + (-c); }
+inline Vector2 operator- (double    c, Vector2 r) { return c + (-r); }
+inline Vector2 operator-=(Vector2 & l, Vector2 r) { return l += -r; }
+inline Vector2 operator-=(Vector2 & l, double  c) { return l += -c; }
 
-inline Vector2 operator*(Vector2 l, Vector2 r)   { return {l.x*r.x, l.y*r.y}; }
-inline Vector2 operator*(Vector2 l, double c)    { return {l.x*c, l.y*c}; }
-inline Vector2 operator*(double c, Vector2 r)    { return {r.x*c, r.y*c}; }
-inline Vector2 operator*=(Vector2 l, Vector2 r)  { return l = l * r; }
-inline Vector2 operator*=(Vector2 l, double c)   { return l = l * c; }
+inline Vector2 operator* (Vector2   l, Vector2 r) { return {l.x*r.x, l.y*r.y}; }
+inline Vector2 operator* (Vector2   l, double  c) { return {l.x*c, l.y*c}; }
+inline Vector2 operator* (double    c, Vector2 r) { return {r.x*c, r.y*c}; }
+inline Vector2 operator*=(Vector2 & l, Vector2 r) { return l = l * r; }
+inline Vector2 operator*=(Vector2 & l, double  c) { return l = l * c; }
 
-inline Vector2 recip(Vector2 v)                  { return {1.f/v.x, 1.f/v.y}; }
-inline Vector2 operator/(Vector2 l, Vector2 r)   { return l * recip(r); }
-inline Vector2 operator/(Vector2 l, double c)    { return l * (1.f/c); }
-inline Vector2 operator/(double c, Vector2 r)    { return c * recip(r); }
-inline Vector2 operator/=(Vector2 l, Vector2 r)  { return l = l / r; }
-inline Vector2 operator/=(Vector2 l, double c)   { return l = l / c; }
+inline Vector2 recip     (Vector2   v)            { return {1.f/v.x, 1.f/v.y}; }
+inline Vector2 operator/ (Vector2   l, Vector2 r) { return l * recip(r); }
+inline Vector2 operator/ (Vector2   l, double  c) { return l * (1.f/c); }
+inline Vector2 operator/ (double    c, Vector2 r) { return c * recip(r); }
+inline Vector2 operator/=(Vector2 & l, Vector2 r) { return l = l / r; }
+inline Vector2 operator/=(Vector2 & l, double  c) { return l = l / c; }
 
 
 /**
@@ -88,30 +126,3 @@ inline double min_x(Rectangle r) { return r.pos.x; }
 inline double min_y(Rectangle r) { return r.pos.y; }
 inline double max_x(Rectangle r) { return r.pos.x + r.dim.w; }
 inline double max_y(Rectangle r) { return r.pos.y + r.dim.h; }
-
-
-/**
- *  Defines a functor that enables classes to have class properties accessible
- *  by other types, while still preserving encapsulation.
- */
-
-/* read and write */
-template <typename T>
-class prop {
-  T _v;
-public:
-  T & operator()() { return _v; };
-  void operator()(T v) { _v = v; };
-  
-};
-
-/* read-only */
-template <class C, typename T>
-class prop_r {
-  friend C;
-  T _v;
-public:
-  T & operator()() { return _v; };
-private:
-  void operator()(T v) { _v = v; };
-};

@@ -12,7 +12,8 @@ int main(int argc, char * argv[])
   World world;
   Player player;
   
-  const int screen_size = 200;
+  const int scale = 2;
+  const int screen_size = 600 / scale;
   const int size = screen_size;
   
   auto upWallPhysics = new PhysicsComponent();
@@ -31,16 +32,16 @@ int main(int argc, char * argv[])
   rightWallPhysics->collision_bounds({0, 0, size, size});
   rightWallPhysics->dynamic(false);
   
-  Entity upWall(nullptr, upWallPhysics, nullptr);
+  Entity upWall(nullptr, nullptr, upWallPhysics, nullptr);
   upWall.moveTo((screen_size-size)/2, -size);
   
-  Entity downWall(nullptr, downWallPhysics, nullptr);
+  Entity downWall(nullptr, nullptr, downWallPhysics, nullptr);
   downWall.moveTo((screen_size-size)/2, screen_size);
   
-  Entity leftWall(nullptr, leftWallPhysics, nullptr);
+  Entity leftWall(nullptr, nullptr, leftWallPhysics, nullptr);
   leftWall.moveTo(-size, (screen_size-size)/2);
   
-  Entity rightWall(nullptr, rightWallPhysics, nullptr);
+  Entity rightWall(nullptr, nullptr, rightWallPhysics, nullptr);
   rightWall.moveTo(screen_size, (screen_size-size)/2);
   
   world.addEntity(&player);
@@ -50,7 +51,7 @@ int main(int argc, char * argv[])
   world.addEntity(&rightWall);
   
   // initialize game world
-  world.scale(3);
+  world.scale(scale);
   world.init("Q*bert", {screen_size, screen_size}, {0x00, 0x00, 0x00, 0xFF});
   
   // game loop

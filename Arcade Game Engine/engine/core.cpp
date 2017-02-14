@@ -4,6 +4,7 @@
 //
 
 #include "core.hpp"
+#include <fstream>
 
 /********************************
  * Sprite
@@ -27,42 +28,38 @@ void Sprite::draw(int x, int y, int w, int h, int scale)
 /********************************
  * Notifier
  ********************************/
-void Notifier::addObserver(Observer * observer, Event event)
+void Notifier::addObserver(Observer * observer, const Event & event)
 {
-  addObserver(observer, (vector<Event>){event});
+  observers()[event].push_back(observer);
 }
 
-void Notifier::addObserver(Observer * observer, vector<Event> events)
-{
-  if (observer == nullptr) return;
-  for (auto event : events) { observers()[event].push_back(observer); }
-}
-
-void Notifier::removeObserver(Observer * observer, Event event)
+void Notifier::removeObserver(Observer * observer, Event * event)
 {
   if (event)
   {
-    auto i = 0;
-    auto observers_for_event = observers()[event];
-    for (auto observer_for_event : observers_for_event)
+    auto observers_for_event = observers()[*event];
+    for (auto i = 0; i < observers_for_event.size(); i++)
     {
-      if (observer == observer_for_event)
+      if (observer == observers_for_event[i])
       {
-        observers()[event].erase(observers_for_event.begin()+i);
+        observers()[*event].erase(observers_for_event.begin()+i);
         return;
       }
     }
   }
   else
   {
-//    for (auto i = 0; i < observers().size(); i++)
-//    {
-//      if (observer == observers()[i])
-//      {
-//        observers().erase(observers().begin()+i);
-//        return;
-//      }
-//    }
+    for (auto pair : observers())
+    {
+      for (auto i = 0; i < pair.second.size(); i++)
+      {
+        if (observer == pair.second[i])
+        {
+          observers()[pair.first].erase(pair.second.begin()+i);
+          return;
+        }
+      }
+    }
   }
 }
 
@@ -101,7 +98,7 @@ bool World::init(const char * title,
   // create window
   const int w_pos_x = dimensions.w < 0 ? SDL_WINDOWPOS_UNDEFINED : dimensions.w;
   const int w_pos_y = dimensions.h < 0 ? SDL_WINDOWPOS_UNDEFINED : dimensions.h;
-  bounds({-1, -1, dimensions.w, dimensions.h});
+  view_dimensions({dimensions.w, dimensions.h});
   window(SDL_CreateWindow(title,
                           w_pos_x,
                           w_pos_y,
@@ -269,25 +266,29 @@ double World::getElapsedTime()
  * Entity
  ********************************/
 Entity::Entity(InputComponent * input,
+               AnimationComponent * animation,
                PhysicsComponent * physics,
                GraphicsComponent * graphics)
 {
   this->input(input);
+  this->animation(animation);
   this->physics(physics);
   this->graphics(graphics);
 }
 
 Entity::~Entity()
 {
-  if (input())    delete input();
-  if (physics())  delete physics();
-  if (graphics()) delete graphics();
+  if (input())     delete input();
+  if (animation()) delete animation();
+  if (physics())   delete physics();
+  if (graphics())  delete graphics();
 }
 
 void Entity::init(World * owner)
 {
   world(owner);
   if (input()) input()->init(this);
+  if (animation()) animation()->init(this);
   if (physics()) physics()->init(this);
   if (graphics()) graphics()->init(this);
 }
@@ -295,6 +296,7 @@ void Entity::init(World * owner)
 void Entity::update(World & world)
 {
   if (input()) input()->update(world);
+  if (animation()) animation()->update(world);
   if (physics()) physics()->update(world);
   if (graphics()) graphics()->update(world);
 }
@@ -354,6 +356,80 @@ void Component::init(Entity * owner)
 
 
 /********************************
+ * AnimationComponent
+ ********************************/
+AnimationComponent::AnimationComponent()
+  : Component()
+{
+  animating(false);
+}
+
+bool AnimationComponent::loadAnimationFromFile(const char * filename,
+                                               const char * animation_id,
+                                               double duration)
+{
+  vector<Vector2> movements;
+  ifstream file(filename);
+  if (file.is_open())
+  {
+    double x, y;
+    while (file >> x >> y)
+    {
+      movements.push_back({x, y});
+    }
+    if (movements.size() > 0)
+    {
+      _animation_paths[animation_id] = {movements, duration};
+      return true;
+    }
+  }
+  return false;
+}
+
+bool AnimationComponent::removeAnimation(const char * id)
+{
+  return _animation_paths.erase(id) == 1;
+}
+
+bool AnimationComponent::performAnimation(const char * id)
+{
+  if (!animating() && _animation_paths.find(id) != _animation_paths.end())
+  {
+    animating(true);
+    _current_animation = _animation_paths[id];
+    _current_movement_index = -1;
+    _animation_start_time = entity()->world()->getElapsedTime();
+    notify(*entity(), DidStartAnimating);
+    return true;
+  }
+  return false;
+}
+
+void AnimationComponent::update(World & world)
+{
+  if (animating())
+  {
+    const double elapsed  = world.getElapsedTime() - _animation_start_time;
+    const double fraction = elapsed / _current_animation.duration;
+    const long max = _current_animation.movements.size();
+    const long bound = fraction < 1 ? floor(fraction * max) + 1 : max;
+    Vector2 total_movement;
+    for (; _current_movement_index < bound; _current_movement_index++)
+    {
+      total_movement += _current_animation.movements[_current_movement_index];
+    }
+    entity()->moveBy(total_movement.x, total_movement.y);
+    
+    if (elapsed > _current_animation.duration)
+    {
+      animating(false);
+      notify(*entity(), DidStopAnimating);
+    }
+  }
+}
+
+
+/********************************
  * GraphicsComponent
  ********************************/
 GraphicsComponent::~GraphicsComponent()
@@ -365,7 +441,8 @@ GraphicsComponent::~GraphicsComponent()
 }
 
 void GraphicsComponent::initSprites(SDL_Renderer & renderer,
-                                    vector<const char *> files)
+                                    vector<const char *> files,
+                                    int current_sprite_index)
 {
   for (auto file : files)
   {
@@ -382,7 +459,7 @@ void GraphicsComponent::initSprites(SDL_Renderer & renderer,
       SDL_FreeSurface(loaded_surface);
     }
   }
-  if (sprites().size() > 0) current_sprite(sprites().at(0));
+  if (sprites().size() > 0) current_sprite(sprites()[current_sprite_index]);
 }
 
 void GraphicsComponent::offsetTo(int x, int y)

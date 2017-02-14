@@ -5,21 +5,41 @@
 
 #include "core.hpp"
 
+// Events
+const Event DidJump("DidJump");
+
+/**
+ *  Defines directions up, down, left, and right.
+ */
+enum PlayerDirection
+{
+  UP, DOWN, LEFT, RIGHT
+};
+
 /**
  *  Defines the player input mechanics.
  */
-class PlayerInputComponent : public InputComponent, public Notifier {
+class PlayerInputComponent
+  : public InputComponent
+  , public Notifier
+  , public Observer
+{
 public:
   prop_r<PlayerInputComponent, bool> jumping;
   
-  static constexpr Event DidJumpUp    = "DidJumpUp";
-  static constexpr Event DidJumpDown  = "DidJumpDown";
-  static constexpr Event DidJumpLeft  = "DidJumpLeft";
-  static constexpr Event DidJumpRight = "DidJumpRight";
-  static constexpr Event DidJump      = "DidJump";
-  
-  PlayerInputComponent();
+  void init(Entity * owner);
   void update(World & world);
+  void onNotify(Entity & entity, Event event);
+};
+
+/**
+ *  Defines the player animations.
+ */
+class PlayerAnimationComponent : public AnimationComponent, public Observer
+{
+public:
+  void init(Entity * owner);
+  void onNotify(Entity & entity, Event event);
 };
 
 /**
@@ -36,7 +56,6 @@ public:
  */
 class PlayerGraphicsComponent : public GraphicsComponent, public Observer
 {
-  
 public:
   void init(Entity * owner);
   void update(World & world);
@@ -49,8 +68,6 @@ public:
 class Player : public Entity
 {
 public:
-  prop<Vector2> speed;
-  
   Player();
   void init(World * owner);
 };

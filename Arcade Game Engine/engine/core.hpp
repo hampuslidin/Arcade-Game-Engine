@@ -26,8 +26,13 @@ class World;
 class Entity;
 class Component;
 class InputComponent;
+class AnimationComponent;
 class PhysicsComponent;
 class GraphicsComponent;
+
+// Events
+const Event DidStartAnimating("DidStartAnimating");
+const Event DidStopAnimating("DidStopAnimating");
 
 
 /**
@@ -50,11 +55,10 @@ public:
 class Notifier
 {
 public:
-  void addObserver(Observer * observer, Event event);
-  void addObserver(Observer * observer, vector<Event> event);
-  void removeObserver(Observer * observer, Event event = nullptr);
+  void addObserver(Observer * observer, const Event & event);
+  void removeObserver(Observer * observer, Event * event = nullptr);
 protected:
-  prop<map<Event, vector<Observer*>>> observers;
+  prop<map<Event, vector<Observer *>>> observers;
   
   virtual ~Notifier() {};
   void notify(Entity & entity, Event event);
@@ -83,7 +87,7 @@ public:
   prop_r<World,   SDL_Renderer*> renderer;
   prop_r<World, vector<Entity*>> entities;
   prop_r<World,          double> delta_time;
-  prop_r<World,       Rectangle> bounds;
+  prop_r<World,      Dimension2> view_dimensions;
   prop<int> scale;
   
   /**
@@ -117,15 +121,17 @@ private:
 class Entity
 {
 public:
-  prop_r<Entity,             World*> world;
-  prop_r<Entity,    InputComponent*> input;
-  prop_r<Entity,  PhysicsComponent*> physics;
-  prop_r<Entity, GraphicsComponent*> graphics;
-  prop_r<Entity,            Vector2> position;
-  prop_r<Entity,            Vector2> velocity;
+  prop_r<Entity,              World*> world;
+  prop_r<Entity,     InputComponent*> input;
+  prop_r<Entity, AnimationComponent*> animation;
+  prop_r<Entity,   PhysicsComponent*> physics;
+  prop_r<Entity,  GraphicsComponent*> graphics;
+  prop_r<Entity,             Vector2> position;
+  prop_r<Entity,             Vector2> velocity;
   prop<bool> is_dynamic;
   
   Entity(InputComponent * input,
+         AnimationComponent * animation,
          PhysicsComponent * physics,
          GraphicsComponent * graphics);
   ~Entity();
@@ -156,8 +162,8 @@ public:
 
 
 /**
- *  An abstrct class that is responsible for defining the behavior of an Entity
- *  object, possibly depending on user input.
+ *  InputConponent is responsible for defining the behavior of an Entity,
+ *  either depending on some user input, or by A.I.
  */
 class InputComponent : public Component
 {
@@ -167,8 +173,57 @@ public:
 
 
 /**
- *  An abstract class that is responsible for updating the position and velocity
- *  of an Entity object.
+ *  AnimationComponent is responsible for moving an Entity according to a path,
+ *  either in local space or in world space.
+ */
+class AnimationComponent : public Component, public Notifier
+{
+  struct _AnimationPath
+  {
+    vector<Vector2> movements;
+    double          duration;
+  };
+  map<const char *, _AnimationPath> _animation_paths;
+  _AnimationPath _current_animation;
+  double _animation_start_time;
+  int _current_movement_index;
+public:
+  prop_r<AnimationComponent, bool> animating;
+  
+  AnimationComponent();
+  virtual ~AnimationComponent() {};
+  
+  /**
+   *  Loads an animation by reading the file at the specified location.
+   *  
+   *  @return true on success, false when failing to read the file.
+   */
+  bool loadAnimationFromFile(const char * filename,
+                             const char * animation_id,
+                             double duration);
+  
+  /**
+   *  Removes an animation with the given id.
+   *
+   *  @return true on success, false if animation with associated id does not
+   *  exist.
+   */
+  bool removeAnimation(const char * id);
+  
+  /**
+   *  Initiates an animation, which will get updated by the *update* member
+   *  function.
+   *
+   *  @return 0 on success, 1 if animation with associated id does not exist.
+   */
+  bool performAnimation(const char * id);
+  void update(World & world);
+};
+
+
+/**
+ *  PhysicsComponent is responsible for updating the position of an Entity
+ *  object, w.r.t. the laws of physics.
  */
 class PhysicsComponent : public Component
 {
@@ -185,8 +240,8 @@ public:
 
 
 /**
- *  An abstract class that is responsible for drawing an Entity object to a
- *  given SDL rendering context.
+ *  GraphicsComponent is responsible for drawing an Entity to a SDL rendering
+ *  context.
  */
 class GraphicsComponent : public Component
 {
@@ -195,7 +250,9 @@ protected:
   prop<        Sprite*> current_sprite;
   prop<      Rectangle> bounds;
   
-  void initSprites(SDL_Renderer & renderer, vector<const char *> files);
+  void initSprites(SDL_Renderer & renderer,
+                   vector<const char *> files,
+                   int current_sprite_index);
 public:
   virtual ~GraphicsComponent();
   void offsetTo(int x, int y);
