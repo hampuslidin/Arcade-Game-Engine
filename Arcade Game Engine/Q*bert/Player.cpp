@@ -9,9 +9,9 @@
 /********************************
  * PlayerInputComponent
  ********************************/
-void PlayerInputComponent::init(Entity * owner)
+void PlayerInputComponent::init(Entity * entity)
 {
-  Component::init(owner);
+  Component::init(entity);
   
   jumping(false);
   
@@ -22,25 +22,25 @@ void PlayerInputComponent::init(Entity * owner)
 
 
 
-void PlayerInputComponent::update(World & world)
+void PlayerInputComponent::update(Core & core)
 {
   Player * const player = (Player*)(entity());
-  World::KeyStatus keys;
-  world.getKeyStatus(keys);
+  Core::KeyStatus keys;
+  core.getKeyStatus(keys);
   
   if (keys.up && !jumping())
   {
     notify(*player, Event(DidJump, UP));
   }
-  if (keys.down && !jumping())
+  else if (keys.down && !jumping())
   {
     notify(*player, Event(DidJump, DOWN));
   }
-  if (keys.left && !jumping())
+  else if (keys.left && !jumping())
   {
     notify(*player, Event(DidJump, LEFT));
   }
-  if (keys.right && !jumping())
+  else if (keys.right && !jumping())
   {
     notify(*player, Event(DidJump, RIGHT));
   }
@@ -58,14 +58,14 @@ void PlayerInputComponent::onNotify(Entity & entity, Event event)
 /********************************
  * PlayerAnimationComponent
  ********************************/
-void PlayerAnimationComponent::init(Entity * owner)
+void PlayerAnimationComponent::init(Entity * entity)
 {
-  Component::init(owner);
+  Component::init(entity);
   
-  loadAnimationFromFile("animations/jump_up.anim",    "jump_up",    0.5);
-  loadAnimationFromFile("animations/jump_down.anim",  "jump_down",  0.5);
-  loadAnimationFromFile("animations/jump_left.anim",  "jump_left",  0.5);
-  loadAnimationFromFile("animations/jump_right.anim", "jump_right", 0.5);
+  loadAnimationFromFile("animations/jump_up.anim",    "jump_up",    0.55);
+  loadAnimationFromFile("animations/jump_down.anim",  "jump_down",  0.55);
+  loadAnimationFromFile("animations/jump_left.anim",  "jump_left",  0.55);
+  loadAnimationFromFile("animations/jump_right.anim", "jump_right", 0.55);
   
   const auto input_notifier = dynamic_cast<Notifier*>(this->entity()->input());
   input_notifier->addObserver(this, DidJump);
@@ -108,46 +108,51 @@ PlayerPhysicsComponent::PlayerPhysicsComponent()
 /********************************
  * PlayerGraphicsComponent
  ********************************/
-void PlayerGraphicsComponent::init(Entity * owner)
+void PlayerGraphicsComponent::init(Entity * entity)
 {
-  Component::init(owner);
+  GraphicsComponent::init(entity);
+  _current_direction = DOWN;
+  _jumping = false;
+  
+  const std::vector<const char *> files {
+    "textures/qbert_standing_up.png",
+    "textures/qbert_standing_down.png",
+    "textures/qbert_standing_left.png",
+    "textures/qbert_standing_right.png",
+    "textures/qbert_jumping_up.png",
+    "textures/qbert_jumping_down.png",
+    "textures/qbert_jumping_left.png",
+    "textures/qbert_jumping_right.png",
+  };
+  initSprites(*entity->core()->renderer(), files, DOWN);
   
   const auto input_notifier = dynamic_cast<Notifier*>(this->entity()->input());
   input_notifier->addObserver(this, DidJump);
   
+  const auto animation_notifier =
+    dynamic_cast<Notifier*>(this->entity()->animation());
+  animation_notifier->addObserver(this, DidStartMovingInAnimation);
+  animation_notifier->addObserver(this, DidStopAnimating);
+  
   resizeTo(16, 16);
-}
-
-void PlayerGraphicsComponent::update(World & world)
-{
-  if (sprites().size() == 0)
-  {
-    const std::vector<const char *> files {
-      "textures/qbert_standing_up.png",
-      "textures/qbert_standing_down.png",
-      "textures/qbert_standing_left.png",
-      "textures/qbert_standing_right.png",
-      "textures/qbert_jumping_up.png",
-      "textures/qbert_jumping_down.png",
-      "textures/qbert_jumping_left.png",
-      "textures/qbert_jumping_right.png",
-    };
-    initSprites(*world.renderer(), files, DOWN);
-  }
-  Vector2 entity_pos = entity()->position();
-  int scale = world.scale();
-  current_sprite()->draw(entity_pos.x + bounds().pos.x,
-                         entity_pos.y + bounds().pos.y,
-                         bounds().dim.w,
-                         bounds().dim.h,
-                         scale);
 }
 
 void PlayerGraphicsComponent::onNotify(Entity & entity, Event event)
 {
-  if (sprites().size() && event == DidJump)
+  if (event == DidJump && !_jumping)
   {
-    current_sprite(sprites()[event.parameter()]);
+    _current_direction = event.parameter();
+    _jumping = true;
+    current_sprite(sprites()[_current_direction]);
+  }
+  else if (event == DidStartMovingInAnimation)
+  {
+    current_sprite(sprites()[4+_current_direction]);
+  }
+  else if (event == DidStopAnimating)
+  {
+    _jumping = false;
+    current_sprite(sprites()[_current_direction]);
   }
 }
 
@@ -162,9 +167,10 @@ Player::Player()
            new PlayerGraphicsComponent())
 {}
 
-void Player::init(World * owner)
+void Player::init(Core * core)
 {
-  Entity::init(owner);
-  Dimension2 view_dimensions = world()->view_dimensions();
-  moveTo(view_dimensions.w/2, view_dimensions.h/2);
+  Entity::init(core);
+  
+  const Dimension2 view_dimensions = core->view_dimensions();
+  moveTo(view_dimensions.x/2-8, view_dimensions.y-176-16-8);
 }

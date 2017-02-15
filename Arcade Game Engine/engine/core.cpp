@@ -5,6 +5,7 @@
 
 #include "core.hpp"
 #include <fstream>
+#include <stack>
 
 /********************************
  * Sprite
@@ -70,16 +71,17 @@ void Notifier::notify(Entity & entity, Event event)
 
 
 /********************************
- * World
+ * Core
  ********************************/
-World::World()
+Core::Core()
 {
   scale(1);
 }
 
-bool World::init(const char * title,
-                 Dimension2 dimensions,
-                 RGBAColor background_color)
+bool Core::init(Entity * root,
+                const char * title,
+                Dimension2 dimensions,
+                RGBAColor background_color)
 {
   // initialize SDL
   if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
@@ -96,14 +98,14 @@ bool World::init(const char * title,
   }
   
   // create window
-  const int w_pos_x = dimensions.w < 0 ? SDL_WINDOWPOS_UNDEFINED : dimensions.w;
-  const int w_pos_y = dimensions.h < 0 ? SDL_WINDOWPOS_UNDEFINED : dimensions.h;
-  view_dimensions({dimensions.w, dimensions.h});
+  const int w_pos_x = dimensions.x < 0 ? SDL_WINDOWPOS_UNDEFINED : dimensions.x;
+  const int w_pos_y = dimensions.y < 0 ? SDL_WINDOWPOS_UNDEFINED : dimensions.y;
+  view_dimensions({dimensions.x, dimensions.y});
   window(SDL_CreateWindow(title,
                           w_pos_x,
                           w_pos_y,
-                          dimensions.w*scale(),
-                          dimensions.h*scale(),
+                          dimensions.x*scale(),
+                          dimensions.y*scale(),
                           SDL_WINDOW_SHOWN));
   if (window() == nullptr)
   {
@@ -131,45 +133,45 @@ bool World::init(const char * title,
   _keys.up = _keys.down = _keys.left = _keys.right = _keys.fire = false;
   _prev_time = 0;
   
-  // initialize entities
-  for (auto entity : entities())
-  {
-    entity->init(this);
-  }
+  // initialize root
+  this->root(root);
+  root->init(this);
   
   return true;
 }
 
-void World::destroy()
+void Core::destroy()
 {
+  root()->destroy();
+    
   SDL_DestroyRenderer(renderer());
   SDL_DestroyWindow(window());
   SDL_Quit();
   _initialized = false;
 }
 
-void World::addEntity(Entity * entity)
-{
-  entities().push_back(entity);
-  if (_initialized) entity->init(this);
-}
+//void Core::addEntity(Entity * entity)
+//{
+//  entities().push_back(entity);
+//  if (_initialized) entity->init(this);
+//}
+//
+//void Core::removeEntity(Entity * entity)
+//{
+//  for (auto i = 0; i < entities().size(); i++)
+//  {
+//    if (entity == entities()[i])
+//    {
+//      entities().erase(entities().begin()+i);
+//      return;
+//    }
+//  }
+//}
 
-void World::removeEntity(Entity * entity)
-{
-  for (auto i = 0; i < entities().size(); i++)
-  {
-    if (entity == entities()[i])
-    {
-      entities().erase(entities().begin()+i);
-      return;
-    }
-  }
-}
-
-bool World::update()
+bool Core::update()
 {
   // record time
-  double start_time = getElapsedTime();
+  double start_time = elapsedTime();
   delta_time(start_time - _prev_time);
   _prev_time = start_time;
   
@@ -234,8 +236,8 @@ bool World::update()
       }
     }
   
-    // update entities
-    for (auto entity : entities()) (entity->update(*this));
+    // update root
+    root()->update();
     
     // clear screen
     SDL_RenderPresent(renderer());
@@ -248,16 +250,15 @@ bool World::update()
   return true;
 }
 
-void World::getKeyStatus(World::KeyStatus & keys)
+void Core::getKeyStatus(Core::KeyStatus & keys)
 {
   keys.up    = this->_keys.up;
   keys.down  = this->_keys.down;
   keys.left  = this->_keys.left;
   keys.right = this->_keys.right;
-  keys.fire  = this->_keys.fire;
 }
 
-double World::getElapsedTime()
+double Core::elapsedTime()
 {
   return SDL_GetTicks() / 1000.f;
 }
@@ -270,57 +271,106 @@ Entity::Entity(InputComponent * input,
                PhysicsComponent * physics,
                GraphicsComponent * graphics)
 {
+  core(nullptr);
+  parent(nullptr);
+  
   this->input(input);
   this->animation(animation);
   this->physics(physics);
   this->graphics(graphics);
 }
 
-Entity::~Entity()
+void Entity::init(Core * core)
 {
+  this->core(core);
+  if (input()) input()->init(this);
+  if (animation()) animation()->init(this);
+  if (physics()) physics()->init(this);
+  if (graphics()) graphics()->init(this);
+  
+  for (auto pair : children())
+  {
+    pair.second->init(core);
+  }
+}
+
+void Entity::destroy()
+{
+  for (auto pair : children())
+  {
+    pair.second->destroy();
+  }
+  children(vector<pair<string, Entity*>>());
+  
   if (input())     delete input();
   if (animation()) delete animation();
   if (physics())   delete physics();
   if (graphics())  delete graphics();
 }
 
-void Entity::init(World * owner)
+void Entity::addChild(Entity * child, string id)
 {
-  world(owner);
-  if (input()) input()->init(this);
-  if (animation()) animation()->init(this);
-  if (physics()) physics()->init(this);
-  if (graphics()) graphics()->init(this);
+  children().push_back(pair<string, Entity *>(id, child));
+  child->parent(this);
 }
 
-void Entity::update(World & world)
+Entity * Entity::findChild(string id)
 {
-  if (input()) input()->update(world);
-  if (animation()) animation()->update(world);
-  if (physics()) physics()->update(world);
-  if (graphics()) graphics()->update(world);
+  for (auto pair : children())
+  {
+    if (pair.first == id)
+    {
+      return pair.second;
+    }
+  }
+  return nullptr;
+}
+
+void Entity::removeChild(string id)
+{
+  for (auto i = 0; i < children().size(); i++)
+  {
+    auto pair = children()[i];
+    if (pair.first == id)
+    {
+      pair.second->parent(nullptr);
+      children().erase(children().begin()+1);
+    }
+  }
+}
+
+void Entity::calculateWorldPosition(Vector2 & result)
+{
+  Vector2 world_position = local_position();
+  Entity * current_entity = this;
+  while ((current_entity = current_entity->parent()))
+  {
+    world_position += current_entity->local_position();
+  }
+  result.x = world_position.x;
+  result.y = world_position.y;
 }
 
 void Entity::moveTo(double x, double y)
 {
-  position().x = x;
-  position().y = y;
+  local_position().x = x;
+  local_position().y = y;
 }
 
 void Entity::moveHorizontallyTo(double x)
 {
-  position().x = x;
+  local_position().x = x;
 }
 
 void Entity::moveVerticallyTo(double y)
 {
-  position().y = y;
+  local_position().y = y;
 }
 
 void Entity::moveBy(double dx, double dy)
 {
-  position().x += dx;
-  position().y += dy;
+  local_position().x += dx;
+  local_position().y += dy;
 }
 
 void Entity::changeVelocityTo(double vx, double vy)
@@ -345,13 +395,58 @@ void Entity::changeVelocityBy(double dvx, double dvy)
   velocity().y += dvy;
 }
 
+void _tmp_update(Entity * root, Core * core, int c_type)
+{
+  Component * component;
+  
+  stack<Entity*> entity_stack;
+  entity_stack.push(root);
+  while (entity_stack.size() > 0)
+  {
+    Entity * current_entity = entity_stack.top();
+    entity_stack.pop();
+    
+    switch (c_type) {
+      case 0:
+        if ((component = current_entity->input())) component->update(*core);
+        break;
+      case 1:
+        if ((component = current_entity->animation())) component->update(*core);
+        break;
+      case 2:
+        if ((component = current_entity->physics())) component->update(*core);
+        break;
+      case 3:
+        if ((component = current_entity->graphics())) component->update(*core);
+        break;
+    }
+    
+    if (current_entity->children().size() > 0)
+    {
+      for (long i = current_entity->children().size() - 1; i >= 0; i--)
+      {
+        entity_stack.push(current_entity->children()[i].second);
+      }
+    }
+    
+  }
+}
+
+void Entity::update()
+{
+  _tmp_update(this, core(), 0);
+  _tmp_update(this, core(), 1);
+  _tmp_update(this, core(), 2);
+  _tmp_update(this, core(), 3);
+}
+
 
 /********************************
  * Component
  ********************************/
-void Component::init(Entity * owner)
+void Component::init(Entity * entity)
 {
-  entity(owner);
+  this->entity(entity);
 }
 
 
@@ -380,9 +475,11 @@ bool AnimationComponent::loadAnimationFromFile(const char * filename,
     if (movements.size() > 0)
     {
       _animation_paths[animation_id] = {movements, duration};
+      file.close();
       return true;
     }
   }
+  file.close();
   return false;
 }
 
@@ -397,27 +494,34 @@ bool AnimationComponent::performAnimation(const char * id)
   {
     animating(true);
     _current_animation = _animation_paths[id];
-    _current_movement_index = -1;
-    _animation_start_time = entity()->world()->getElapsedTime();
+    _current_movement_index = 0;
+    _animation_start_time = entity()->core()->elapsedTime();
     notify(*entity(), DidStartAnimating);
     return true;
   }
   return false;
 }
 
-void AnimationComponent::update(World & world)
+void AnimationComponent::update(Core & world)
 {
   if (animating())
   {
-    const double elapsed  = world.getElapsedTime() - _animation_start_time;
+    const double elapsed  = world.elapsedTime() - _animation_start_time;
     const double fraction = elapsed / _current_animation.duration;
     const long max = _current_animation.movements.size();
     const long bound = fraction < 1 ? floor(fraction * max) + 1 : max;
-    Vector2 total_movement;
+    
+    Vector2 total_movement {0, 0};
     for (; _current_movement_index < bound; _current_movement_index++)
     {
       total_movement += _current_animation.movements[_current_movement_index];
     }
+    
+    if (total_movement.x != 0 || total_movement.y != 0)
+    {
+      notify(*entity(), DidStartMovingInAnimation);
+    }
+    
     entity()->moveBy(total_movement.x, total_movement.y);
     
     if (elapsed > _current_animation.duration)
@@ -476,12 +580,23 @@ void GraphicsComponent::offsetBy(int dx, int dy)
 
 void GraphicsComponent::resizeTo(int w, int h)
 {
-  bounds().dim.w = w;
-  bounds().dim.h = h;
+  bounds().dim.x = w;
+  bounds().dim.y = h;
 }
 
 void GraphicsComponent::resizeBy(int dw, int dh)
 {
-  bounds().dim.w += dw;
-  bounds().dim.h += dh;
+  bounds().dim.x += dw;
+  bounds().dim.y += dh;
+}
+
+void GraphicsComponent::update(Core & world)
+{
+  Vector2 entity_pos;
+  entity()->calculateWorldPosition(entity_pos);
+  current_sprite()->draw(entity_pos.x + bounds().pos.x,
+                         entity_pos.y + bounds().pos.y,
+                         bounds().dim.x,
+                         bounds().dim.y,
+                         world.scale());
 }

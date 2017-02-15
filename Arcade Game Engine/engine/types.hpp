@@ -23,9 +23,9 @@ public:
 };
 
 /* read-only */
-template <class Owner, typename PropertyType>
+template <class entity, typename PropertyType>
 class prop_r {
-  friend Owner;
+  friend entity;
   PropertyType _v;
 public:
   PropertyType & operator()() { return _v; };
@@ -107,11 +107,7 @@ inline Vector2 operator/=(Vector2 & l, double  c) { return l = l / c; }
 /**
  *  Defines two dimensions by width and height.
  */
-struct Dimension2
-{
-  double w, h;
-};
-
+typedef Vector2 Dimension2;
 
 /**
  *  Defines a rectangle specified by its position and dimensions.
@@ -124,5 +120,5 @@ struct Rectangle
 
 inline double min_x(Rectangle r) { return r.pos.x; }
 inline double min_y(Rectangle r) { return r.pos.y; }
-inline double max_x(Rectangle r) { return r.pos.x + r.dim.w; }
-inline double max_y(Rectangle r) { return r.pos.y + r.dim.h; }
+inline double max_x(Rectangle r) { return r.pos.x + r.dim.x; }
+inline double max_y(Rectangle r) { return r.pos.y + r.dim.y; }

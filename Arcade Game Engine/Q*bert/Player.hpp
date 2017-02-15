@@ -3,6 +3,8 @@
 //  Game Engine
 //
 
+#pragma once
+
 #include "core.hpp"
 
 // Events
@@ -27,8 +29,8 @@ class PlayerInputComponent
 public:
   prop_r<PlayerInputComponent, bool> jumping;
   
-  void init(Entity * owner);
-  void update(World & world);
+  void init(Entity * entity);
+  void update(Core & core);
   void onNotify(Entity & entity, Event event);
 };
 
@@ -38,7 +40,7 @@ public:
 class PlayerAnimationComponent : public AnimationComponent, public Observer
 {
 public:
-  void init(Entity * owner);
+  void init(Entity * entity);
   void onNotify(Entity & entity, Event event);
 };
 
@@ -56,9 +58,10 @@ public:
  */
 class PlayerGraphicsComponent : public GraphicsComponent, public Observer
 {
+  int _current_direction;
+  bool _jumping;
 public:
-  void init(Entity * owner);
-  void update(World & world);
+  void init(Entity * entity);
   void onNotify(Entity & entity, Event event);
 };
 
@@ -69,5 +72,5 @@ class Player : public Entity
 {
 public:
   Player();
-  void init(World * owner);
+  void init(Core * core);
 };

@@ -7,6 +7,7 @@
 
 #include <map>
 #include <vector>
+#include <string>
 #include "types.hpp"
 
 #ifdef __APPLE__
@@ -22,7 +23,7 @@ using namespace std;
 class Sprite;
 class Notifier;
 class Observer;
-class World;
+class Core;
 class Entity;
 class Component;
 class InputComponent;
@@ -32,6 +33,7 @@ class GraphicsComponent;
 
 // Events
 const Event DidStartAnimating("DidStartAnimating");
+const Event DidStartMovingInAnimation("DidStartMovingInAnimation");
 const Event DidStopAnimating("DidStopAnimating");
 
 
@@ -77,17 +79,17 @@ public:
 
 
 /**
- *  Defines the whole game world and is responsible for reading user input
+ *  Defines the core engine and is responsible for reading user input
  *  and updating all entities.
  */
-class World
+class Core
 {
 public:
-  prop_r<World,     SDL_Window*> window;
-  prop_r<World,   SDL_Renderer*> renderer;
-  prop_r<World, vector<Entity*>> entities;
-  prop_r<World,          double> delta_time;
-  prop_r<World,      Dimension2> view_dimensions;
+  prop_r<Core,   SDL_Window*> window;
+  prop_r<Core, SDL_Renderer*> renderer;
+  prop_r<Core,       Entity*> root;
+  prop_r<Core,        double> delta_time;
+  prop_r<Core,    Dimension2> view_dimensions;
   prop<int> scale;
   
   /**
@@ -98,17 +100,18 @@ public:
     bool up, down, left, right, fire;
   };
   
-  World();
-  bool init(const char * title,
+  Core();
+  bool init(Entity * root,
+            const char * title,
             Dimension2 dimensions,
             RGBAColor background_color = {0xAA, 0xAA, 0xAA, 0xFF});
   void destroy();
-  void addEntity(Entity * entity);
-  void removeEntity(Entity * entity);
+//  void addEntity(Entity * entity);
+//  void removeEntity(Entity * entity);
   bool update();
   bool resolveCollisions(Entity & collider, bool collision_response = true);
   void getKeyStatus(KeyStatus & keys);
-  double getElapsedTime();
+  double elapsedTime();
 private:
   KeyStatus _keys;
   double _prev_time;
@@ -121,22 +124,54 @@ private:
 class Entity
 {
 public:
-  prop_r<Entity,              World*> world;
-  prop_r<Entity,     InputComponent*> input;
-  prop_r<Entity, AnimationComponent*> animation;
-  prop_r<Entity,   PhysicsComponent*> physics;
-  prop_r<Entity,  GraphicsComponent*> graphics;
-  prop_r<Entity,             Vector2> position;
-  prop_r<Entity,             Vector2> velocity;
-  prop<bool> is_dynamic;
+  prop_r<Entity,                         Core*> core;
+  prop_r<Entity,                       Entity*> parent;
+  prop_r<Entity, vector<pair<string, Entity*>>> children;
+  prop_r<Entity,               InputComponent*> input;
+  prop_r<Entity,           AnimationComponent*> animation;
+  prop_r<Entity,             PhysicsComponent*> physics;
+  prop_r<Entity,            GraphicsComponent*> graphics;
+  prop_r<Entity,                       Vector2> local_position;
+  prop_r<Entity,                       Vector2> velocity;
   
   Entity(InputComponent * input,
          AnimationComponent * animation,
          PhysicsComponent * physics,
          GraphicsComponent * graphics);
-  ~Entity();
-  virtual void init(World * owner);
-  void update(World & world);
+  
+  /**
+   *  Initializes an entity.
+   *  
+   *  If deriving classes override this method, it must call the base class
+   *  method. This method calls itself on the entities children, so make sure
+   *  to add all children before calling the base class method.
+   *
+   *  @param  core   The engine core.
+   */
+  virtual void init(Core * core);
+  
+  /**
+   *  Destroys an entity.
+   *
+   *  If deriving classes override this method, it must call the base class
+   *  method. This method calls itself on the entities children, so make sure
+   *  to do all children related operations before calling the base class
+   *  method.
+   */
+  virtual void destroy();
+  
+  /**
+   *  Adds a child with a given identity string to the entity.
+   *
+   *  Children must be constructed using the new operator. The children will
+   *  be deleted either by calling *removeChild*, or by calling *destroy* on
+   *  the entity.
+   */
+  void addChild(Entity * child, string id);
+  
+  Entity * findChild(string id);
+  void removeChild(string id);
+  void calculateWorldPosition(Vector2 & result);
   void moveTo(double x, double y);
   void moveHorizontallyTo(double x);
   void moveVerticallyTo(double y);
@@ -145,6 +180,7 @@ public:
   void changeHorizontalVelocityTo(double vx);
   void changeVerticalVelocityTo(double vy);
   void changeVelocityBy(double dvs, double dvy);
+  void update();
 };
 
 
@@ -156,14 +192,13 @@ class Component
 protected:
   prop_r<Component, Entity*> entity;
 public:
-  virtual void init(Entity * owner);
-  virtual void update(World & world) = 0;
+  virtual void init(Entity * entity);
+  virtual void update(Core & core) = 0;
 };
 
 
 /**
- *  InputConponent is responsible for defining the behavior of an Entity,
- *  either depending on some user input, or by A.I.
+ *  InputConponent is responsible for defining the behavior of an Entity.
  */
 class InputComponent : public Component
 {
@@ -217,7 +252,7 @@ public:
    *  @return 0 on success, 1 if animation with associated id does not exist.
    */
   bool performAnimation(const char * id);
-  void update(World & world);
+  virtual void update(Core & core);
 };
 
 
@@ -235,7 +270,7 @@ public:
   
   PhysicsComponent();
   virtual ~PhysicsComponent() {};
-  void update(World & world);
+  virtual void update(Core & core);
 };
 
 
@@ -252,11 +287,12 @@ protected:
   
   void initSprites(SDL_Renderer & renderer,
                    vector<const char *> files,
-                   int current_sprite_index);
+                   int current_sprite_index = 0);
 public:
   virtual ~GraphicsComponent();
   void offsetTo(int x, int y);
   void offsetBy(int dx, int dy);
   void resizeTo(int w, int h);
   void resizeBy(int dw, int dh);
+  virtual void update(Core & core);
 };

@@ -15,6 +15,8 @@
 		D29DC54D1E509F680005EC95 /* SDL2_ttf.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D29DC54B1E509F5E0005EC95 /* SDL2_ttf.framework */; };
 		D29DC54E1E509F680005EC95 /* SDL2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D29DC5491E509F5E0005EC95 /* SDL2.framework */; };
 		D2F614D51E53183C00B33DAB /* types.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D2F614D41E53183C00B33DAB /* types.cpp */; };
+		D2F614F01E5499BC00B33DAB /* Block.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D2F614EE1E5499BC00B33DAB /* Block.cpp */; };
+		D2F614F31E54C7D400B33DAB /* Board.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D2F614F11E54C7D400B33DAB /* Board.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -42,6 +44,10 @@
 		D29DC54A1E509F5E0005EC95 /* SDL2_image.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = SDL2_image.framework; sourceTree = "<group>"; };
 		D29DC54B1E509F5E0005EC95 /* SDL2_ttf.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = SDL2_ttf.framework; sourceTree = "<group>"; };
 		D2F614D41E53183C00B33DAB /* types.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = types.cpp; path = engine/types.cpp; sourceTree = "<group>"; };
+		D2F614EE1E5499BC00B33DAB /* Block.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Block.cpp; path = "Q*bert/Block.cpp"; sourceTree = "<group>"; };
+		D2F614EF1E5499BC00B33DAB /* Block.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Block.hpp; path = "Q*bert/Block.hpp"; sourceTree = "<group>"; };
+		D2F614F11E54C7D400B33DAB /* Board.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Board.cpp; path = "Q*bert/Board.cpp"; sourceTree = "<group>"; };
+		D2F614F21E54C7D400B33DAB /* Board.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Board.hpp; path = "Q*bert/Board.hpp"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -110,6 +116,8 @@
 				D29DC5461E509E280005EC95 /* include */,
 				D29DC5421E509E250005EC95 /* main.cpp */,
 				D29DC5431E509E250005EC95 /* Player.cpp */,
+				D2F614EE1E5499BC00B33DAB /* Block.cpp */,
+				D2F614F11E54C7D400B33DAB /* Board.cpp */,
 			);
 			name = "Q*bert";
 			sourceTree = "<group>";
@@ -118,6 +126,8 @@
 			isa = PBXGroup;
 			children = (
 				D29DC5411E509E250005EC95 /* Player.hpp */,
+				D2F614EF1E5499BC00B33DAB /* Block.hpp */,
+				D2F614F21E54C7D400B33DAB /* Board.hpp */,
 			);
 			name = include;
 			sourceTree = "<group>";
@@ -198,9 +208,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D2F614F31E54C7D400B33DAB /* Board.cpp in Sources */,
 				D29DC5451E509E250005EC95 /* Player.cpp in Sources */,
 				D29DC53D1E509D780005EC95 /* core.cpp in Sources */,
 				D29DC53E1E509D780005EC95 /* physics.cpp in Sources */,
+				D2F614F01E5499BC00B33DAB /* Block.cpp in Sources */,
 				D29DC5441E509E250005EC95 /* main.cpp in Sources */,
 				D2F614D51E53183C00B33DAB /* types.cpp in Sources */,
 			);
