@@ -300,7 +300,7 @@ void Entity::destroy()
   {
     pair.second->destroy();
   }
-  children(vector<pair<string, Entity*>>());
+  children().clear();
   
   if (input())     delete input();
   if (animation()) delete animation();
@@ -397,7 +397,7 @@ void Entity::changeVelocityBy(double dvx, double dvy)
 
 void _tmp_update(Entity * root, Core * core, int c_type)
 {
-  Component * component;
+  Component * component = nullptr;
   
   stack<Entity*> entity_stack;
   entity_stack.push(root);
@@ -408,18 +408,19 @@ void _tmp_update(Entity * root, Core * core, int c_type)
     
     switch (c_type) {
       case 0:
-        if ((component = current_entity->input())) component->update(*core);
+        component = current_entity->input();
         break;
       case 1:
-        if ((component = current_entity->animation())) component->update(*core);
+        component = current_entity->animation();
         break;
       case 2:
-        if ((component = current_entity->physics())) component->update(*core);
+        component = current_entity->physics();
         break;
       case 3:
-        if ((component = current_entity->graphics())) component->update(*core);
+        component = current_entity->graphics();
         break;
     }
+    if (component) component->update(*core);
     
     if (current_entity->children().size() > 0)
     {
@@ -457,10 +458,11 @@ AnimationComponent::AnimationComponent()
   : Component()
 {
   animating(false);
+  _calculate_velocity = false;
 }
 
-bool AnimationComponent::loadAnimationFromFile(const char * filename,
-                                               const char * animation_id,
+bool AnimationComponent::loadAnimationFromFile(string filename,
+                                               string animation_id,
                                                double duration)
 {
   vector<Vector2> movements;
@@ -483,19 +485,20 @@ bool AnimationComponent::loadAnimationFromFile(const char * filename,
   return false;
 }
 
-bool AnimationComponent::removeAnimation(const char * id)
+bool AnimationComponent::removeAnimation(string id)
 {
   return _animation_paths.erase(id) == 1;
 }
 
-bool AnimationComponent::performAnimation(const char * id)
+bool AnimationComponent::performAnimation(string id, bool calculate_velocity)
 {
   if (!animating() && _animation_paths.find(id) != _animation_paths.end())
   {
     animating(true);
-    _current_animation = _animation_paths[id];
+    _animation = _animation_paths[id];
     _current_movement_index = 0;
     _animation_start_time = entity()->core()->elapsedTime();
+    _calculate_velocity = calculate_velocity;
     notify(*entity(), DidStartAnimating);
     return true;
   }
@@ -507,28 +510,34 @@ void AnimationComponent::update(Core & world)
   if (animating())
   {
     const double elapsed  = world.elapsedTime() - _animation_start_time;
-    const double fraction = elapsed / _current_animation.duration;
-    const long max = _current_animation.movements.size();
+    const double fraction = elapsed / _animation.duration;
+    const long max = _animation.movements.size();
     const long bound = fraction < 1 ? floor(fraction * max) + 1 : max;
     
     Vector2 total_movement {0, 0};
     for (; _current_movement_index < bound; _current_movement_index++)
     {
-      total_movement += _current_animation.movements[_current_movement_index];
+      total_movement += _animation.movements[_current_movement_index];
     }
+    
+    entity()->moveBy(total_movement.x, total_movement.y);
     
     if (total_movement.x != 0 || total_movement.y != 0)
     {
       notify(*entity(), DidStartMovingInAnimation);
     }
     
-    entity()->moveBy(total_movement.x, total_movement.y);
+    if (elapsed < _animation.duration) { return; }
     
-    if (elapsed > _current_animation.duration)
+    if (_calculate_velocity)
     {
-      animating(false);
-      notify(*entity(), DidStopAnimating);
+      const Vector2 distance = _animation.movements.back();
+      const double time = _animation.duration / _animation.movements.size();
+      const Vector2 velocity = distance / time;
+      entity()->changeVelocityTo(velocity.x, velocity.y);
     }
+    animating(false);
+    notify(*entity(), DidStopAnimating);
   }
 }
 
@@ -548,6 +557,7 @@ void GraphicsComponent::initSprites(SDL_Renderer & renderer,
                                     vector<const char *> files,
                                     int current_sprite_index)
 {
+  sprites().clear();
   for (auto file : files)
   {
     SDL_Surface * loaded_surface = IMG_Load(file);

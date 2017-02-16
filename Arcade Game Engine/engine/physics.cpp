@@ -82,23 +82,53 @@ bool Core::resolveCollisions(Entity & collider, bool collision_response)
  ********************************/
 PhysicsComponent::PhysicsComponent()
 {
+  _should_simulate = true;
+  collision_bounds({0, 0, 16, 16});
   dynamic(true);
+  simulate_with_animations(false);
   gravity(9.82);
   pixels_per_meter(200);
 }
 
+void PhysicsComponent::init(Entity * entity)
+{
+  Component::init(entity);
+  
+  const auto animation_notifier = dynamic_cast<Notifier*>(entity->animation());
+  if (animation_notifier)
+  {
+    animation_notifier->addObserver(this, DidStartAnimating);
+    animation_notifier->addObserver(this, DidStopAnimating);
+  }
+}
+
 void PhysicsComponent::update(Core & core)
 {
-  auto delta_time = core.delta_time();
-  if (dynamic()) {
-    entity()->changeVelocityBy(0, gravity() * delta_time * pixels_per_meter());
-    auto distance = entity()->velocity() * delta_time;
-    entity()->moveBy(distance.x, distance.y);
-    core.resolveCollisions(*entity());
+  if (_should_simulate || simulate_with_animations())
+    {
+    auto delta_time = core.delta_time();
+    if (dynamic()) {
+      entity()->changeVelocityBy(0, gravity() * delta_time * pixels_per_meter());
+      auto distance = entity()->velocity() * delta_time;
+      entity()->moveBy(distance.x, distance.y);
+      core.resolveCollisions(*entity());
+    }
+    else
+    {
+      auto distance = entity()->velocity() * delta_time;
+      entity()->moveBy(distance.x, distance.y);
+    }
   }
-  else
+}
+
+void PhysicsComponent::onNotify(Entity & entity, Event event)
+{
+  if (event == DidStartAnimating)
   {
-    auto distance = entity()->velocity() * delta_time;
-    entity()->moveBy(distance.x, distance.y);
+    _should_simulate = false;
+  }
+  else if (event == DidStopAnimating)
+  {
+    _should_simulate = true;
   }
 }

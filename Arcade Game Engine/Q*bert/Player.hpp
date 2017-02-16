@@ -45,15 +45,6 @@ public:
 };
 
 /**
- *  Defines the player physics.
- */
-class PlayerPhysicsComponent : public PhysicsComponent
-{
-public:
-  PlayerPhysicsComponent();
-};
-
-/**
  *  Defines the player graphics.
  */
 class PlayerGraphicsComponent : public GraphicsComponent, public Observer

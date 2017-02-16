@@ -192,6 +192,7 @@ class Component
 protected:
   prop_r<Component, Entity*> entity;
 public:
+  virtual ~Component() {};
   virtual void init(Entity * entity);
   virtual void update(Core & core) = 0;
 };
@@ -200,11 +201,7 @@ public:
 /**
  *  InputConponent is responsible for defining the behavior of an Entity.
  */
-class InputComponent : public Component
-{
-public:
-  virtual ~InputComponent() {};
-};
+class InputComponent : public Component {};
 
 
 /**
@@ -218,23 +215,24 @@ class AnimationComponent : public Component, public Notifier
     vector<Vector2> movements;
     double          duration;
   };
-  map<const char *, _AnimationPath> _animation_paths;
-  _AnimationPath _current_animation;
+  
+  map<string, _AnimationPath> _animation_paths;
+  _AnimationPath _animation;
   double _animation_start_time;
   int _current_movement_index;
+  bool _calculate_velocity;
 public:
   prop_r<AnimationComponent, bool> animating;
   
   AnimationComponent();
-  virtual ~AnimationComponent() {};
   
   /**
    *  Loads an animation by reading the file at the specified location.
    *  
    *  @return true on success, false when failing to read the file.
    */
-  bool loadAnimationFromFile(const char * filename,
-                             const char * animation_id,
+  bool loadAnimationFromFile(string filename,
+                             string animation_id,
                              double duration);
   
   /**
@@ -243,7 +241,7 @@ public:
    *  @return true on success, false if animation with associated id does not
    *  exist.
    */
-  bool removeAnimation(const char * id);
+  bool removeAnimation(string id);
   
   /**
    *  Initiates an animation, which will get updated by the *update* member
@@ -251,7 +249,7 @@ public:
    *
    *  @return 0 on success, 1 if animation with associated id does not exist.
    */
-  bool performAnimation(const char * id);
+  bool performAnimation(string id, bool calculate_velocity = false);
   virtual void update(Core & core);
 };
 
@@ -260,17 +258,20 @@ public:
  *  PhysicsComponent is responsible for updating the position of an Entity
  *  object, w.r.t. the laws of physics.
  */
-class PhysicsComponent : public Component
+class PhysicsComponent : public Component, public Observer
 {
+  bool _should_simulate;
 public:
-  prop<Rectangle> collision_bounds;
+  prop<   Rectangle> collision_bounds;
   prop<        bool> dynamic;
-  prop<       double> gravity;
+  prop<        bool> simulate_with_animations;
+  prop<      double> gravity;
   prop<unsigned int> pixels_per_meter;
   
   PhysicsComponent();
-  virtual ~PhysicsComponent() {};
+  virtual void init(Entity * entity);
   virtual void update(Core & core);
+  void onNotify(Entity & entity, Event event);
 };
 
 
