@@ -130,12 +130,22 @@ bool Core::init(Entity * root,
   SDL_RenderClear(renderer());
   
   // initialize member properties
-  _keys.up = _keys.down = _keys.left = _keys.right = _keys.fire = false;
+  _keys.up = _keys.down = _keys.left = _keys.right = false;
   _prev_time = 0;
   
-  // initialize root
+  // initialize entities
   this->root(root);
   root->init(this);
+  stack<Entity*> entity_stack;
+  entity_stack.push(root);
+  Entity * current_entity;
+  while (entity_stack.size())
+  {
+    current_entity = entity_stack.top();
+    entity_stack.pop();
+    _entities.push_back(current_entity);
+    for (auto child : current_entity->children()) entity_stack.push(child);
+  }
   
   return true;
 }
@@ -149,24 +159,6 @@ void Core::destroy()
   SDL_Quit();
   _initialized = false;
 }
-
-//void Core::addEntity(Entity * entity)
-//{
-//  entities().push_back(entity);
-//  if (_initialized) entity->init(this);
-//}
-//
-//void Core::removeEntity(Entity * entity)
-//{
-//  for (auto i = 0; i < entities().size(); i++)
-//  {
-//    if (entity == entities()[i])
-//    {
-//      entities().erase(entities().begin()+i);
-//      return;
-//    }
-//  }
-//}
 
 bool Core::update()
 {
@@ -204,9 +196,6 @@ bool Core::update()
           case SDLK_RIGHT:
             _keys.right = true;
             break;
-          case SDLK_SPACE:
-            _keys.fire = true;
-            break;
         }
       }
       if (event.type == SDL_KEYUP)
@@ -224,9 +213,6 @@ bool Core::update()
             break;
           case SDLK_RIGHT:
             _keys.right = false;
-            break;
-          case SDLK_SPACE:
-            _keys.fire = false;
             break;
           case SDLK_ESCAPE:
           case SDLK_q:
@@ -266,11 +252,13 @@ double Core::elapsedTime()
 /********************************
  * Entity
  ********************************/
-Entity::Entity(InputComponent * input,
+Entity::Entity(string id,
+               InputComponent * input,
                AnimationComponent * animation,
                PhysicsComponent * physics,
                GraphicsComponent * graphics)
 {
+  this->id(id);
   core(nullptr);
   parent(nullptr);
   
@@ -288,17 +276,17 @@ void Entity::init(Core * core)
   if (physics()) physics()->init(this);
   if (graphics()) graphics()->init(this);
   
-  for (auto pair : children())
+  for (auto child : children())
   {
-    pair.second->init(core);
+    child->init(core);
   }
 }
 
 void Entity::destroy()
 {
-  for (auto pair : children())
+  for (auto child : children())
   {
-    pair.second->destroy();
+    child->destroy();
   }
   children().clear();
   
@@ -308,19 +296,19 @@ void Entity::destroy()
   if (graphics())  delete graphics();
 }
 
-void Entity::addChild(Entity * child, string id)
+void Entity::addChild(Entity * child)
 {
-  children().push_back(pair<string, Entity *>(id, child));
+  children().push_back(child);
   child->parent(this);
 }
 
 Entity * Entity::findChild(string id)
 {
-  for (auto pair : children())
+  for (auto child : children())
   {
-    if (pair.first == id)
+    if (child->id() == id)
     {
-      return pair.second;
+      return child;
     }
   }
   return nullptr;
@@ -330,10 +318,10 @@ void Entity::removeChild(string id)
 {
   for (auto i = 0; i < children().size(); i++)
   {
-    auto pair = children()[i];
-    if (pair.first == id)
+    auto child = children()[i];
+    if (child->id() == id)
     {
-      pair.second->parent(nullptr);
+      child->parent(nullptr);
       children().erase(children().begin()+1);
     }
   }
@@ -401,9 +389,10 @@ void _tmp_update(Entity * root, Core * core, int c_type)
   
   stack<Entity*> entity_stack;
   entity_stack.push(root);
-  while (entity_stack.size() > 0)
+  Entity * current_entity;
+  while (entity_stack.size())
   {
-    Entity * current_entity = entity_stack.top();
+    current_entity = entity_stack.top();
     entity_stack.pop();
     
     switch (c_type) {
@@ -426,7 +415,7 @@ void _tmp_update(Entity * root, Core * core, int c_type)
     {
       for (long i = current_entity->children().size() - 1; i >= 0; i--)
       {
-        entity_stack.push(current_entity->children()[i].second);
+        entity_stack.push(current_entity->children()[i]);
       }
     }
     

@@ -7,6 +7,19 @@
 #include "Player.hpp"
 #include "Board.hpp"
 
+class A
+{
+public:
+  virtual void printMe() { printf("A"); };
+};
+
+
+class B : public A
+{
+public:
+  void printMe() { printf("B"); };
+};
+
 int main(int argc, char * argv[])
 {
   const int scale = 3;
@@ -15,11 +28,11 @@ int main(int argc, char * argv[])
   
   // set up game world
   Core core;
-  Entity world(nullptr, nullptr, nullptr, nullptr);
-  Board board;
-  Player player;
-  world.addChild(&board, "board");
-  world.addChild(&player, "player");
+  Entity world("world", nullptr, nullptr, nullptr, nullptr);
+  Board board("board");
+  Player player("player");
+  world.addChild(&board);
+  world.addChild(&player);
   
   // initialize game world
   core.scale(scale);

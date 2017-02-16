@@ -22,7 +22,11 @@ public:
 class BlockGraphicsComponent : public GraphicsComponent
 {
 public:
+  enum BlockColor { ORANGE, BLUE, GREEN };
+  
   void init(Entity * entity);
+  void changeBaseColor(BlockColor block_color);
+  void changeDetailColor(BlockColor block_color);
 };
 
 /**
@@ -31,5 +35,6 @@ public:
 class Block : public Entity
 {
 public:
-  Block(int x, int y);
+  Block(string id, int x, int y);
+  void toggle(string id);
 };

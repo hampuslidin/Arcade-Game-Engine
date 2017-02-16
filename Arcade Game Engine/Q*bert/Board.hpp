@@ -14,6 +14,6 @@
 class Board : public Entity
 {
 public:
-  Board();
+  Board(string id);
   void init(Core * core);
 };

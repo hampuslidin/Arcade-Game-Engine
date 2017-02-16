@@ -4,6 +4,7 @@
 //
 
 #include "Player.hpp"
+#include "Block.hpp"
 #include <fstream>
 
 /********************************
@@ -18,8 +19,6 @@ void PlayerInputComponent::init(Entity * entity)
   const auto animation_notifier = dynamic_cast<Notifier*>(entity->animation());
   animation_notifier->addObserver(this, DidStopAnimating);
 }
-
-
 
 void PlayerInputComponent::update(Core & core)
 {
@@ -77,19 +76,48 @@ void PlayerAnimationComponent::onNotify(Entity & entity, Event event)
     switch (event.parameter())
     {
       case UP:
-        performAnimation("jump_up", true);
+        performAnimation("jump_up");
         break;
       case DOWN:
-        performAnimation("jump_down", true);
+        performAnimation("jump_down");
         break;
       case LEFT:
-        performAnimation("jump_left", true);
+        performAnimation("jump_left");
         break;
       case RIGHT:
-        performAnimation("jump_right", true);
+        performAnimation("jump_right");
         break;
     }
   }
+}
+
+
+/********************************
+ * PlayerPhysicsComponent
+ ********************************/
+PlayerPhysicsComponent::PlayerPhysicsComponent()
+{
+  collision_bounds({7, 14, 2, 2});
+  collision_detection(true);
+}
+
+void PlayerPhysicsComponent::update(Core & core)
+{
+  PhysicsComponent::update(core);
+  
+  for (auto collided_entity : collided_entities())
+  {
+    string id_prefix = collided_entity->id().substr(0, 5);
+    if (collided_entity->id().compare(0, 5, "block") == 0)
+    {
+      Block * block = dynamic_cast<Block*>(collided_entity);
+      block->toggle(entity()->id());
+      return;
+    }
+  }
+  
+  dynamic(true);
+  collision_detection(false);
 }
 
 
@@ -147,10 +175,11 @@ void PlayerGraphicsComponent::onNotify(Entity & entity, Event event)
 /********************************
  * Player
  ********************************/
-Player::Player()
-  : Entity(new PlayerInputComponent(),
+Player::Player(string id)
+  : Entity(id,
+           new PlayerInputComponent(),
            new PlayerAnimationComponent(),
-           new PhysicsComponent(),
+           new PlayerPhysicsComponent(),
            new PlayerGraphicsComponent())
 {}
 

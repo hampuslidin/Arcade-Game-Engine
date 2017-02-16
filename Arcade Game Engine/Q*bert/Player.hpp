@@ -35,6 +35,17 @@ public:
 };
 
 /**
+ *  Defines the player physics.
+ */
+class PlayerPhysicsComponent
+  : public PhysicsComponent
+{
+public:
+  PlayerPhysicsComponent();
+  void update(Core & core);
+};
+
+/**
  *  Defines the player animations.
  */
 class PlayerAnimationComponent : public AnimationComponent, public Observer
@@ -62,6 +73,6 @@ public:
 class Player : public Entity
 {
 public:
-  Player();
+  Player(string id);
   void init(Core * core);
 };

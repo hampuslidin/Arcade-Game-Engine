@@ -35,6 +35,7 @@ class GraphicsComponent;
 const Event DidStartAnimating("DidStartAnimating");
 const Event DidStartMovingInAnimation("DidStartMovingInAnimation");
 const Event DidStopAnimating("DidStopAnimating");
+const Event DidCollide("DidCollide");
 
 
 /**
@@ -84,6 +85,7 @@ public:
  */
 class Core
 {
+  vector<Entity*> _entities;
 public:
   prop_r<Core,   SDL_Window*> window;
   prop_r<Core, SDL_Renderer*> renderer;
@@ -97,7 +99,7 @@ public:
    */
   struct KeyStatus
   {
-    bool up, down, left, right, fire;
+    bool up, down, left, right;
   };
   
   Core();
@@ -106,10 +108,10 @@ public:
             Dimension2 dimensions,
             RGBAColor background_color = {0xAA, 0xAA, 0xAA, 0xFF});
   void destroy();
-//  void addEntity(Entity * entity);
-//  void removeEntity(Entity * entity);
   bool update();
-  bool resolveCollisions(Entity & collider, bool collision_response = true);
+  void resolveCollisions(Entity & collider,
+                         bool collision_response,
+                         vector<Entity*> & result);
   void getKeyStatus(KeyStatus & keys);
   double elapsedTime();
 private:
@@ -124,17 +126,19 @@ private:
 class Entity
 {
 public:
-  prop_r<Entity,                         Core*> core;
-  prop_r<Entity,                       Entity*> parent;
-  prop_r<Entity, vector<pair<string, Entity*>>> children;
-  prop_r<Entity,               InputComponent*> input;
-  prop_r<Entity,           AnimationComponent*> animation;
-  prop_r<Entity,             PhysicsComponent*> physics;
-  prop_r<Entity,            GraphicsComponent*> graphics;
-  prop_r<Entity,                       Vector2> local_position;
-  prop_r<Entity,                       Vector2> velocity;
+  prop_r<Entity,               Core*> core;
+  prop_r<Entity,              string> id;
+  prop_r<Entity,             Entity*> parent;
+  prop_r<Entity,     vector<Entity*>> children;
+  prop_r<Entity,     InputComponent*> input;
+  prop_r<Entity, AnimationComponent*> animation;
+  prop_r<Entity,   PhysicsComponent*> physics;
+  prop_r<Entity,  GraphicsComponent*> graphics;
+  prop_r<Entity,             Vector2> local_position;
+  prop_r<Entity,             Vector2> velocity;
   
-  Entity(InputComponent * input,
+  Entity(string id,
+         InputComponent * input,
          AnimationComponent * animation,
          PhysicsComponent * physics,
          GraphicsComponent * graphics);
@@ -167,7 +171,7 @@ public:
    *  be deleted either by calling *removeChild*, or by calling *destroy* on
    *  the entity.
    */
-  void addChild(Entity * child, string id);
+  void addChild(Entity * child);
   
   Entity * findChild(string id);
   void removeChild(string id);
@@ -258,20 +262,24 @@ public:
  *  PhysicsComponent is responsible for updating the position of an Entity
  *  object, w.r.t. the laws of physics.
  */
-class PhysicsComponent : public Component, public Observer
+class PhysicsComponent : public Component, public Notifier, public Observer
 {
   bool _should_simulate;
+protected:
+  prop_r<PhysicsComponent, vector<Entity*>> collided_entities;
 public:
   prop<   Rectangle> collision_bounds;
-  prop<        bool> dynamic;
-  prop<        bool> simulate_with_animations;
   prop<      double> gravity;
   prop<unsigned int> pixels_per_meter;
+  prop<        bool> dynamic;
+  prop<        bool> collision_detection;
+  prop<        bool> collision_response;
+  prop<        bool> simulate_with_animations;
   
   PhysicsComponent();
   virtual void init(Entity * entity);
   virtual void update(Core & core);
-  void onNotify(Entity & entity, Event event);
+  virtual void onNotify(Entity & entity, Event event);
 };
 
 

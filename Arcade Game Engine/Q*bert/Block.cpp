@@ -11,8 +11,7 @@
 BlockPhysicsComponent::BlockPhysicsComponent()
   : PhysicsComponent()
 {
-  collision_bounds({0, 0, 32, 32});
-  dynamic(false);
+  collision_bounds({15, 6, 2, 2});
 }
 
 /********************************
@@ -22,19 +21,46 @@ void BlockGraphicsComponent::init(Entity * entity)
 {
   GraphicsComponent::init(entity);
   
-  initSprites(*entity->core()->renderer(), {"textures/block_o_b_1.png"});
+  vector<const char *> filenames
+  {
+    "textures/block_o_b.png",
+    "textures/block_o_g.png"
+  };
+  initSprites(*entity->core()->renderer(), filenames);
   
   resizeTo(32, 32);
+}
+
+void BlockGraphicsComponent::changeBaseColor(BlockColor block_color)
+{
+  // TODO: Implement.
+}
+
+void BlockGraphicsComponent::changeDetailColor(BlockColor block_color)
+{
+  // TODO: Make generic.
+  current_sprite(sprites()[1]);
 }
 
 /********************************
  * Block
  ********************************/
-Block::Block(int x, int y)
-  : Entity(nullptr,
+Block::Block(string id, int x, int y)
+  : Entity(id,
+           nullptr,
            nullptr,
            new BlockPhysicsComponent(),
            new BlockGraphicsComponent())
 {
   moveTo(x, y);
+}
+
+void Block::toggle(string id)
+{
+  if (id.compare("player") == 0)
+  {
+    BlockGraphicsComponent * block_graphics =
+      dynamic_cast<BlockGraphicsComponent*>(graphics());
+    block_graphics->changeDetailColor(BlockGraphicsComponent::GREEN);
+  }
 }
