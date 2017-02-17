@@ -359,6 +359,7 @@ Entity::Entity(string id,
   this->id(id);
   core(nullptr);
   parent(nullptr);
+  local_position({0, 0});
   
   this->input(input);
   this->animation(animation);
@@ -422,10 +423,9 @@ Entity * Entity::findChild(string id)
 {
   for (auto child : children())
   {
-    if (child->id() == id)
-    {
-      return child;
-    }
+    if (child->id().compare(id) == 0) return child;
+    auto possible_find = child->findChild(id);
+    if (possible_find) return possible_find;
   }
   return nullptr;
 }
@@ -654,11 +654,14 @@ void GraphicsComponent::resizeBy(int dw, int dh)
 
 void GraphicsComponent::update(Core & world)
 {
-  Vector2 entity_pos;
-  entity()->calculateWorldPosition(entity_pos);
-  current_sprite()->draw(entity_pos.x + bounds().pos.x,
-                         entity_pos.y + bounds().pos.y,
-                         bounds().dim.x,
-                         bounds().dim.y,
-                         world.scale());
+  if (current_sprite())
+  {
+    Vector2 entity_pos;
+    entity()->calculateWorldPosition(entity_pos);
+    current_sprite()->draw(entity_pos.x + bounds().pos.x,
+                           entity_pos.y + bounds().pos.y,
+                           bounds().dim.x,
+                           bounds().dim.y,
+                           world.scale());
+  }
 }

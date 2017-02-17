@@ -198,7 +198,6 @@ void PlayerGraphicsComponent::init(Entity * entity)
 {
   GraphicsComponent::init(entity);
   
-  sprites().clear();
   sprites().reserve(8);
   string postures[]   {"_standing", "_jumping"};
   string directions[] {"_up", "_down", "_left", "_right"};

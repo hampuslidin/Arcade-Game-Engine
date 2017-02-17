@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D23CC4C11E57514E00B774C9 /* Level.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D23CC4BF1E57514E00B774C9 /* Level.cpp */; };
+		D23CC4C41E57533E00B774C9 /* HUD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D23CC4C21E57533E00B774C9 /* HUD.cpp */; };
 		D29DC53D1E509D780005EC95 /* core.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D29DC53B1E509D780005EC95 /* core.cpp */; };
 		D29DC53E1E509D780005EC95 /* physics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D29DC53C1E509D780005EC95 /* physics.cpp */; };
 		D29DC5441E509E250005EC95 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D29DC5421E509E250005EC95 /* main.cpp */; };
@@ -32,6 +34,10 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		D23CC4BF1E57514E00B774C9 /* Level.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Level.cpp; path = "Q*bert/Level.cpp"; sourceTree = "<group>"; };
+		D23CC4C01E57514E00B774C9 /* Level.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Level.hpp; path = "Q*bert/Level.hpp"; sourceTree = "<group>"; };
+		D23CC4C21E57533E00B774C9 /* HUD.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = HUD.cpp; path = "Q*bert/HUD.cpp"; sourceTree = "<group>"; };
+		D23CC4C31E57533E00B774C9 /* HUD.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = HUD.hpp; path = "Q*bert/HUD.hpp"; sourceTree = "<group>"; };
 		D29DC52B1E509D120005EC95 /* Q*bert */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "Q*bert"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D29DC5381E509D780005EC95 /* core.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = core.hpp; path = engine/core.hpp; sourceTree = "<group>"; };
 		D29DC53A1E509D780005EC95 /* types.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = types.hpp; path = engine/types.hpp; sourceTree = "<group>"; };
@@ -118,6 +124,8 @@
 				D29DC5431E509E250005EC95 /* Player.cpp */,
 				D2F614EE1E5499BC00B33DAB /* Block.cpp */,
 				D2F614F11E54C7D400B33DAB /* Board.cpp */,
+				D23CC4BF1E57514E00B774C9 /* Level.cpp */,
+				D23CC4C21E57533E00B774C9 /* HUD.cpp */,
 			);
 			name = "Q*bert";
 			sourceTree = "<group>";
@@ -128,6 +136,8 @@
 				D29DC5411E509E250005EC95 /* Player.hpp */,
 				D2F614EF1E5499BC00B33DAB /* Block.hpp */,
 				D2F614F21E54C7D400B33DAB /* Board.hpp */,
+				D23CC4C01E57514E00B774C9 /* Level.hpp */,
+				D23CC4C31E57533E00B774C9 /* HUD.hpp */,
 			);
 			name = include;
 			sourceTree = "<group>";
@@ -208,8 +218,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D23CC4C41E57533E00B774C9 /* HUD.cpp in Sources */,
 				D2F614F31E54C7D400B33DAB /* Board.cpp in Sources */,
 				D29DC5451E509E250005EC95 /* Player.cpp in Sources */,
+				D23CC4C11E57514E00B774C9 /* Level.cpp in Sources */,
 				D29DC53D1E509D780005EC95 /* core.cpp in Sources */,
 				D29DC53E1E509D780005EC95 /* physics.cpp in Sources */,
 				D2F614F01E5499BC00B33DAB /* Block.cpp in Sources */,

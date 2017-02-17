@@ -91,7 +91,7 @@ PhysicsComponent::PhysicsComponent()
   _out_of_view = true;
   collision_bounds({0, 0, 16, 16});
   gravity(9.82);
-  pixels_per_meter(200);
+  pixels_per_meter(150);
   dynamic(false);
   collision_detection(false);
   collision_response(false);

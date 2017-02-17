@@ -21,7 +21,6 @@ void BlockGraphicsComponent::init(Entity * entity)
 {
   GraphicsComponent::init(entity);
   
-  sprites().clear();
   sprites().reserve(54);
   for (auto i = 0; i < 9; i++)
   {
@@ -78,6 +77,6 @@ void Block::toggle(string id)
   {
     BlockGraphicsComponent * block_graphics =
       dynamic_cast<BlockGraphicsComponent*>(graphics());
-    block_graphics->changeDetailColor(5);
+    block_graphics->changeDetailColor(1);
   }
 }

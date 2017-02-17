@@ -4,21 +4,7 @@
 //
 
 #include "core.hpp"
-#include "Player.hpp"
-#include "Board.hpp"
-
-class A
-{
-public:
-  virtual void printMe() { printf("A"); };
-};
-
-
-class B : public A
-{
-public:
-  void printMe() { printf("B"); };
-};
+#include "Level.hpp"
 
 int main(int argc, char * argv[])
 {
@@ -28,15 +14,11 @@ int main(int argc, char * argv[])
   
   // set up game world
   Core core;
-  Entity world("world", nullptr, nullptr, nullptr, nullptr);
-  Board board("board");
-  Player player("player");
-  world.addChild(&board);
-  world.addChild(&player);
+  Level level("level");
   
   // initialize game world
   core.scale(scale);
-  core.init(&world, "Q*bert", scaled_screen_size, {0x00, 0x00, 0x00, 0xFF});
+  core.init(&level, "Q*bert", scaled_screen_size, {0x00, 0x00, 0x00, 0xFF});
   
   // game loop
   while (core.update());
