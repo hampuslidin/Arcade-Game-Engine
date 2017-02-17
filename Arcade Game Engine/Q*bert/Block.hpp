@@ -21,13 +21,14 @@ public:
  */
 class BlockGraphicsComponent : public GraphicsComponent
 {
+  int _base_i;
+  int _detail_i;
 public:
-  enum BlockColor { ORANGE, BLUE, GREEN };
-  
   void init(Entity * entity);
   void reset();
-  void changeBaseColor(BlockColor block_color);
-  void changeDetailColor(BlockColor block_color);
+  void changeColor(int base_i, int detail_i);
+  void changeBaseColor(int index);
+  void changeDetailColor(int index);
 };
 
 /**

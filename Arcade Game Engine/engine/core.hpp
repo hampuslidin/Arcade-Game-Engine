@@ -31,7 +31,8 @@ class AnimationComponent;
 class PhysicsComponent;
 class GraphicsComponent;
 
-// Events
+// MARK: Events
+
 const Event DidStartAnimating("DidStartAnimating");
 const Event DidStartMovingInAnimation("DidStartMovingInAnimation");
 const Event DidStopAnimating("DidStopAnimating");
@@ -39,6 +40,10 @@ const Event DidCollide("DidCollide");
 const Event DidMoveIntoView("DidMoveIntoView");
 const Event DidMoveOutOfView("DidMoveOutOfView");
 
+
+//
+// MARK: - Sprite
+//
 
 /**
  *  Defines a sprite and methods for drawing it to a SDL rendering context.
@@ -49,10 +54,15 @@ class Sprite
   SDL_Texture * _texture;
 public:
   Sprite(SDL_Renderer * renderer, SDL_Texture * texture);
+  static Sprite * createSprite(SDL_Renderer * renderer, const char * filename);
   void destroy();
   void draw(int x, int y, int w, int h, int scale = 1);
 };
 
+
+//
+// MARK: - Notifier
+//
 
 /**
  *  An abstract class for notifying Observer objects of an event.
@@ -71,6 +81,10 @@ protected:
 };
 
 
+//
+// MARK: - Observer
+//
+
 /**
  *  An abstract class for receiving notifications about events from Notifier
  *  objects.
@@ -81,6 +95,10 @@ public:
   virtual void onNotify(Entity & entity, Event event) = 0;
 };
 
+
+//
+// MARK: - Core
+//
 
 /**
  *  Defines the core engine and is responsible for reading user input
@@ -122,6 +140,11 @@ private:
   double _prev_time;
   bool _initialized;
 };
+
+
+//
+// MARK: - Entity
+//
 
 /**
  *  Defines a class that represents a game entity that resides in a game world.
@@ -324,9 +347,6 @@ protected:
   prop<        Sprite*> current_sprite;
   prop<      Rectangle> bounds;
   
-  void initSprites(SDL_Renderer & renderer,
-                   vector<const char *> files,
-                   int current_sprite_index = 0);
 public:
   virtual ~GraphicsComponent();
   void offsetTo(int x, int y);

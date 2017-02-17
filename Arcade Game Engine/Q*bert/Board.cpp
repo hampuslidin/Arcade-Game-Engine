@@ -25,9 +25,9 @@ Board::Board(string id)
 
 void Board::init(Core * core)
 {
+  Entity::init(core);
+  
   const Dimension2 view_dimensions = core->view_dimensions();
   moveTo((view_dimensions.x-BOARD_DIMENSIONS.x)/2,
          view_dimensions.y-BOARD_DIMENSIONS.y-16);
-  
-  Entity::init(core);
 }

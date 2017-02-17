@@ -198,17 +198,21 @@ void PlayerGraphicsComponent::init(Entity * entity)
 {
   GraphicsComponent::init(entity);
   
-  vector<const char *> files {
-    "textures/qbert_standing_up.png",
-    "textures/qbert_standing_down.png",
-    "textures/qbert_standing_left.png",
-    "textures/qbert_standing_right.png",
-    "textures/qbert_jumping_up.png",
-    "textures/qbert_jumping_down.png",
-    "textures/qbert_jumping_left.png",
-    "textures/qbert_jumping_right.png",
-  };
-  initSprites(*entity->core()->renderer(), files, DOWN);
+  sprites().clear();
+  sprites().reserve(8);
+  string postures[]   {"_standing", "_jumping"};
+  string directions[] {"_up", "_down", "_left", "_right"};
+  for (auto i = 0; i < 2; i++)
+  {
+    string posture = postures[i];
+    for (auto j = 0; j < 4; j++)
+    {
+      string direction = directions[j];
+      string filename = "textures/qbert" + posture + direction + ".png";
+      sprites().push_back(Sprite::createSprite(entity->core()->renderer(),
+                                               filename.c_str()));
+    }
+  }
   
   const auto input_notifier = dynamic_cast<Notifier*>(entity->input());
   input_notifier->addObserver(this, DidJump);

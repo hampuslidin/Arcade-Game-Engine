@@ -60,6 +60,22 @@ Sprite::Sprite(SDL_Renderer * renderer, SDL_Texture * texture)
   , _texture(texture)
 {}
 
+Sprite * Sprite::createSprite(SDL_Renderer * renderer, const char * filename)
+{
+  SDL_Surface * loaded_surface = IMG_Load(filename);
+  if (!loaded_surface)
+  {
+    SDL_Log("IMG_Load: %s\n", IMG_GetError());
+  }
+  else
+  {
+    auto texture = SDL_CreateTextureFromSurface(renderer, loaded_surface);
+    SDL_FreeSurface(loaded_surface);
+    return new Sprite(renderer, texture);
+  }
+  return nullptr;
+}
+
 void Sprite::destroy()
 {
   SDL_DestroyTexture(_texture);
@@ -493,6 +509,7 @@ void Entity::update()
   _tmp_update(this, core(), 3);
 }
 
+
 //
 // MARK: - Component
 //
@@ -503,6 +520,7 @@ void Component::init(Entity * entity)
 {
   this->entity(entity);
 }
+
 
 //
 // MARK: - AnimationComponent
@@ -608,29 +626,6 @@ GraphicsComponent::~GraphicsComponent()
   {
     sprite->destroy();
   }
-}
-
-void GraphicsComponent::initSprites(SDL_Renderer & renderer,
-                                    vector<const char *> files,
-                                    int current_sprite_index)
-{
-  sprites().clear();
-  for (auto file : files)
-  {
-    SDL_Surface * loaded_surface = IMG_Load(file);
-    if (!loaded_surface)
-    {
-      SDL_Log("IMG_Load: %s\n", IMG_GetError());
-    }
-    else
-    {
-      SDL_Texture * player_texture =
-      SDL_CreateTextureFromSurface(&renderer, loaded_surface);
-      sprites().push_back(new Sprite(&renderer, player_texture));
-      SDL_FreeSurface(loaded_surface);
-    }
-  }
-  if (sprites().size() > 0) current_sprite(sprites()[current_sprite_index]);
 }
 
 void GraphicsComponent::offsetTo(int x, int y)
