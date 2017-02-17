@@ -14,42 +14,56 @@ void PlayerInputComponent::init(Entity * entity)
 {
   InputComponent::init(entity);
   
-  jumping(false);
-  
   const auto animation_notifier = dynamic_cast<Notifier*>(entity->animation());
   animation_notifier->addObserver(this, DidStopAnimating);
+  
+  const auto physics_notifier = dynamic_cast<Notifier*>(entity->physics());
+  physics_notifier->addObserver(this, DidFallOff);
+}
+
+void PlayerInputComponent::reset()
+{
+  InputComponent::reset();
+  
+  _animating = false;
+  _did_jump_off = false;
 }
 
 void PlayerInputComponent::update(Core & core)
 {
-  Player * const player = (Player*)(entity());
-  Core::KeyStatus keys;
-  core.getKeyStatus(keys);
-  
-  if (keys.up && !jumping())
+  if (!_animating && !_did_jump_off)
   {
-    notify(*player, Event(DidJump, UP));
+    Core::KeyStatus keys;
+    core.getKeyStatus(keys);
+    
+    if (keys.up)
+    {
+      notify(*entity(), Event(DidJump, UP));
+    }
+    else if (keys.down)
+    {
+      notify(*entity(), Event(DidJump, DOWN));
+    }
+    else if (keys.left)
+    {
+      notify(*entity(), Event(DidJump, LEFT));
+    }
+    else if (keys.right)
+    {
+      notify(*entity(), Event(DidJump, RIGHT));
+    }
   }
-  else if (keys.down && !jumping())
-  {
-    notify(*player, Event(DidJump, DOWN));
-  }
-  else if (keys.left && !jumping())
-  {
-    notify(*player, Event(DidJump, LEFT));
-  }
-  else if (keys.right && !jumping())
-  {
-    notify(*player, Event(DidJump, RIGHT));
-  }
-  jumping(keys.up || keys.down || keys.left || keys.right);
 }
 
 void PlayerInputComponent::onNotify(Entity & entity, Event event)
 {
   if (event == DidStopAnimating)
   {
-    jumping(false);
+    _animating = false;
+  }
+  else if (event == DidFallOff)
+  {
+    _did_jump_off = true;
   }
 }
 
@@ -60,10 +74,10 @@ void PlayerAnimationComponent::init(Entity * entity)
 {
   AnimationComponent::init(entity);
   
-  loadAnimationFromFile("animations/jump_up.anim",    "jump_up",    0.55);
-  loadAnimationFromFile("animations/jump_down.anim",  "jump_down",  0.55);
-  loadAnimationFromFile("animations/jump_left.anim",  "jump_left",  0.55);
-  loadAnimationFromFile("animations/jump_right.anim", "jump_right", 0.55);
+  loadAnimationFromFile("animations/jump_up.anim",    "jump_up",    0.5);
+  loadAnimationFromFile("animations/jump_down.anim",  "jump_down",  0.5);
+  loadAnimationFromFile("animations/jump_left.anim",  "jump_left",  0.5);
+  loadAnimationFromFile("animations/jump_right.anim", "jump_right", 0.5);
   
   const auto input_notifier = dynamic_cast<Notifier*>(entity->input());
   input_notifier->addObserver(this, DidJump);
@@ -76,16 +90,16 @@ void PlayerAnimationComponent::onNotify(Entity & entity, Event event)
     switch (event.parameter())
     {
       case UP:
-        performAnimation("jump_up");
+        performAnimation("jump_up", true);
         break;
       case DOWN:
-        performAnimation("jump_down");
+        performAnimation("jump_down", true);
         break;
       case LEFT:
-        performAnimation("jump_left");
+        performAnimation("jump_left", true);
         break;
       case RIGHT:
-        performAnimation("jump_right");
+        performAnimation("jump_right", true);
         break;
     }
   }
@@ -98,6 +112,30 @@ void PlayerAnimationComponent::onNotify(Entity & entity, Event event)
 PlayerPhysicsComponent::PlayerPhysicsComponent()
 {
   collision_bounds({7, 14, 2, 2});
+}
+
+void PlayerPhysicsComponent::init(Entity * entity)
+{
+  PhysicsComponent::init(entity);
+
+  const auto input_notifier = dynamic_cast<Notifier*>(entity->input());
+  input_notifier->addObserver(this, DidJump);
+  
+  const auto animation_notifier = dynamic_cast<Notifier*>(entity->animation());
+  animation_notifier->addObserver(this, DidStartAnimating);
+  animation_notifier->addObserver(this, DidStopAnimating);
+  
+  addObserver(this, DidMoveOutOfView);
+}
+
+void PlayerPhysicsComponent::reset()
+{
+  PhysicsComponent::reset();
+  
+  _has_jumped_once = false;
+  _animating       = false;
+  _did_fall_off    = false;
+  dynamic(false);
   collision_detection(true);
 }
 
@@ -108,7 +146,7 @@ void PlayerPhysicsComponent::update(Core & core)
   for (auto collided_entity : collided_entities())
   {
     string id_prefix = collided_entity->id().substr(0, 5);
-    if (collided_entity->id().compare(0, 5, "block") == 0)
+    if (collided_entity->id().compare(0, 5, "block") == 0 && _has_jumped_once)
     {
       Block * block = dynamic_cast<Block*>(collided_entity);
       block->toggle(entity()->id());
@@ -116,8 +154,40 @@ void PlayerPhysicsComponent::update(Core & core)
     }
   }
   
-  dynamic(true);
-  collision_detection(false);
+  if (!_did_fall_off && !_animating && _has_jumped_once)
+  {
+    _did_fall_off = true;
+    dynamic(true);
+    collision_detection(false);
+    entity()->order(0);
+    notify(*entity(), DidFallOff);
+  }
+}
+
+void PlayerPhysicsComponent::onNotify(Entity & entity, Event event)
+{
+  PhysicsComponent::onNotify(entity, event);
+  
+  if (event == DidJump)
+  {
+    _has_jumped_once = true;
+    
+    const auto input_notifier = dynamic_cast<Notifier*>(entity.input());
+    input_notifier->removeObserver(this, DidJump);
+  }
+  else if (event == DidStartAnimating)
+  {
+    _animating = true;
+  }
+  else if (event == DidStopAnimating)
+  {
+    _animating = false;
+  }
+  else if (event == DidMoveOutOfView)
+  {
+    this->entity()->order(-1);
+    this->entity()->core()->reset();
+  }
 }
 
 
@@ -127,8 +197,6 @@ void PlayerPhysicsComponent::update(Core & core)
 void PlayerGraphicsComponent::init(Entity * entity)
 {
   GraphicsComponent::init(entity);
-  _current_direction = DOWN;
-  _jumping = false;
   
   vector<const char *> files {
     "textures/qbert_standing_up.png",
@@ -150,6 +218,15 @@ void PlayerGraphicsComponent::init(Entity * entity)
   animation_notifier->addObserver(this, DidStopAnimating);
   
   resizeTo(16, 16);
+}
+
+void PlayerGraphicsComponent::reset()
+{
+  GraphicsComponent::reset();
+  
+  _current_direction = DOWN;
+  _jumping = false;
+  current_sprite(sprites()[DOWN]);
 }
 
 void PlayerGraphicsComponent::onNotify(Entity & entity, Event event)
@@ -183,10 +260,10 @@ Player::Player(string id)
            new PlayerGraphicsComponent())
 {}
 
-void Player::init(Core * core)
+void Player::reset()
 {
-  Entity::init(core);
+  Entity::reset();
   
-  const Dimension2 view_dimensions = core->view_dimensions();
+  const Dimension2 view_dimensions = core()->view_dimensions();
   moveTo(view_dimensions.x/2-8, view_dimensions.y-176-16-8);
 }

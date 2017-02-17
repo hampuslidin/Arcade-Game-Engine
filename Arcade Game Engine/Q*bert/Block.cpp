@@ -31,6 +31,11 @@ void BlockGraphicsComponent::init(Entity * entity)
   resizeTo(32, 32);
 }
 
+void BlockGraphicsComponent::reset()
+{
+  current_sprite(sprites()[0]);
+}
+
 void BlockGraphicsComponent::changeBaseColor(BlockColor block_color)
 {
   // TODO: Implement.

@@ -25,6 +25,7 @@ public:
   enum BlockColor { ORANGE, BLUE, GREEN };
   
   void init(Entity * entity);
+  void reset();
   void changeBaseColor(BlockColor block_color);
   void changeDetailColor(BlockColor block_color);
 };

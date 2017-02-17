@@ -36,6 +36,8 @@ const Event DidStartAnimating("DidStartAnimating");
 const Event DidStartMovingInAnimation("DidStartMovingInAnimation");
 const Event DidStopAnimating("DidStopAnimating");
 const Event DidCollide("DidCollide");
+const Event DidMoveIntoView("DidMoveIntoView");
+const Event DidMoveOutOfView("DidMoveOutOfView");
 
 
 /**
@@ -59,9 +61,10 @@ class Notifier
 {
 public:
   void addObserver(Observer * observer, const Event & event);
-  void removeObserver(Observer * observer, Event * event = nullptr);
+  void removeObserver(Observer * observer);
+  void removeObserver(Observer * observer, const Event & event);
 protected:
-  prop<map<Event, vector<Observer *>>> observers;
+  prop<map<const Event, vector<Observer *>>> observers;
   
   virtual ~Notifier() {};
   void notify(Entity & entity, Event event);
@@ -85,7 +88,6 @@ public:
  */
 class Core
 {
-  vector<Entity*> _entities;
 public:
   prop_r<Core,   SDL_Window*> window;
   prop_r<Core, SDL_Renderer*> renderer;
@@ -106,8 +108,9 @@ public:
   bool init(Entity * root,
             const char * title,
             Dimension2 dimensions,
-            RGBAColor background_color = {0xAA, 0xAA, 0xAA, 0xFF});
+            RGBAColor background_color = {0x00, 0x00, 0x00, 0xFF});
   void destroy();
+  void reset();
   bool update();
   void resolveCollisions(Entity & collider,
                          bool collision_response,
@@ -126,6 +129,8 @@ private:
 class Entity
 {
 public:
+  // MARK: Properties
+  
   prop_r<Entity,               Core*> core;
   prop_r<Entity,              string> id;
   prop_r<Entity,             Entity*> parent;
@@ -136,6 +141,22 @@ public:
   prop_r<Entity,  GraphicsComponent*> graphics;
   prop_r<Entity,             Vector2> local_position;
   prop_r<Entity,             Vector2> velocity;
+  
+  /**
+   *  Change the order in the layer. Affects the update order on the parents
+   *  children.
+   *
+   *  IMPORTANT: do not call this in the reset method function, it will lead
+   *  to undefined behavior.
+   */
+  void order(int new_value);
+  
+  /**
+   *  Retrieve the order in the layer.
+   */
+  int order();
+  
+  // MARK: Member functions
   
   Entity(string id,
          InputComponent * input,
@@ -154,6 +175,8 @@ public:
    */
   virtual void init(Core * core);
   
+  virtual void reset();
+  
   /**
    *  Destroys an entity.
    *
@@ -170,8 +193,13 @@ public:
    *  Children must be constructed using the new operator. The children will
    *  be deleted either by calling *removeChild*, or by calling *destroy* on
    *  the entity.
+   *
+   *  @param  child   The Entity to be added.
+   *  @param  order   The order in which the entity will be placed. If -1 or a
+   *                  number equal to or larger than the number of children is
+   *                  passed, then the entity will be placed at the back. 
    */
-  void addChild(Entity * child);
+  void addChild(Entity * child, int order = -1);
   
   Entity * findChild(string id);
   void removeChild(string id);
@@ -198,6 +226,7 @@ protected:
 public:
   virtual ~Component() {};
   virtual void init(Entity * entity);
+  virtual void reset() {};
   virtual void update(Core & core) = 0;
 };
 
@@ -228,7 +257,7 @@ class AnimationComponent : public Component, public Notifier
 public:
   prop_r<AnimationComponent, bool> animating;
   
-  AnimationComponent();
+  virtual void reset();
   
   /**
    *  Loads an animation by reading the file at the specified location.
@@ -265,6 +294,7 @@ public:
 class PhysicsComponent : public Component, public Notifier, public Observer
 {
   bool _should_simulate;
+  bool _out_of_view;
 protected:
   prop_r<PhysicsComponent, vector<Entity*>> collided_entities;
 public:

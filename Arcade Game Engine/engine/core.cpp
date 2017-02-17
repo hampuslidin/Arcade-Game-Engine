@@ -4,12 +4,57 @@
 //
 
 #include "core.hpp"
+#include "Block.hpp"
 #include <fstream>
 #include <stack>
 
-/********************************
- * Sprite
- ********************************/
+// MARK: Helper functions
+
+void _tmp_update(Entity * root, Core * core, int c_type)
+{
+  Component * component = nullptr;
+  
+  stack<Entity*> entity_stack;
+  entity_stack.push(root);
+  Entity * current_entity;
+  while (entity_stack.size())
+  {
+    current_entity = entity_stack.top();
+    entity_stack.pop();
+    
+    switch (c_type) {
+      case 0:
+        component = current_entity->input();
+        break;
+      case 1:
+        component = current_entity->animation();
+        break;
+      case 2:
+        component = current_entity->physics();
+        break;
+      case 3:
+        component = current_entity->graphics();
+        break;
+    }
+    if (component) component->update(*core);
+    
+    if (current_entity->children().size() > 0)
+    {
+      for (long i = current_entity->children().size() - 1; i >= 0; i--)
+      {
+        entity_stack.push(current_entity->children()[i]);
+      }
+    }
+    
+  }
+}
+
+//
+// MARK: - Sprite
+//
+
+// MARK: Member functions
+
 Sprite::Sprite(SDL_Renderer * renderer, SDL_Texture * texture)
   : _renderer(renderer)
   , _texture(texture)
@@ -26,39 +71,44 @@ void Sprite::draw(int x, int y, int w, int h, int scale)
   SDL_RenderCopy(_renderer, _texture, nullptr, &rect);
 }
 
-/********************************
- * Notifier
- ********************************/
+//
+// MARK: - Notifier
+//
+
+// MARK: Member functions
+
 void Notifier::addObserver(Observer * observer, const Event & event)
 {
   observers()[event].push_back(observer);
 }
 
-void Notifier::removeObserver(Observer * observer, Event * event)
+void Notifier::removeObserver(Observer * observer)
 {
-  if (event)
+  for (auto pair : observers())
   {
-    auto observers_for_event = observers()[*event];
-    for (auto i = 0; i < observers_for_event.size(); i++)
+    for (auto i = 0; i < pair.second.size(); i++)
     {
-      if (observer == observers_for_event[i])
+      if (observer == pair.second[i])
       {
-        observers()[*event].erase(observers_for_event.begin()+i);
+        observers()[pair.first].erase(pair.second.begin()+i);
         return;
       }
     }
   }
-  else
+}
+
+void Notifier::removeObserver(Observer * observer, const Event & event)
+{
+  auto it = observers().find(event);
+  if (it != observers().end())
   {
-    for (auto pair : observers())
+    auto observers_for_event = observers()[event];
+    for (auto i = 0; i < observers_for_event.size(); i++)
     {
-      for (auto i = 0; i < pair.second.size(); i++)
+      if (observer == observers_for_event[i])
       {
-        if (observer == pair.second[i])
-        {
-          observers()[pair.first].erase(pair.second.begin()+i);
-          return;
-        }
+        observers_for_event.erase(observers_for_event.begin()+i);
+        return;
       }
     }
   }
@@ -70,9 +120,12 @@ void Notifier::notify(Entity & entity, Event event)
 }
 
 
-/********************************
- * Core
- ********************************/
+//
+// MARK: - Core
+//
+
+//MARK: Member functions
+
 Core::Core()
 {
   scale(1);
@@ -136,16 +189,7 @@ bool Core::init(Entity * root,
   // initialize entities
   this->root(root);
   root->init(this);
-  stack<Entity*> entity_stack;
-  entity_stack.push(root);
-  Entity * current_entity;
-  while (entity_stack.size())
-  {
-    current_entity = entity_stack.top();
-    entity_stack.pop();
-    _entities.push_back(current_entity);
-    for (auto child : current_entity->children()) entity_stack.push(child);
-  }
+  reset();
   
   return true;
 }
@@ -158,6 +202,11 @@ void Core::destroy()
   SDL_DestroyWindow(window());
   SDL_Quit();
   _initialized = false;
+}
+
+void Core::reset()
+{
+  root()->reset();
 }
 
 bool Core::update()
@@ -249,9 +298,42 @@ double Core::elapsedTime()
   return SDL_GetTicks() / 1000.f;
 }
 
-/********************************
- * Entity
- ********************************/
+//
+// MARK: - Entity
+//
+
+// MARK: Properties
+
+void Entity::order(int new_value)
+{
+  if (parent())
+  {
+    auto tmp = parent();
+    tmp->removeChild(id());
+    tmp->addChild(this, new_value);
+  }
+}
+
+int Entity::order()
+{
+  if (parent())
+  {
+    for (int i = 0; i < parent()->children().size(); i++)
+    {
+      auto child = parent()->children()[i];
+      if (child->id() == id())
+      {
+        return i;
+      }
+    }
+  }
+  return 0;
+}
+
+
+
+// MARK: Member functions
+
 Entity::Entity(string id,
                InputComponent * input,
                AnimationComponent * animation,
@@ -271,15 +353,25 @@ Entity::Entity(string id,
 void Entity::init(Core * core)
 {
   this->core(core);
+  
   if (input()) input()->init(this);
   if (animation()) animation()->init(this);
   if (physics()) physics()->init(this);
   if (graphics()) graphics()->init(this);
   
-  for (auto child : children())
-  {
-    child->init(core);
-  }
+  for (auto child : children()) child->init(core);
+}
+
+void Entity::reset()
+{
+  velocity({0, 0});
+  
+  if (input()) input()->reset();
+  if (animation()) animation()->reset();
+  if (physics()) physics()->reset();
+  if (graphics()) graphics()->reset();
+  
+  for (auto child : children()) child->reset();
 }
 
 void Entity::destroy()
@@ -296,9 +388,17 @@ void Entity::destroy()
   if (graphics())  delete graphics();
 }
 
-void Entity::addChild(Entity * child)
+void Entity::addChild(Entity * child, int order)
 {
-  children().push_back(child);
+  if (order >= 0)
+  {
+    if (order > children().size()) order = (int)children().size();
+    children().insert(children().begin()+order, child);
+  }
+  else
+  {
+    children().push_back(child);
+  }
   child->parent(this);
 }
 
@@ -316,13 +416,13 @@ Entity * Entity::findChild(string id)
 
 void Entity::removeChild(string id)
 {
-  for (auto i = 0; i < children().size(); i++)
+  for (int i = 0; i < children().size(); i++)
   {
     auto child = children()[i];
     if (child->id() == id)
     {
       child->parent(nullptr);
-      children().erase(children().begin()+1);
+      children().erase(children().begin()+i);
     }
   }
 }
@@ -383,44 +483,7 @@ void Entity::changeVelocityBy(double dvx, double dvy)
   velocity().y += dvy;
 }
 
-void _tmp_update(Entity * root, Core * core, int c_type)
-{
-  Component * component = nullptr;
-  
-  stack<Entity*> entity_stack;
-  entity_stack.push(root);
-  Entity * current_entity;
-  while (entity_stack.size())
-  {
-    current_entity = entity_stack.top();
-    entity_stack.pop();
-    
-    switch (c_type) {
-      case 0:
-        component = current_entity->input();
-        break;
-      case 1:
-        component = current_entity->animation();
-        break;
-      case 2:
-        component = current_entity->physics();
-        break;
-      case 3:
-        component = current_entity->graphics();
-        break;
-    }
-    if (component) component->update(*core);
-    
-    if (current_entity->children().size() > 0)
-    {
-      for (long i = current_entity->children().size() - 1; i >= 0; i--)
-      {
-        entity_stack.push(current_entity->children()[i]);
-      }
-    }
-    
-  }
-}
+
 
 void Entity::update()
 {
@@ -430,21 +493,24 @@ void Entity::update()
   _tmp_update(this, core(), 3);
 }
 
+//
+// MARK: - Component
+//
 
-/********************************
- * Component
- ********************************/
+// MARK: Member functions
+
 void Component::init(Entity * entity)
 {
   this->entity(entity);
 }
 
+//
+// MARK: - AnimationComponent
+//
 
-/********************************
- * AnimationComponent
- ********************************/
-AnimationComponent::AnimationComponent()
-  : Component()
+// MARK: Member functions
+
+void AnimationComponent::reset()
 {
   animating(false);
   _calculate_velocity = false;
@@ -530,10 +596,12 @@ void AnimationComponent::update(Core & world)
   }
 }
 
+//
+// MARK: - GraphicsComponent
+//
 
-/********************************
- * GraphicsComponent
- ********************************/
+// MARK: Member functions
+
 GraphicsComponent::~GraphicsComponent()
 {
   for (auto sprite : sprites())

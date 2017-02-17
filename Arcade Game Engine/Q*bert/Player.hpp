@@ -9,6 +9,7 @@
 
 // Events
 const Event DidJump("DidJump");
+const Event DidFallOff("DidFallOff");
 
 /**
  *  Defines directions up, down, left, and right.
@@ -26,23 +27,13 @@ class PlayerInputComponent
   , public Notifier
   , public Observer
 {
+  bool _animating;
+  bool _did_jump_off;
 public:
-  prop_r<PlayerInputComponent, bool> jumping;
-  
   void init(Entity * entity);
+  void reset();
   void update(Core & core);
   void onNotify(Entity & entity, Event event);
-};
-
-/**
- *  Defines the player physics.
- */
-class PlayerPhysicsComponent
-  : public PhysicsComponent
-{
-public:
-  PlayerPhysicsComponent();
-  void update(Core & core);
 };
 
 /**
@@ -56,6 +47,23 @@ public:
 };
 
 /**
+ *  Defines the player physics.
+ */
+class PlayerPhysicsComponent
+: public PhysicsComponent
+{
+  bool _has_jumped_once;
+  bool _animating;
+  bool _did_fall_off;
+public:
+  PlayerPhysicsComponent();
+  void init(Entity * entity);
+  void reset();
+  void update(Core & core);
+  void onNotify(Entity & entity, Event event);
+};
+
+/**
  *  Defines the player graphics.
  */
 class PlayerGraphicsComponent : public GraphicsComponent, public Observer
@@ -64,6 +72,7 @@ class PlayerGraphicsComponent : public GraphicsComponent, public Observer
   bool _jumping;
 public:
   void init(Entity * entity);
+  void reset();
   void onNotify(Entity & entity, Event event);
 };
 
@@ -74,5 +83,5 @@ class Player : public Entity
 {
 public:
   Player(string id);
-  void init(Core * core);
+  void reset();
 };
