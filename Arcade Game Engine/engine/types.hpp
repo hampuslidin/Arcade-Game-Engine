@@ -6,6 +6,9 @@
 #pragma once
 
 #include <stdlib.h>
+#include <string>
+
+using namespace std;
 
 /**
  *  Defines a functor that enables classes to have class properties accessible
@@ -39,15 +42,19 @@ private:
  */
 class Event
 {
-  const char * _id;
+  string _id;
 public:
   typedef int Parameter;
   prop_r<Event, Parameter> parameter;
   
-  Event(const char * id);
-  Event(const Event & event, const Parameter & parameter);
-  bool operator==(const Event & event) const;
-  bool operator<(const Event & event) const;
+  string string_value();
+  
+  Event(string id);
+  Event(Event event, Parameter parameter);
+  bool operator==(Event event) const;
+  bool operator<(Event event) const;
+  
+  void operator=(Event const &) = delete;
 };
 
 

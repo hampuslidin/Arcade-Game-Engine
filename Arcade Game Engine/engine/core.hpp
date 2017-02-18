@@ -21,8 +21,8 @@
 using namespace std;
 
 class Sprite;
-class Notifier;
-class Observer;
+class SpriteCollection;
+class NotificationCenter;
 class Core;
 class Entity;
 class Component;
@@ -61,38 +61,49 @@ public:
 
 
 //
-// MARK: - Notifier
+// MARK: - SpriteCollection
 //
 
 /**
- *  An abstract class for notifying Observer objects of an event.
+ *  Defines a collection of sprites.
  */
-class Notifier
+class SpriteCollection
 {
-public:
-  void addObserver(Observer * observer, const Event & event);
-  void removeObserver(Observer * observer);
-  void removeObserver(Observer * observer, const Event & event);
-protected:
-  prop<map<const Event, vector<Observer *>>> observers;
+  SDL_Renderer * _renderer;
+  map<string, Sprite*> _sprites;
   
-  virtual ~Notifier() {};
-  void notify(Entity & entity, Event event);
+  SpriteCollection() {};
+public:
+  SpriteCollection(SpriteCollection const &) = delete;
+  static SpriteCollection & main();
+  void init(SDL_Renderer * renderer);
+  Sprite * create(string id, const char * filename);
+  void destroy(string id);
+  void destroyAll();
+  Sprite * retrieve(string id);
+  void draw(string id, int x, int y, int w, int h, int scale = 1);
+  
+  void operator=(SpriteCollection const &) = delete;
 };
 
 
 //
-// MARK: - Observer
+// MARK: - NotificationCenter
 //
 
-/**
- *  An abstract class for receiving notifications about events from Notifier
- *  objects.
- */
-class Observer
+class NotificationCenter
 {
+  map<Event, vector<function<void(Event)>>> _blocks;
+  
+  NotificationCenter() {};
 public:
-  virtual void onNotify(Entity & entity, Event event) = 0;
+  NotificationCenter(NotificationCenter const &) = delete;
+  static NotificationCenter & main();
+  void notify(Event event);
+  size_t observe(Event event, function<void(Event)> block);
+  void unobserve(Event event, size_t id);
+  
+  void operator=(NotificationCenter const &) = delete;
 };
 
 
@@ -107,11 +118,11 @@ public:
 class Core
 {
 public:
-  prop_r<Core,   SDL_Window*> window;
-  prop_r<Core, SDL_Renderer*> renderer;
-  prop_r<Core,       Entity*> root;
-  prop_r<Core,        double> delta_time;
-  prop_r<Core,    Dimension2> view_dimensions;
+  prop_r<Core,      SDL_Window*> window;
+  prop_r<Core,    SDL_Renderer*> renderer;
+  prop_r<Core,          Entity*> root;
+  prop_r<Core,           double> delta_time;
+  prop_r<Core,       Dimension2> view_dimensions;
   prop<int> scale;
   
   /**
@@ -264,7 +275,8 @@ class InputComponent : public Component {};
  *  AnimationComponent is responsible for moving an Entity according to a path,
  *  either in local space or in world space.
  */
-class AnimationComponent : public Component, public Notifier
+class AnimationComponent
+  : public Component
 {
   struct _AnimationPath
   {
@@ -314,7 +326,8 @@ public:
  *  PhysicsComponent is responsible for updating the position of an Entity
  *  object, w.r.t. the laws of physics.
  */
-class PhysicsComponent : public Component, public Notifier, public Observer
+class PhysicsComponent
+  : public Component
 {
   bool _should_simulate;
   bool _out_of_view;
@@ -332,7 +345,6 @@ public:
   PhysicsComponent();
   virtual void init(Entity * entity);
   virtual void update(Core & core);
-  virtual void onNotify(Entity & entity, Event event);
 };
 
 
@@ -343,12 +355,11 @@ public:
 class GraphicsComponent : public Component
 {
 protected:
-  prop<vector<Sprite*>> sprites;
-  prop<        Sprite*> current_sprite;
-  prop<      Rectangle> bounds;
+  prop<  Sprite*> current_sprite;
+  prop<Rectangle> bounds;
   
 public:
-  virtual ~GraphicsComponent();
+  
   void offsetTo(int x, int y);
   void offsetBy(int dx, int dy);
   void resizeTo(int w, int h);

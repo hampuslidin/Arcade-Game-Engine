@@ -7,22 +7,28 @@
 
 #include <cstring>
 
-Event::Event(const char * id)
-  : _id(id)
-{}
+string Event::string_value()
+{
+  return _id;
+}
 
-Event::Event(const Event & event, const Parameter & parameter)
-  : _id(event._id)
+Event::Event(string id)
+{
+  _id = id;
+}
+
+Event::Event(Event event, Parameter parameter)
+  : Event(event._id)
 {
   this->parameter(parameter);
 }
 
-bool Event::operator==(const Event & event) const
+bool Event::operator==(Event event) const
 {
-  return strcmp(this->_id, event._id) == 0;
+  return _id.compare(event._id) == 0;
 }
 
-bool Event::operator<(const Event & event) const
+bool Event::operator<(Event event) const
 {
-  return strcmp(this->_id, event._id) < 0;
+  return _id.compare(event._id) < 0;
 }

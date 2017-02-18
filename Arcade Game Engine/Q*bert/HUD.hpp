@@ -9,16 +9,6 @@
 #include "Level.hpp"
 
 /**
- *  Defines a heads-up display.
- */
-class HUD : public Entity
-{
-public:
-  HUD(string id);
-  void init(Core * core);
-};
-
-/**
  *  Defines player text graphics.
  */
 class PlayerTextGraphicsComponent : public GraphicsComponent
@@ -60,12 +50,11 @@ public:
 /**
  *  Defines score graphics.
  */
-class ScoreDigitGraphicsComponent
-  : public GraphicsComponent
+class ScoreDigitGraphicsComponent : public GraphicsComponent
 {
 public:
   void init(Entity * entity);
-  void reset();
+  void update(Core & core);
 };
 
 /**
@@ -77,5 +66,16 @@ public:
   prop_r<ScoreDigit, int> digit;
   
   ScoreDigit(string id, int x, int y);
+  void init(Core * core);
   void reset();
+};
+
+/**
+ *  Defines a heads-up display.
+ */
+class HUD : public Entity
+{
+public:
+  HUD(string id);
+  void init(Core * core);
 };

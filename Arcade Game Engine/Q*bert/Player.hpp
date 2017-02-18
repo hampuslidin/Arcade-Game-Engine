@@ -24,8 +24,6 @@ enum PlayerDirection
  */
 class PlayerInputComponent
   : public InputComponent
-  , public Notifier
-  , public Observer
 {
   bool _animating;
   bool _did_jump_off;
@@ -33,24 +31,23 @@ public:
   void init(Entity * entity);
   void reset();
   void update(Core & core);
-  void onNotify(Entity & entity, Event event);
 };
 
 /**
  *  Defines the player animations.
  */
-class PlayerAnimationComponent : public AnimationComponent, public Observer
+class PlayerAnimationComponent
+  : public AnimationComponent
 {
 public:
   void init(Entity * entity);
-  void onNotify(Entity & entity, Event event);
 };
 
 /**
  *  Defines the player physics.
  */
 class PlayerPhysicsComponent
-: public PhysicsComponent
+  : public PhysicsComponent
 {
   bool _has_jumped_once;
   bool _animating;
@@ -60,20 +57,19 @@ public:
   void init(Entity * entity);
   void reset();
   void update(Core & core);
-  void onNotify(Entity & entity, Event event);
 };
 
 /**
  *  Defines the player graphics.
  */
-class PlayerGraphicsComponent : public GraphicsComponent, public Observer
+class PlayerGraphicsComponent
+  : public GraphicsComponent
 {
   int _current_direction;
   bool _jumping;
 public:
   void init(Entity * entity);
   void reset();
-  void onNotify(Entity & entity, Event event);
 };
 
 /**
@@ -83,5 +79,6 @@ class Player : public Entity
 {
 public:
   Player(string id);
+  void init(Core * core);
   void reset();
 };

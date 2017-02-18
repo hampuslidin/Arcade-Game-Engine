@@ -4,7 +4,6 @@
 //
 
 #include "core.hpp"
-#include "Block.hpp"
 #include <fstream>
 #include <stack>
 
@@ -88,51 +87,93 @@ void Sprite::draw(int x, int y, int w, int h, int scale)
 }
 
 //
-// MARK: - Notifier
+// MARK: - SpriteCollection
 //
 
-// MARK: Member functions
-
-void Notifier::addObserver(Observer * observer, const Event & event)
+SpriteCollection & SpriteCollection::main()
 {
-  observers()[event].push_back(observer);
+  static SpriteCollection instance;
+  return instance;
 }
 
-void Notifier::removeObserver(Observer * observer)
+void SpriteCollection::init(SDL_Renderer * renderer)
 {
-  for (auto pair : observers())
+  _renderer = renderer;
+}
+
+Sprite * SpriteCollection::create(string id, const char * filename)
+{
+  return _sprites[id] = Sprite::createSprite(_renderer, filename);
+}
+
+void SpriteCollection::destroy(string id)
+{
+  auto it = _sprites.find(id);
+  if (it != _sprites.end())
   {
-    for (auto i = 0; i < pair.second.size(); i++)
-    {
-      if (observer == pair.second[i])
-      {
-        observers()[pair.first].erase(pair.second.begin()+i);
-        return;
-      }
-    }
+    _sprites.at(id)->destroy();
+    _sprites.erase(it);
   }
 }
 
-void Notifier::removeObserver(Observer * observer, const Event & event)
+void SpriteCollection::destroyAll()
 {
-  auto it = observers().find(event);
-  if (it != observers().end())
+  for (auto pair : _sprites)
   {
-    auto observers_for_event = observers()[event];
-    for (auto i = 0; i < observers_for_event.size(); i++)
-    {
-      if (observer == observers_for_event[i])
-      {
-        observers_for_event.erase(observers_for_event.begin()+i);
-        return;
-      }
-    }
+    pair.second->destroy();
   }
+  _sprites.clear();
 }
 
-void Notifier::notify(Entity & entity, Event event)
+Sprite * SpriteCollection::retrieve(string id)
 {
-  for (auto observer : observers()[event]) observer->onNotify(entity, event);
+  if (_sprites.find(id) != _sprites.end())
+  {
+    return _sprites.at(id);
+  }
+  return nullptr;
+}
+
+void SpriteCollection::draw(string id, int x, int y, int w, int h, int scale)
+{
+  Sprite * sprite;
+  if ((sprite = retrieve(id))) sprite->draw(x, y, w, h, scale);
+}
+
+//
+// MARK: - NotificationCenter
+//
+
+NotificationCenter & NotificationCenter::main()
+{
+  static NotificationCenter instance;
+  return instance;
+}
+
+void NotificationCenter::notify(Event event)
+{
+  for (auto f : _blocks[event]) f(event);
+}
+
+size_t NotificationCenter::observe(Event event, function<void(Event)> block)
+{
+  auto size = _blocks[event].size();
+  _blocks[event].push_back(block);
+  return hash<string>{}(event.string_value() + to_string(size));
+}
+
+void NotificationCenter::unobserve(Event event, size_t id)
+{
+  auto blocks_for_event = _blocks[event];
+  for (auto i = 0; i < blocks_for_event.size(); i++)
+  {
+    size_t h = hash<string>{}(event.string_value() + to_string(i));
+    if (h == id)
+    {
+      _blocks[event].erase(blocks_for_event.begin()+i);
+      return;
+    }
+  }
 }
 
 
@@ -201,6 +242,7 @@ bool Core::init(Entity * root,
   // initialize member properties
   _keys.up = _keys.down = _keys.left = _keys.right = false;
   _prev_time = 0;
+  SpriteCollection::main().init(renderer());
   
   // initialize entities
   this->root(root);
@@ -212,6 +254,7 @@ bool Core::init(Entity * root,
 
 void Core::destroy()
 {
+  SpriteCollection::main().destroyAll();
   root()->destroy();
     
   SDL_DestroyRenderer(renderer());
@@ -499,8 +542,6 @@ void Entity::changeVelocityBy(double dvx, double dvy)
   velocity().y += dvy;
 }
 
-
-
 void Entity::update()
 {
   _tmp_update(this, core(), 0);
@@ -572,7 +613,8 @@ bool AnimationComponent::performAnimation(string id, bool calculate_velocity)
     _current_movement_index = 0;
     _animation_start_time = entity()->core()->elapsedTime();
     _calculate_velocity = calculate_velocity;
-    notify(*entity(), DidStartAnimating);
+    NotificationCenter::main().notify(DidStartAnimating);
+//    notify(*entity(), DidStartAnimating);
     return true;
   }
   return false;
@@ -597,7 +639,7 @@ void AnimationComponent::update(Core & world)
     
     if (total_movement.x != 0 || total_movement.y != 0)
     {
-      notify(*entity(), DidStartMovingInAnimation);
+      NotificationCenter::main().notify(DidStartMovingInAnimation);
     }
     
     if (elapsed < _animation.duration) { return; }
@@ -610,23 +652,16 @@ void AnimationComponent::update(Core & world)
       entity()->changeVelocityTo(velocity.x, velocity.y);
     }
     animating(false);
-    notify(*entity(), DidStopAnimating);
+    NotificationCenter::main().notify(DidStopAnimating);
   }
 }
+
 
 //
 // MARK: - GraphicsComponent
 //
 
 // MARK: Member functions
-
-GraphicsComponent::~GraphicsComponent()
-{
-  for (auto sprite : sprites())
-  {
-    sprite->destroy();
-  }
-}
 
 void GraphicsComponent::offsetTo(int x, int y)
 {

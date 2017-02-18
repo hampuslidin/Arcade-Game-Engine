@@ -5,7 +5,6 @@
 
 #include "core.hpp"
 
-
 /********************************
  * Core
  ********************************/
@@ -91,7 +90,7 @@ PhysicsComponent::PhysicsComponent()
   _out_of_view = true;
   collision_bounds({0, 0, 16, 16});
   gravity(9.82);
-  pixels_per_meter(150);
+  pixels_per_meter(90);
   dynamic(false);
   collision_detection(false);
   collision_response(false);
@@ -102,12 +101,11 @@ void PhysicsComponent::init(Entity * entity)
 {
   Component::init(entity);
   
-  const auto animation_notifier = dynamic_cast<Notifier*>(entity->animation());
-  if (animation_notifier)
-  {
-    animation_notifier->addObserver(this, DidStartAnimating);
-    animation_notifier->addObserver(this, DidStopAnimating);
-  }
+  auto f1 = [this](Event _) { _should_simulate = false; };
+  auto f2 = [this](Event _) { _should_simulate = true;  };
+  
+  NotificationCenter::main().observe(DidStartAnimating, f1);
+  NotificationCenter::main().observe(DidStopAnimating,  f2);
 }
 
 void PhysicsComponent::update(Core & core)
@@ -129,7 +127,7 @@ void PhysicsComponent::update(Core & core)
           world_position.y >= core.view_dimensions().y) && !_out_of_view)
       {
         _out_of_view = true;
-        notify(*entity(), DidMoveOutOfView);
+        NotificationCenter::main().notify(DidMoveOutOfView);
       }
       else if ((world_position.x >= 0 &&
                 world_position.x < core.view_dimensions().x &&
@@ -137,7 +135,7 @@ void PhysicsComponent::update(Core & core)
                 world_position.y < core.view_dimensions().y) && _out_of_view)
       {
         _out_of_view = false;
-        notify(*entity(), DidMoveIntoView);
+        NotificationCenter::main().notify(DidMoveIntoView);
       }
 
     }
@@ -149,20 +147,8 @@ void PhysicsComponent::update(Core & core)
                              collided_entities());
       if (collided_entities().size() > 0)
       {
-        notify(*entity(), DidCollide);
+        NotificationCenter::main().notify(DidCollide);
       }
     }
-  }
-}
-
-void PhysicsComponent::onNotify(Entity & entity, Event event)
-{
-  if (event == DidStartAnimating)
-  {
-    _should_simulate = false;
-  }
-  else if (event == DidStopAnimating)
-  {
-    _should_simulate = true;
   }
 }
