@@ -120,8 +120,8 @@
 				D29DC5421E509E250005EC95 /* main.cpp */,
 				D29DC5431E509E250005EC95 /* Player.cpp */,
 				D2F614F11E54C7D400B33DAB /* Board.cpp */,
-				D23CC4BF1E57514E00B774C9 /* Level.cpp */,
 				D23CC4C21E57533E00B774C9 /* HUD.cpp */,
+				D23CC4BF1E57514E00B774C9 /* Level.cpp */,
 			);
 			name = "Q*bert";
 			sourceTree = "<group>";
@@ -131,8 +131,8 @@
 			children = (
 				D29DC5411E509E250005EC95 /* Player.hpp */,
 				D2F614F21E54C7D400B33DAB /* Board.hpp */,
-				D23CC4C01E57514E00B774C9 /* Level.hpp */,
 				D23CC4C31E57533E00B774C9 /* HUD.hpp */,
+				D23CC4C01E57514E00B774C9 /* Level.hpp */,
 			);
 			name = include;
 			sourceTree = "<group>";

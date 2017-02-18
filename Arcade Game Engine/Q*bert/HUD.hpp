@@ -8,10 +8,12 @@
 #include "core.hpp"
 #include "Level.hpp"
 
+
 /**
  *  Defines player text graphics.
  */
-class PlayerTextGraphicsComponent : public GraphicsComponent
+class PlayerTextGraphicsComponent
+  : public GraphicsComponent
 {
   const double _duration = 0.5;
   double _start_time;
@@ -50,7 +52,8 @@ public:
 /**
  *  Defines score graphics.
  */
-class ScoreDigitGraphicsComponent : public GraphicsComponent
+class ScoreDigitGraphicsComponent
+  : public GraphicsComponent
 {
 public:
   void init(Entity * entity);
@@ -63,7 +66,7 @@ public:
 class ScoreDigit : public Entity
 {
 public:
-  prop_r<ScoreDigit, int> digit;
+  prop<int> digit;
   
   ScoreDigit(string id, int x, int y);
   void init(Core * core);

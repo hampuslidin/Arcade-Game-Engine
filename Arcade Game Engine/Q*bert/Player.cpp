@@ -12,13 +12,15 @@
 // MARK: - PlayerInputComponent
 //
 
+// MARK: Member functions
+
 void PlayerInputComponent::init(Entity * entity)
 {
   InputComponent::init(entity);
   
-  auto f1 = [this](Event _) { _animating    = true;    };
-  auto f2 = [this](Event _) { _animating    = false;   };
-  auto f3 = [this](Event _) { _did_jump_off = true;    };
+  auto f1 = [this](Event, vector<GameObject*> *) { _animating = true;    };
+  auto f2 = [this](Event, vector<GameObject*> *) { _animating = false;   };
+  auto f3 = [this](Event, vector<GameObject*> *) { _did_jump_off = true; };
   
   NotificationCenter::main().observe(DidStartAnimating, f1);
   NotificationCenter::main().observe(DidStopAnimating,  f2);
@@ -64,6 +66,8 @@ void PlayerInputComponent::update(Core & core)
 // MARK: - PlayerAnimationComponent
 //
 
+// MARK: Member functions
+
 void PlayerAnimationComponent::init(Entity * entity)
 {
   AnimationComponent::init(entity);
@@ -73,7 +77,7 @@ void PlayerAnimationComponent::init(Entity * entity)
   loadAnimationFromFile("animations/jump_left.anim",  "jump_left",  0.5);
   loadAnimationFromFile("animations/jump_right.anim", "jump_right", 0.5);
   
-  auto f = [this](Event event)
+  auto f = [this](Event event, vector<GameObject*> *)
   {
     switch (event.parameter())
     {
@@ -100,6 +104,8 @@ void PlayerAnimationComponent::init(Entity * entity)
 // MARK: - PlayerPhysicsComponent
 //
 
+// MARK: Member functions
+
 PlayerPhysicsComponent::PlayerPhysicsComponent()
 {
   collision_bounds({7, 14, 2, 2});
@@ -109,10 +115,10 @@ void PlayerPhysicsComponent::init(Entity * entity)
 {
   PhysicsComponent::init(entity);
 
-  auto f1 = [this](Event _) { _has_jumped_once = true;  };
-  auto f2 = [this](Event _) { _animating       = true;  };
-  auto f3 = [this](Event _) { _animating       = false; };
-  auto f4 = [entity](Event _)
+  auto f1 = [this](Event, vector<GameObject*> *) { _has_jumped_once = true;  };
+  auto f2 = [this](Event, vector<GameObject*> *) { _animating       = true;  };
+  auto f3 = [this](Event, vector<GameObject*> *) { _animating       = false; };
+  auto f4 = [entity](Event, vector<GameObject*> *)
   {
     entity->order(-1);
     entity->core()->reset();
@@ -146,8 +152,7 @@ void PlayerPhysicsComponent::update(Core & core)
       string id_prefix = collided_entity->id().substr(0, 5);
       if (collided_entity->id().compare(0, 5, "block") == 0)
       {
-        Block * block = dynamic_cast<Block*>(collided_entity);
-        block->toggle(entity()->id());
+        ((Block*)collided_entity)->toggle(entity()->id());
         return;
       }
     }
@@ -168,11 +173,13 @@ void PlayerPhysicsComponent::update(Core & core)
 // MARK: - PlayerGraphicsComponent
 //
 
+// MARK: Member functions
+
 void PlayerGraphicsComponent::init(Entity * entity)
 {
   GraphicsComponent::init(entity);
   
-  auto f1 = [this](Event event)
+  auto f1 = [this](Event event, vector<GameObject*> *)
   {
     _current_direction = event.parameter();
     _jumping = true;
@@ -180,13 +187,13 @@ void PlayerGraphicsComponent::init(Entity * entity)
     current_sprite(SpriteCollection::main().retrieve(id));
   };
   
-  auto f2 = [this](Event _)
+  auto f2 = [this](Event, vector<GameObject*> *)
   {
     const string id = "qbert_jumping_" + to_string(_current_direction);
     current_sprite(SpriteCollection::main().retrieve(id));
   };
   
-  auto f3 = [this](Event _)
+  auto f3 = [this](Event, vector<GameObject*> *)
   {
     _jumping = false;
     const string id = "qbert_standing_" + to_string(_current_direction);

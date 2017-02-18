@@ -150,12 +150,14 @@ NotificationCenter & NotificationCenter::main()
   return instance;
 }
 
-void NotificationCenter::notify(Event event)
+void NotificationCenter::notify(Event event, vector<GameObject*> * game_objects)
 {
-  for (auto f : _blocks[event]) f(event);
+  for (auto f : _blocks[event]) f(event, game_objects);
 }
 
-size_t NotificationCenter::observe(Event event, function<void(Event)> block)
+size_t NotificationCenter::observe(Event event,
+                                   function<void(Event,
+                                                 vector<GameObject*>*)> block)
 {
   auto size = _blocks[event].size();
   _blocks[event].push_back(block);
@@ -357,11 +359,17 @@ double Core::elapsedTime()
   return SDL_GetTicks() / 1000.f;
 }
 
+
 //
 // MARK: - Entity
 //
 
 // MARK: Properties
+
+string Entity::id()
+{
+  return _id;
+}
 
 void Entity::order(int new_value)
 {
@@ -390,7 +398,6 @@ int Entity::order()
 }
 
 
-
 // MARK: Member functions
 
 Entity::Entity(string id,
@@ -399,7 +406,7 @@ Entity::Entity(string id,
                PhysicsComponent * physics,
                GraphicsComponent * graphics)
 {
-  this->id(id);
+  _id = id;
   core(nullptr);
   parent(nullptr);
   local_position({0, 0});
@@ -555,8 +562,16 @@ void Entity::update()
 // MARK: - Component
 //
 
-// MARK: Member functions
+// MARK: Properties
 
+string Component::id()
+{
+  string id = trait() + "_component";
+  if (entity()) id = entity()->id() + "_" + id;
+  return id;
+}
+
+// MARK: Member functions
 void Component::init(Entity * entity)
 {
   this->entity(entity);
@@ -564,8 +579,21 @@ void Component::init(Entity * entity)
 
 
 //
+// MARK: - InputComponent
+//
+
+// MARK: Properties
+
+string InputComponent::trait() { return "input"; }
+
+
+//
 // MARK: - AnimationComponent
 //
+
+// MARK: Properties
+
+string AnimationComponent::trait() { return "animation"; }
 
 // MARK: Member functions
 
@@ -614,7 +642,6 @@ bool AnimationComponent::performAnimation(string id, bool calculate_velocity)
     _animation_start_time = entity()->core()->elapsedTime();
     _calculate_velocity = calculate_velocity;
     NotificationCenter::main().notify(DidStartAnimating);
-//    notify(*entity(), DidStartAnimating);
     return true;
   }
   return false;
@@ -660,6 +687,10 @@ void AnimationComponent::update(Core & world)
 //
 // MARK: - GraphicsComponent
 //
+
+// MARK: Properties
+
+string GraphicsComponent::trait() { return "graphics"; }
 
 // MARK: Member functions
 

@@ -10,7 +10,8 @@
 /**
  *  Defines the block physics.
  */
-class BlockPhysicsComponent : public PhysicsComponent
+class BlockPhysicsComponent
+  : public PhysicsComponent
 {
 public:
   BlockPhysicsComponent();
@@ -19,7 +20,8 @@ public:
 /**
  *  Defines the block graphics.
  */
-class BlockGraphicsComponent : public GraphicsComponent
+class BlockGraphicsComponent
+  : public GraphicsComponent
 {
   int _base_i;
   int _detail_i;
@@ -34,7 +36,8 @@ public:
 /**
  *  Defines a block.
  */
-class Block : public Entity
+class Block
+  : public Entity
 {
 public:
   Block(string id, int x, int y);
@@ -44,7 +47,8 @@ public:
 /**
  *  Defines a board.
  */
-class Board : public Entity
+class Board
+  : public Entity
 {
 public:
   Board(string id);

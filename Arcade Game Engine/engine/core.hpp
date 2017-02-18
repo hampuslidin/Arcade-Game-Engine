@@ -24,6 +24,7 @@ class Sprite;
 class SpriteCollection;
 class NotificationCenter;
 class Core;
+class GameObject;
 class Entity;
 class Component;
 class InputComponent;
@@ -93,14 +94,15 @@ public:
 
 class NotificationCenter
 {
-  map<Event, vector<function<void(Event)>>> _blocks;
+  map<Event, vector<function<void(Event, vector<GameObject*>*)>>> _blocks;
   
   NotificationCenter() {};
 public:
   NotificationCenter(NotificationCenter const &) = delete;
   static NotificationCenter & main();
-  void notify(Event event);
-  size_t observe(Event event, function<void(Event)> block);
+  void notify(Event event, vector<GameObject*> * game_objects = nullptr);
+  size_t observe(Event event,
+                 function<void(Event, vector<GameObject*>*)> block);
   void unobserve(Event event, size_t id);
   
   void operator=(NotificationCenter const &) = delete;
@@ -153,6 +155,16 @@ private:
 };
 
 
+
+//
+// MARK: - GameObject
+//
+class GameObject {
+public:
+  virtual string id() = 0;
+};
+
+
 //
 // MARK: - Entity
 //
@@ -161,12 +173,13 @@ private:
  *  Defines a class that represents a game entity that resides in a game world.
  */
 class Entity
+  : public GameObject
 {
+  string _id;
 public:
   // MARK: Properties
   
   prop_r<Entity,               Core*> core;
-  prop_r<Entity,              string> id;
   prop_r<Entity,             Entity*> parent;
   prop_r<Entity,     vector<Entity*>> children;
   prop_r<Entity,     InputComponent*> input;
@@ -175,6 +188,8 @@ public:
   prop_r<Entity,  GraphicsComponent*> graphics;
   prop_r<Entity,             Vector2> local_position;
   prop_r<Entity,             Vector2> velocity;
+  
+  string id();
   
   /**
    *  Change the order in the layer. Affects the update order on the parents
@@ -254,10 +269,15 @@ public:
  *  An abstrct class for a generic component.
  */
 class Component
+  : public GameObject
 {
 protected:
   prop_r<Component, Entity*> entity;
+  
+  virtual string trait() = 0;
 public:
+  string id();
+  
   virtual ~Component() {};
   virtual void init(Entity * entity);
   virtual void reset() {};
@@ -268,7 +288,11 @@ public:
 /**
  *  InputConponent is responsible for defining the behavior of an Entity.
  */
-class InputComponent : public Component {};
+class InputComponent
+  : public Component
+{
+  string trait();
+};
 
 
 /**
@@ -283,6 +307,8 @@ class AnimationComponent
     vector<Vector2> movements;
     double          duration;
   };
+  
+  string trait();
   
   map<string, _AnimationPath> _animation_paths;
   _AnimationPath _animation;
@@ -331,6 +357,9 @@ class PhysicsComponent
 {
   bool _should_simulate;
   bool _out_of_view;
+  bool _did_collide;
+  
+  string trait();
 protected:
   prop_r<PhysicsComponent, vector<Entity*>> collided_entities;
 public:
@@ -354,12 +383,11 @@ public:
  */
 class GraphicsComponent : public Component
 {
+  string trait();
 protected:
   prop<  Sprite*> current_sprite;
   prop<Rectangle> bounds;
-  
 public:
-  
   void offsetTo(int x, int y);
   void offsetBy(int dx, int dy);
   void resizeTo(int w, int h);

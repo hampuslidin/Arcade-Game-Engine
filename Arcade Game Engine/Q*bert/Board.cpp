@@ -12,6 +12,8 @@
 // MARK: - BlockPhysicsComponent
 //
 
+// MARK: Member functions
+
 BlockPhysicsComponent::BlockPhysicsComponent()
   : PhysicsComponent()
 {
@@ -22,6 +24,8 @@ BlockPhysicsComponent::BlockPhysicsComponent()
 //
 // MARK: - BlockGraphicsComponent
 //
+
+// MARK: Member functions
 
 void BlockGraphicsComponent::init(Entity * entity)
 {

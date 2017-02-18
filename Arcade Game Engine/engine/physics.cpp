@@ -81,13 +81,19 @@ void Core::resolveCollisions(Entity & collider,
   _resolveCollisions(collider, *root(), collision_response, result);
 }
 
-/********************************
- * PhysicsComponent
- ********************************/
+
+//
+// MARK: - PhysicsComponent
+//
+
+// MARK: Properties
+
+string PhysicsComponent::trait() { return "physics"; }
+
+// MARK: Member functions
+
 PhysicsComponent::PhysicsComponent()
 {
-  _should_simulate = true;
-  _out_of_view = true;
   collision_bounds({0, 0, 16, 16});
   gravity(9.82);
   pixels_per_meter(90);
@@ -101,8 +107,12 @@ void PhysicsComponent::init(Entity * entity)
 {
   Component::init(entity);
   
-  auto f1 = [this](Event _) { _should_simulate = false; };
-  auto f2 = [this](Event _) { _should_simulate = true;  };
+  _should_simulate = true;
+  _out_of_view = true;
+  _did_collide = false;
+  
+  auto f1 = [this](Event, vector<GameObject*> *) { _should_simulate = false; };
+  auto f2 = [this](Event, vector<GameObject*> *) { _should_simulate = true;  };
   
   NotificationCenter::main().observe(DidStartAnimating, f1);
   NotificationCenter::main().observe(DidStopAnimating,  f2);
@@ -147,8 +157,22 @@ void PhysicsComponent::update(Core & core)
                              collided_entities());
       if (collided_entities().size() > 0)
       {
-        NotificationCenter::main().notify(DidCollide);
+        if (!_did_collide)
+        {
+          vector<GameObject*> game_objects(collided_entities().begin(),
+                                           collided_entities().end());
+          NotificationCenter::main().notify(DidCollide, &game_objects);
+          _did_collide = true;
+        }
+      }
+      else
+      {
+        _did_collide = false;
       }
     }
+  }
+  else
+  {
+    _did_collide = false;
   }
 }

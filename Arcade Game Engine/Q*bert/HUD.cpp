@@ -10,6 +10,8 @@
 // MARK: - PlayerTextGraphicsComponent
 //
 
+// MARK: Member functions
+
 void PlayerTextGraphicsComponent::init(Entity * entity)
 {
   GraphicsComponent::init(entity);
@@ -70,7 +72,7 @@ Score::Score(string id)
 {
   for (auto n = 0; n < 10; n++)
   {
-    string id = "textures/score_digit_" + to_string(n) + ".png";
+    string id = "score_digit_" + to_string(n);
     addChild(new ScoreDigit(id, 8*n, 0));
   }
 }
@@ -87,6 +89,26 @@ void Score::init(Core * core)
     sprites.create(id, filename.c_str());
   }
   
+  auto f = [this](Event, vector<GameObject*> *)
+  {
+    score(score()+25);
+    int num_digits = 0;
+    int tmp = score();
+    while (tmp > 0)
+    {
+      tmp /= 10;
+      num_digits += 1;
+    }
+    
+    tmp = score();
+    for (auto i = num_digits-1; i >= 0; i--, tmp /= 10)
+    {
+      ((ScoreDigit*)children()[i])->digit(tmp % 10);
+    }
+  };
+  
+  NotificationCenter::main().observe(DidCollide, f);
+  
   _level = (Level*)(core->root());
   moveTo(8, 16);
 }
@@ -101,6 +123,8 @@ void Score::reset()
 //
 // MARK: - ScoreDigitGraphicsComponent
 //
+
+// MARK: Member functions
 
 void ScoreDigitGraphicsComponent::init(Entity * entity)
 {
