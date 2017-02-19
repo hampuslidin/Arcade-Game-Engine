@@ -4,7 +4,6 @@
 //
 
 #include "core.hpp"
-#include <fstream>
 #include <stack>
 
 // MARK: Helper functions
@@ -271,6 +270,11 @@ void Core::reset()
   _reset = true;
 }
 
+void Core::createTimer(double duration, function<void ()> block)
+{
+  _timers.push_back({elapsedTime() + duration, block});
+}
+
 bool Core::update()
 {
   // record time
@@ -332,7 +336,7 @@ bool Core::update()
         }
       }
     }
-  
+    
     // update root
     if (_reset)
     {
@@ -344,6 +348,19 @@ bool Core::update()
     // clear screen
     SDL_RenderPresent(renderer());
     SDL_RenderClear(renderer());
+    
+    // go through timers
+    auto tmp = _timers;
+    for (auto i = 0; i < tmp.size(); i++)
+    {
+      auto timer = tmp[i];
+      const double current_time = elapsedTime();
+      if (current_time >= timer.end_time)
+      {
+        timer.block();
+        _timers.erase(_timers.begin()+i);
+      }
+    }
     
     return should_continue;
   }
@@ -591,103 +608,6 @@ void Component::init(Entity * entity)
 // MARK: Property functions
 
 string InputComponent::trait() { return "input"; }
-
-
-//
-// MARK: - AnimationComponent
-//
-
-// MARK: Property functions
-
-string AnimationComponent::trait() { return "animation"; }
-
-// MARK: Member functions
-
-void AnimationComponent::reset()
-{
-  animating(false);
-  _calculate_velocity = false;
-}
-
-bool AnimationComponent::loadAnimationFromFile(string filename,
-                                               string animation_id,
-                                               double duration)
-{
-  vector<Vector2> movements;
-  ifstream file(filename);
-  if (file.is_open())
-  {
-    double x, y;
-    while (file >> x >> y)
-    {
-      movements.push_back({x, y});
-    }
-    if (movements.size() > 0)
-    {
-      _animation_paths[animation_id] = {movements, duration};
-      file.close();
-      return true;
-    }
-  }
-  file.close();
-  return false;
-}
-
-bool AnimationComponent::removeAnimation(string id)
-{
-  return _animation_paths.erase(id) == 1;
-}
-
-bool AnimationComponent::performAnimation(string id, bool calculate_velocity)
-{
-  if (!animating() && _animation_paths.find(id) != _animation_paths.end())
-  {
-    animating(true);
-    _animation = _animation_paths[id];
-    _current_movement_index = 0;
-    _animation_start_time = entity()->core()->elapsedTime();
-    _calculate_velocity = calculate_velocity;
-    NotificationCenter::main().notify(DidStartAnimating);
-    return true;
-  }
-  return false;
-}
-
-void AnimationComponent::update(Core & world)
-{
-  if (animating())
-  {
-    const double elapsed  = world.elapsedTime() - _animation_start_time;
-    const double fraction = elapsed / _animation.duration;
-    const long max = _animation.movements.size();
-    const long bound = fraction < 1 ? floor(fraction * max) + 1 : max;
-    
-    Vector2 total_movement {0, 0};
-    for (; _current_movement_index < bound; _current_movement_index++)
-    {
-      total_movement += _animation.movements[_current_movement_index];
-    }
-    
-    entity()->moveBy(total_movement.x, total_movement.y);
-    
-    if (total_movement.x != 0 || total_movement.y != 0)
-    {
-      NotificationCenter::main().notify(DidStartMovingInAnimation);
-    }
-    
-    if (elapsed < _animation.duration) { return; }
-    
-    if (_calculate_velocity)
-    {
-      const Vector2 distance = _animation.movements.back();
-      const double time = _animation.duration / _animation.movements.size();
-      const Vector2 velocity = distance / time;
-      entity()->changeVelocityTo(velocity.x, velocity.y);
-    }
-    animating(false);
-    NotificationCenter::main().notify(DidStopAnimating);
-  }
-}
 
 
 //

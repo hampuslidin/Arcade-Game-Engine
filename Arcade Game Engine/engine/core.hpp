@@ -23,6 +23,7 @@ using namespace std;
 class Sprite;
 class SpriteCollection;
 class NotificationCenter;
+class Timer;
 class Core;
 class GameObject;
 class Entity;
@@ -128,7 +129,14 @@ public:
     bool up, down, left, right;
   };
 private:
+  struct _Timer
+  {
+    double end_time;
+    function<void(void)> block;
+  };
+  
   KeyStatus _keys;
+  vector<_Timer> _timers;
   double _prev_time;
   bool _initialized;
   bool _reset;
@@ -147,6 +155,7 @@ public:
             RGBAColor background_color = {0x00, 0x00, 0x00, 0xFF});
   void destroy();
   void reset();
+  void createTimer(double duration, function<void(void)> block);
   bool update();
   void resolveCollisions(Entity & collider,
                          bool collision_response,
@@ -304,40 +313,26 @@ class InputComponent
 class AnimationComponent
   : public Component
 {
-  struct _AnimationPath
-  {
-    vector<Vector2> movements;
-    double          duration;
-  };
-  
+public:
+  typedef vector<pair<Vector2, Vector2>> CubicHermiteCurve;
+private:
   string trait();
   
-  map<string, _AnimationPath> _animation_paths;
-  _AnimationPath _animation;
-  double _animation_start_time;
-  int _current_movement_index;
-  bool _calculate_velocity;
+  map<string, CubicHermiteCurve> _curves;
+  CubicHermiteCurve _current_curve;
+  Vector2 _start_position;
+  double _start_time;
+  double _duration;
+  bool _update_velocity;
+  bool _did_start_moving;
 public:
+  
   prop_r<AnimationComponent, bool> animating;
   
   virtual void reset();
   
-  /**
-   *  Loads an animation by reading the file at the specified location.
-   *  
-   *  @return true on success, false when failing to read the file.
-   */
-  bool loadAnimationFromFile(string filename,
-                             string animation_id,
-                             double duration);
-  
-  /**
-   *  Removes an animation with the given id.
-   *
-   *  @return true on success, false if animation with associated id does not
-   *  exist.
-   */
-  bool removeAnimation(string id);
+  void addSegment(string id, Vector2 point, Vector2 velocity);
+  void removeCurve(string id);
   
   /**
    *  Initiates an animation, which will get updated by the *update* member
@@ -345,7 +340,10 @@ public:
    *
    *  @return 0 on success, 1 if animation with associated id does not exist.
    */
-  bool performAnimation(string id, bool calculate_velocity = false);
+  void performAnimation(string id,
+                        double duration,
+                        bool update_velocity = false);
+
   virtual void update(Core & core);
 };
 

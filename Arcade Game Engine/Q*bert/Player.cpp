@@ -18,13 +18,18 @@ void PlayerInputComponent::init(Entity * entity)
 {
   InputComponent::init(entity);
   
-  auto f1 = [this](Event, vector<GameObject*> *) { _animating = true;    };
-  auto f2 = [this](Event, vector<GameObject*> *) { _animating = false;   };
-  auto f3 = [this](Event, vector<GameObject*> *) { _did_jump_off = true; };
+  auto f1 = [this](Event, vector<GameObject*> *) { _animating       = true;  };
+  auto f2 = [this, entity](Event, vector<GameObject*> *)
+  {
+    entity->core()->createTimer(0.15, [this]()   { _animating       = false; });
+  };
+  auto f3 = [this](Event, vector<GameObject*> *) { _did_jump_off    = true;  };
+  auto f4 = [this](Event, vector<GameObject*> *) { _did_clear_board = true;  };
   
   NotificationCenter::main().observe(DidStartAnimating, f1);
   NotificationCenter::main().observe(DidStopAnimating,  f2);
   NotificationCenter::main().observe(DidFallOff,        f3);
+  NotificationCenter::main().observe(DidClearBoard,     f4);
 }
 
 void PlayerInputComponent::reset()
@@ -33,11 +38,12 @@ void PlayerInputComponent::reset()
   
   _animating = false;
   _did_jump_off = false;
+  _did_clear_board = false;
 }
 
 void PlayerInputComponent::update(Core & core)
 {
-  if (!_animating && !_did_jump_off)
+  if (!_animating && !_did_jump_off && !_did_clear_board)
   {
     Core::KeyStatus keys;
     core.getKeyStatus(keys);
@@ -72,26 +78,33 @@ void PlayerAnimationComponent::init(Entity * entity)
 {
   AnimationComponent::init(entity);
   
-  loadAnimationFromFile("animations/jump_up.anim",    "jump_up",    0.5);
-  loadAnimationFromFile("animations/jump_down.anim",  "jump_down",  0.5);
-  loadAnimationFromFile("animations/jump_left.anim",  "jump_left",  0.5);
-  loadAnimationFromFile("animations/jump_right.anim", "jump_right", 0.5);
+  addSegment("jump_up",    {0,     0}, {16,  -86.848});
+  addSegment("jump_up",    {16,  -24}, {16,   38.848});
+  
+  addSegment("jump_down",  {0,     0}, {-16, -38.848});
+  addSegment("jump_down",  {-16,  24}, {-16,  86.848});
+  
+  addSegment("jump_left",  {0,     0}, {-16, -86.848});
+  addSegment("jump_left",  {-16, -24}, {-16,  38.848});
+  
+  addSegment("jump_right", {0,     0}, {16,  -38.848});
+  addSegment("jump_right", {16,   24}, {16,   86.848});
   
   auto f = [this](Event event, vector<GameObject*> *)
   {
     switch (event.parameter())
     {
       case UP:
-        performAnimation("jump_up", true);
+        performAnimation("jump_up", 0.4, true);
         break;
       case DOWN:
-        performAnimation("jump_down", true);
+        performAnimation("jump_down", 0.4, true);
         break;
       case LEFT:
-        performAnimation("jump_left", true);
+        performAnimation("jump_left", 0.4, true);
         break;
       case RIGHT:
-        performAnimation("jump_right", true);
+        performAnimation("jump_right", 0.4, true);
         break;
     }
   };
@@ -121,7 +134,10 @@ void PlayerPhysicsComponent::init(Entity * entity)
   auto f4 = [entity](Event, vector<GameObject*> *)
   {
     entity->order(-1);
-    entity->core()->reset();
+    entity->core()->createTimer(1, [entity]()
+    {
+      entity->core()->reset();
+    });
   };
   
   NotificationCenter::main().observe(DidJump,           f1);

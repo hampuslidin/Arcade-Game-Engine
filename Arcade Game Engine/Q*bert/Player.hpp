@@ -27,6 +27,7 @@ class PlayerInputComponent
 {
   bool _animating;
   bool _did_jump_off;
+  bool _did_clear_board;
 public:
   void init(Entity * entity);
   void reset();

@@ -96,7 +96,7 @@ PhysicsComponent::PhysicsComponent()
 {
   collision_bounds({0, 0, 16, 16});
   gravity(9.82);
-  pixels_per_meter(90);
+  pixels_per_meter(80);
   dynamic(false);
   collision_detection(false);
   collision_response(false);

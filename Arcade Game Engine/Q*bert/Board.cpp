@@ -137,7 +137,10 @@ void Board::init(Core * core)
     if (_sum == 0)
     {
       NotificationCenter::main().notify(DidClearBoard);
-      core->reset();
+      core->createTimer(1, [core]()
+      {
+        core->reset();
+      });
     }
   };
   

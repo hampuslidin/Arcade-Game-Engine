@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D215B0B21E59951C00846D94 /* animation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D215B0B11E59951C00846D94 /* animation.cpp */; };
 		D23CC4C11E57514E00B774C9 /* Level.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D23CC4BF1E57514E00B774C9 /* Level.cpp */; };
 		D23CC4C41E57533E00B774C9 /* HUD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D23CC4C21E57533E00B774C9 /* HUD.cpp */; };
 		D29DC53D1E509D780005EC95 /* core.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D29DC53B1E509D780005EC95 /* core.cpp */; };
@@ -33,6 +34,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		D215B0B11E59951C00846D94 /* animation.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = animation.cpp; path = engine/animation.cpp; sourceTree = "<group>"; };
 		D23CC4BF1E57514E00B774C9 /* Level.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Level.cpp; path = "Q*bert/Level.cpp"; sourceTree = "<group>"; };
 		D23CC4C01E57514E00B774C9 /* Level.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Level.hpp; path = "Q*bert/Level.hpp"; sourceTree = "<group>"; };
 		D23CC4C21E57533E00B774C9 /* HUD.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = HUD.cpp; path = "Q*bert/HUD.cpp"; sourceTree = "<group>"; };
@@ -99,6 +101,7 @@
 				D29DC53F1E509DE40005EC95 /* include */,
 				D29DC53B1E509D780005EC95 /* core.cpp */,
 				D2F614D41E53183C00B33DAB /* types.cpp */,
+				D215B0B11E59951C00846D94 /* animation.cpp */,
 				D29DC53C1E509D780005EC95 /* physics.cpp */,
 			);
 			name = engine;
@@ -217,6 +220,7 @@
 				D2F614F31E54C7D400B33DAB /* Board.cpp in Sources */,
 				D29DC5451E509E250005EC95 /* Player.cpp in Sources */,
 				D23CC4C11E57514E00B774C9 /* Level.cpp in Sources */,
+				D215B0B21E59951C00846D94 /* animation.cpp in Sources */,
 				D29DC53D1E509D780005EC95 /* core.cpp in Sources */,
 				D29DC53E1E509D780005EC95 /* physics.cpp in Sources */,
 				D29DC5441E509E250005EC95 /* main.cpp in Sources */,
