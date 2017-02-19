@@ -7,6 +7,11 @@
 
 #include "core.hpp"
 
+const Event DidClearBoard("DidClearBoard");
+
+// MARK: Events
+const Event DidSetBlock("DidSetBlock");
+
 /**
  *  Defines the block physics.
  */
@@ -40,8 +45,13 @@ class Block
   : public Entity
 {
 public:
+  enum State { NOT_SET, HALF_SET, FULL_SET };
+  
+  prop_r<Block, State> state;
+  
   Block(string id, int x, int y);
-  void toggle(string id);
+  void reset();
+  void toggle_state();
 };
 
 /**
@@ -50,7 +60,9 @@ public:
 class Board
   : public Entity
 {
+  int _sum;
 public:
   Board(string id);
   void init(Core * core);
+  void reset();
 };

@@ -5,6 +5,24 @@
 
 #include "HUD.hpp"
 
+// MARK: Helper functions
+
+int number_of_digits(int n)
+{
+  if (n != 0)
+  {
+    int num_digits = 0;
+    int tmp = n;
+    while (tmp > 0)
+    {
+      tmp /= 10;
+      num_digits += 1;
+    }
+    return num_digits;
+  }
+  return 1;
+}
+
 
 //
 // MARK: - PlayerTextGraphicsComponent
@@ -34,7 +52,7 @@ void PlayerTextGraphicsComponent::update(Core & core)
   modf(elapsed/_duration, &cycles);
   _start_time = _start_time + cycles * _duration;
   _current_sprite_index = floor(fmod(elapsed, _duration) / _duration * 6);
-  string id = "player_text_" + to_string(_current_sprite_index);
+  string id = "player_1_text_" + to_string(_current_sprite_index);
   current_sprite(SpriteCollection::main().retrieve(id));
   
   GraphicsComponent::update(core);
@@ -55,7 +73,7 @@ void PlayerText::init(Core * core)
   SpriteCollection & sprites = SpriteCollection::main();
   for (auto i = 0; i < 6; i++)
   {
-    string id = "player_text_" + to_string(i);
+    string id = "player_1_text_" + to_string(i);
     string filename = "textures/" + id + ".png";
     sprites.create(id, filename.c_str());
   }
@@ -66,6 +84,8 @@ void PlayerText::init(Core * core)
 //
 // MARK: - Score
 //
+
+// MARK: Member functions
 
 Score::Score(string id)
   : Entity(id, nullptr, nullptr, nullptr, nullptr)
@@ -85,40 +105,49 @@ void Score::init(Core * core)
   for (auto n = 0; n < 10; n++)
   {
     string id = "score_digit_" + to_string(n);
-    string filename = "textures/" + id + ".png";
+    string filename = "textures/score_digit_orange_" + to_string(n) + ".png";
     sprites.create(id, filename.c_str());
   }
   
-  auto f = [this](Event, vector<GameObject*> *)
+  auto did_set_block = [this](Event event, vector<GameObject*> *)
   {
-    score(score()+25);
-    int num_digits = 0;
-    int tmp = score();
-    while (tmp > 0)
+    switch (event.parameter())
     {
-      tmp /= 10;
-      num_digits += 1;
+      case Block::HALF_SET:
+        score(score()+15);
+        break;
+      case Block::FULL_SET:
+        score(score()+25);
+        break;
     }
-    
-    tmp = score();
-    for (auto i = num_digits-1; i >= 0; i--, tmp /= 10)
-    {
-      ((ScoreDigit*)children()[i])->digit(tmp % 10);
-    }
+    update_digits();
   };
   
-  NotificationCenter::main().observe(DidCollide, f);
+  NotificationCenter::main().observe(DidSetBlock, did_set_block);
   
   _level = (Level*)(core->root());
-  moveTo(8, 16);
+  moveTo(10, 12);
 }
 
 void Score::reset()
 {
   Entity::reset();
-    
+  
   score(0);
+  update_digits();
 }
+
+// MARK: Private member functions
+
+void Score::update_digits()
+{
+  int tmp = score();
+  for (auto i = number_of_digits(score())-1; i >= 0; i--, tmp /= 10)
+  {
+    ((ScoreDigit*)children()[i])->digit(tmp % 10);
+  }
+}
+
 
 //
 // MARK: - ScoreDigitGraphicsComponent

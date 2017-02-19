@@ -86,7 +86,7 @@ void Core::resolveCollisions(Entity & collider,
 // MARK: - PhysicsComponent
 //
 
-// MARK: Properties
+// MARK: Property functions
 
 string PhysicsComponent::trait() { return "physics"; }
 

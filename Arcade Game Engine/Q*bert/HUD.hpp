@@ -7,6 +7,8 @@
 
 #include "core.hpp"
 #include "Level.hpp"
+#include "Board.hpp"
+#include "Player.hpp"
 
 
 /**
@@ -41,6 +43,8 @@ class Score
   : public Entity
 {
   Level * _level;
+  
+  void update_digits();
 public:
   prop_r<Score, int> score;
   

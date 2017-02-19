@@ -152,7 +152,7 @@ void PlayerPhysicsComponent::update(Core & core)
       string id_prefix = collided_entity->id().substr(0, 5);
       if (collided_entity->id().compare(0, 5, "block") == 0)
       {
-        ((Block*)collided_entity)->toggle(entity()->id());
+        ((Block*)collided_entity)->toggle_state();
         return;
       }
     }

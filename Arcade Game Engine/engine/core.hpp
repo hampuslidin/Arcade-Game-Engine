@@ -120,13 +120,6 @@ public:
 class Core
 {
 public:
-  prop_r<Core,      SDL_Window*> window;
-  prop_r<Core,    SDL_Renderer*> renderer;
-  prop_r<Core,          Entity*> root;
-  prop_r<Core,           double> delta_time;
-  prop_r<Core,       Dimension2> view_dimensions;
-  prop<int> scale;
-  
   /**
    *  Defines the status of each input type.
    */
@@ -134,6 +127,18 @@ public:
   {
     bool up, down, left, right;
   };
+private:
+  KeyStatus _keys;
+  double _prev_time;
+  bool _initialized;
+  bool _reset;
+public:
+  prop_r<Core,      SDL_Window*> window;
+  prop_r<Core,    SDL_Renderer*> renderer;
+  prop_r<Core,          Entity*> root;
+  prop_r<Core,           double> delta_time;
+  prop_r<Core,       Dimension2> view_dimensions;
+  prop<int> scale;
   
   Core();
   bool init(Entity * root,
@@ -148,10 +153,6 @@ public:
                          vector<Entity*> & result);
   void getKeyStatus(KeyStatus & keys);
   double elapsedTime();
-private:
-  KeyStatus _keys;
-  double _prev_time;
-  bool _initialized;
 };
 
 
@@ -159,6 +160,7 @@ private:
 //
 // MARK: - GameObject
 //
+
 class GameObject {
 public:
   virtual string id() = 0;
@@ -177,7 +179,7 @@ class Entity
 {
   string _id;
 public:
-  // MARK: Properties
+  // MARK: Property functions
   
   prop_r<Entity,               Core*> core;
   prop_r<Entity,             Entity*> parent;
@@ -198,7 +200,7 @@ public:
    *  IMPORTANT: do not call this in the reset method function, it will lead
    *  to undefined behavior.
    */
-  void order(int new_value);
+  void order(int order);
   
   /**
    *  Retrieve the order in the layer.

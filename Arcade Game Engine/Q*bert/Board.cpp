@@ -74,13 +74,20 @@ Block::Block(string id, int x, int y)
   moveTo(x, y);
 }
 
-void Block::toggle(string id)
+void Block::reset()
 {
-  if (id.compare("player") == 0)
+  Entity::reset();
+  state(NOT_SET);
+}
+
+void Block::toggle_state()
+{
+  if (state() == NOT_SET)
   {
-    BlockGraphicsComponent * block_graphics =
-    dynamic_cast<BlockGraphicsComponent*>(graphics());
+    auto block_graphics = (BlockGraphicsComponent*)graphics();
     block_graphics->changeDetailColor(1);
+    state(FULL_SET);
+    NotificationCenter::main().notify(Event(DidSetBlock, FULL_SET));
   }
 }
 
@@ -116,7 +123,34 @@ void Board::init(Core * core)
     }
   }
   
+  auto did_set_block = [this, core](Event event, vector<GameObject*> *)
+  {
+    switch (event.parameter())
+    {
+      case Block::NOT_SET:
+        _sum += 1;
+        break;
+      case Block::FULL_SET:
+        _sum -= 1;
+        break;
+    }
+    if (_sum == 0)
+    {
+      NotificationCenter::main().notify(DidClearBoard);
+      core->reset();
+    }
+  };
+  
+  NotificationCenter::main().observe(DidSetBlock, did_set_block);
+  
   const Dimension2 view_dimensions = core->view_dimensions();
   moveTo((view_dimensions.x-BOARD_DIMENSIONS.x)/2,
          view_dimensions.y-BOARD_DIMENSIONS.y-16);
+}
+
+void Board::reset()
+{
+  Entity::reset();
+  
+  _sum = 28;
 }

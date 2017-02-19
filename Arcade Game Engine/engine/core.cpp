@@ -244,12 +244,13 @@ bool Core::init(Entity * root,
   // initialize member properties
   _keys.up = _keys.down = _keys.left = _keys.right = false;
   _prev_time = 0;
+  _reset = false;
   SpriteCollection::main().init(renderer());
   
   // initialize entities
   this->root(root);
   root->init(this);
-  reset();
+  root->reset();
   
   return true;
 }
@@ -267,7 +268,7 @@ void Core::destroy()
 
 void Core::reset()
 {
-  root()->reset();
+  _reset = true;
 }
 
 bool Core::update()
@@ -333,6 +334,11 @@ bool Core::update()
     }
   
     // update root
+    if (_reset)
+    {
+      root()->reset();
+      _reset = false;
+    }
     root()->update();
     
     // clear screen
@@ -364,20 +370,20 @@ double Core::elapsedTime()
 // MARK: - Entity
 //
 
-// MARK: Properties
+// MARK: Property functions
 
 string Entity::id()
 {
   return _id;
 }
 
-void Entity::order(int new_value)
+void Entity::order(int order)
 {
   if (parent())
   {
     auto tmp = parent();
     tmp->removeChild(id());
-    tmp->addChild(this, new_value);
+    tmp->addChild(this, order);
   }
 }
 
@@ -562,7 +568,7 @@ void Entity::update()
 // MARK: - Component
 //
 
-// MARK: Properties
+// MARK: Property functions
 
 string Component::id()
 {
@@ -582,7 +588,7 @@ void Component::init(Entity * entity)
 // MARK: - InputComponent
 //
 
-// MARK: Properties
+// MARK: Property functions
 
 string InputComponent::trait() { return "input"; }
 
@@ -591,7 +597,7 @@ string InputComponent::trait() { return "input"; }
 // MARK: - AnimationComponent
 //
 
-// MARK: Properties
+// MARK: Property functions
 
 string AnimationComponent::trait() { return "animation"; }
 
@@ -688,7 +694,7 @@ void AnimationComponent::update(Core & world)
 // MARK: - GraphicsComponent
 //
 
-// MARK: Properties
+// MARK: Property functions
 
 string GraphicsComponent::trait() { return "graphics"; }
 
