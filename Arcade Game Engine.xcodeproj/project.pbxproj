@@ -10,6 +10,7 @@
 		D215B0B21E59951C00846D94 /* animation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D215B0B11E59951C00846D94 /* animation.cpp */; };
 		D23CC4C11E57514E00B774C9 /* Level.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D23CC4BF1E57514E00B774C9 /* Level.cpp */; };
 		D23CC4C41E57533E00B774C9 /* HUD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D23CC4C21E57533E00B774C9 /* HUD.cpp */; };
+		D2548F7C1E5AF64200777499 /* Controller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D2548F7A1E5AF64200777499 /* Controller.cpp */; };
 		D29DC53D1E509D780005EC95 /* core.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D29DC53B1E509D780005EC95 /* core.cpp */; };
 		D29DC53E1E509D780005EC95 /* physics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D29DC53C1E509D780005EC95 /* physics.cpp */; };
 		D29DC5441E509E250005EC95 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D29DC5421E509E250005EC95 /* main.cpp */; };
@@ -39,6 +40,8 @@
 		D23CC4C01E57514E00B774C9 /* Level.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Level.hpp; path = "Q*bert/Level.hpp"; sourceTree = "<group>"; };
 		D23CC4C21E57533E00B774C9 /* HUD.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = HUD.cpp; path = "Q*bert/HUD.cpp"; sourceTree = "<group>"; };
 		D23CC4C31E57533E00B774C9 /* HUD.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = HUD.hpp; path = "Q*bert/HUD.hpp"; sourceTree = "<group>"; };
+		D2548F7A1E5AF64200777499 /* Controller.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Controller.cpp; path = "Q*bert/Controller.cpp"; sourceTree = "<group>"; };
+		D2548F7B1E5AF64200777499 /* Controller.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Controller.hpp; path = "Q*bert/Controller.hpp"; sourceTree = "<group>"; };
 		D29DC52B1E509D120005EC95 /* Q*bert */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "Q*bert"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D29DC5381E509D780005EC95 /* core.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = core.hpp; path = engine/core.hpp; sourceTree = "<group>"; };
 		D29DC53A1E509D780005EC95 /* types.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = types.hpp; path = engine/types.hpp; sourceTree = "<group>"; };
@@ -121,6 +124,7 @@
 			children = (
 				D29DC5461E509E280005EC95 /* include */,
 				D29DC5421E509E250005EC95 /* main.cpp */,
+				D2548F7A1E5AF64200777499 /* Controller.cpp */,
 				D29DC5431E509E250005EC95 /* Player.cpp */,
 				D2F614F11E54C7D400B33DAB /* Board.cpp */,
 				D23CC4C21E57533E00B774C9 /* HUD.cpp */,
@@ -132,6 +136,7 @@
 		D29DC5461E509E280005EC95 /* include */ = {
 			isa = PBXGroup;
 			children = (
+				D2548F7B1E5AF64200777499 /* Controller.hpp */,
 				D29DC5411E509E250005EC95 /* Player.hpp */,
 				D2F614F21E54C7D400B33DAB /* Board.hpp */,
 				D23CC4C31E57533E00B774C9 /* HUD.hpp */,
@@ -223,6 +228,7 @@
 				D215B0B21E59951C00846D94 /* animation.cpp in Sources */,
 				D29DC53D1E509D780005EC95 /* core.cpp in Sources */,
 				D29DC53E1E509D780005EC95 /* physics.cpp in Sources */,
+				D2548F7C1E5AF64200777499 /* Controller.cpp in Sources */,
 				D29DC5441E509E250005EC95 /* main.cpp in Sources */,
 				D2F614D51E53183C00B33DAB /* types.cpp in Sources */,
 			);

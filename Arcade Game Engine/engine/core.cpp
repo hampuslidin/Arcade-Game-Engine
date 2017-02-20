@@ -241,7 +241,8 @@ bool Core::init(Entity * root,
   SDL_RenderClear(renderer());
   
   // initialize member properties
-  _keys.up = _keys.down = _keys.left = _keys.right = false;
+  _key_status.up   = _key_status.down  = false;
+  _key_status.left = _key_status.right = false;
   _prev_time = 0;
   _reset = false;
   SpriteCollection::main().init(renderer());
@@ -300,16 +301,16 @@ bool Core::update()
         switch (event.key.keysym.sym)
         {
           case SDLK_UP:
-            _keys.up = true;
+            _key_status.up = true;
             break;
           case SDLK_DOWN:
-            _keys.down = true;
+            _key_status.down = true;
             break;
           case SDLK_LEFT:
-            _keys.left = true;
+            _key_status.left = true;
             break;
           case SDLK_RIGHT:
-            _keys.right = true;
+            _key_status.right = true;
             break;
         }
       }
@@ -318,16 +319,16 @@ bool Core::update()
         switch (event.key.keysym.sym)
         {
           case SDLK_UP:
-            _keys.up = false;
+            _key_status.up = false;
             break;
           case SDLK_DOWN:
-            _keys.down = false;
+            _key_status.down = false;
             break;
           case SDLK_LEFT:
-            _keys.left = false;
+            _key_status.left = false;
             break;
           case SDLK_RIGHT:
-            _keys.right = false;
+            _key_status.right = false;
             break;
           case SDLK_ESCAPE:
           case SDLK_q:
@@ -369,12 +370,12 @@ bool Core::update()
   return true;
 }
 
-void Core::getKeyStatus(Core::KeyStatus & keys)
+void Core::keyStatus(Core::KeyStatus & key_status)
 {
-  keys.up    = this->_keys.up;
-  keys.down  = this->_keys.down;
-  keys.left  = this->_keys.left;
-  keys.right = this->_keys.right;
+  key_status.up    = _key_status.up;
+  key_status.down  = _key_status.down;
+  key_status.left  = _key_status.left;
+  key_status.right = _key_status.right;
 }
 
 double Core::elapsedTime()

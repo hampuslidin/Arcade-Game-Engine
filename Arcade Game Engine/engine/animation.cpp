@@ -31,7 +31,6 @@ void AnimationComponent::reset()
 {
   animating(false);
   _update_velocity = false;
-  _did_start_moving = false;
 }
 
 void AnimationComponent::addSegment(string id, Vector2 point, Vector2 velocity)
@@ -56,7 +55,6 @@ void AnimationComponent::performAnimation(string id,
     _start_time = entity()->core()->elapsedTime();
     _duration = duration;
     _update_velocity = update_velocity;
-    _did_start_moving = false;
     NotificationCenter::main().notify(DidStartAnimating);
   }
 }
@@ -83,11 +81,6 @@ void AnimationComponent::update(Core & world)
                         s1.first*cp1 + s1.second*cm1;
       
       entity()->moveTo(_start_position.x + p.x, _start_position.y + p.y);
-      if (!_did_start_moving)
-      {
-        _did_start_moving = true;
-        NotificationCenter::main().notify(DidStartMovingInAnimation);
-      }
     }
     else
     {

@@ -36,7 +36,6 @@ class GraphicsComponent;
 // MARK: Events
 
 const Event DidStartAnimating("DidStartAnimating");
-const Event DidStartMovingInAnimation("DidStartMovingInAnimation");
 const Event DidStopAnimating("DidStopAnimating");
 const Event DidCollide("DidCollide");
 const Event DidMoveIntoView("DidMoveIntoView");
@@ -135,7 +134,7 @@ private:
     function<void(void)> block;
   };
   
-  KeyStatus _keys;
+  KeyStatus _key_status;
   vector<_Timer> _timers;
   double _prev_time;
   bool _initialized;
@@ -160,7 +159,7 @@ public:
   void resolveCollisions(Entity & collider,
                          bool collision_response,
                          vector<Entity*> & result);
-  void getKeyStatus(KeyStatus & keys);
+  void keyStatus(KeyStatus & keys);
   double elapsedTime();
 };
 
@@ -324,7 +323,6 @@ private:
   double _start_time;
   double _duration;
   bool _update_velocity;
-  bool _did_start_moving;
 public:
   
   prop_r<AnimationComponent, bool> animating;
