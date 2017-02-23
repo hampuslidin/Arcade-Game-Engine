@@ -109,7 +109,7 @@ void Score::init(Core * core)
     sprites.create(id, filename.c_str());
   }
   
-  auto did_set_block = [this](Event event, vector<GameObject*> *)
+  auto did_set_block = [this](Event event)
   {
     switch (event.parameter())
     {
@@ -123,7 +123,7 @@ void Score::init(Core * core)
     update_digits();
   };
   
-  NotificationCenter::main().observe(DidSetBlock, did_set_block);
+  NotificationCenter::observe(did_set_block, DidSetBlock);
   
   _level = (Level*)(core->root());
   moveTo(10, 12);

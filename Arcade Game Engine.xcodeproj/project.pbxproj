@@ -18,6 +18,7 @@
 		D29DC54C1E509F680005EC95 /* SDL2_image.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D29DC54A1E509F5E0005EC95 /* SDL2_image.framework */; };
 		D29DC54D1E509F680005EC95 /* SDL2_ttf.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D29DC54B1E509F5E0005EC95 /* SDL2_ttf.framework */; };
 		D29DC54E1E509F680005EC95 /* SDL2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D29DC5491E509F5E0005EC95 /* SDL2.framework */; };
+		D2B67DBA1E5DD4AC00AC8922 /* Enemy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D2B67DB81E5DD4AC00AC8922 /* Enemy.cpp */; };
 		D2F614D51E53183C00B33DAB /* types.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D2F614D41E53183C00B33DAB /* types.cpp */; };
 		D2F614F31E54C7D400B33DAB /* Board.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D2F614F11E54C7D400B33DAB /* Board.cpp */; };
 /* End PBXBuildFile section */
@@ -53,6 +54,8 @@
 		D29DC5491E509F5E0005EC95 /* SDL2.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = SDL2.framework; sourceTree = "<group>"; };
 		D29DC54A1E509F5E0005EC95 /* SDL2_image.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = SDL2_image.framework; sourceTree = "<group>"; };
 		D29DC54B1E509F5E0005EC95 /* SDL2_ttf.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = SDL2_ttf.framework; sourceTree = "<group>"; };
+		D2B67DB81E5DD4AC00AC8922 /* Enemy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Enemy.cpp; path = "Q*bert/Enemy.cpp"; sourceTree = "<group>"; };
+		D2B67DB91E5DD4AC00AC8922 /* Enemy.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Enemy.hpp; path = "Q*bert/Enemy.hpp"; sourceTree = "<group>"; };
 		D2F614D41E53183C00B33DAB /* types.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = types.cpp; path = engine/types.cpp; sourceTree = "<group>"; };
 		D2F614F11E54C7D400B33DAB /* Board.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Board.cpp; path = "Q*bert/Board.cpp"; sourceTree = "<group>"; };
 		D2F614F21E54C7D400B33DAB /* Board.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Board.hpp; path = "Q*bert/Board.hpp"; sourceTree = "<group>"; };
@@ -126,6 +129,7 @@
 				D29DC5421E509E250005EC95 /* main.cpp */,
 				D2548F7A1E5AF64200777499 /* Controller.cpp */,
 				D29DC5431E509E250005EC95 /* Player.cpp */,
+				D2B67DB81E5DD4AC00AC8922 /* Enemy.cpp */,
 				D2F614F11E54C7D400B33DAB /* Board.cpp */,
 				D23CC4C21E57533E00B774C9 /* HUD.cpp */,
 				D23CC4BF1E57514E00B774C9 /* Level.cpp */,
@@ -138,6 +142,7 @@
 			children = (
 				D2548F7B1E5AF64200777499 /* Controller.hpp */,
 				D29DC5411E509E250005EC95 /* Player.hpp */,
+				D2B67DB91E5DD4AC00AC8922 /* Enemy.hpp */,
 				D2F614F21E54C7D400B33DAB /* Board.hpp */,
 				D23CC4C31E57533E00B774C9 /* HUD.hpp */,
 				D23CC4C01E57514E00B774C9 /* Level.hpp */,
@@ -226,6 +231,7 @@
 				D29DC5451E509E250005EC95 /* Player.cpp in Sources */,
 				D23CC4C11E57514E00B774C9 /* Level.cpp in Sources */,
 				D215B0B21E59951C00846D94 /* animation.cpp in Sources */,
+				D2B67DBA1E5DD4AC00AC8922 /* Enemy.cpp in Sources */,
 				D29DC53D1E509D780005EC95 /* core.cpp in Sources */,
 				D29DC53E1E509D780005EC95 /* physics.cpp in Sources */,
 				D2548F7C1E5AF64200777499 /* Controller.cpp in Sources */,

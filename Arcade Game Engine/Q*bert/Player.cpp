@@ -5,7 +5,6 @@
 
 #include "Player.hpp"
 #include "Board.hpp"
-#include <fstream>
 
 
 //
@@ -18,12 +17,9 @@ void PlayerInputComponent::init(Entity * entity)
 {
   ControllerInputComponent::init(entity);
   
-  auto did_clear_board = [this](Event, vector<GameObject*> *)
-  {
-    _did_clear_board = true;
-  };
+  auto did_clear_board = [this](Event) { _did_clear_board = true; };
 
-  NotificationCenter::main().observe(DidClearBoard, did_clear_board);
+  NotificationCenter::observe(did_clear_board, DidClearBoard);
 }
 
 void PlayerInputComponent::reset()
@@ -40,13 +36,19 @@ ControllerDirection PlayerInputComponent::update_direction(Core & core)
     Core::KeyStatus keys;
     core.keyStatus(keys);
     
-    if (keys.up)    return UP;
-    if (keys.down)  return DOWN;
-    if (keys.left)  return LEFT;
-    if (keys.right) return RIGHT;
+    if (keys.up)
+      return UP;
+    if (keys.down)
+      return DOWN;
+    if (keys.left)
+      return LEFT;
+    if (keys.right)
+      return RIGHT;
   }
   return NONE;
 }
+
+double PlayerInputComponent::animation_ending_delay() { return 0.15; }
 
 
 //
@@ -55,22 +57,11 @@ ControllerDirection PlayerInputComponent::update_direction(Core & core)
 
 // MARK: Member functions
 
-void PlayerAnimationComponent::init(Entity * entity)
-{
-  ControllerAnimationComponent::init(entity);
-  
-  addSegment("jump_up",    {0,     0}, {16,  -86.848});
-  addSegment("jump_up",    {16,  -24}, {16,   38.848});
-  
-  addSegment("jump_down",  {0,     0}, {-16, -38.848});
-  addSegment("jump_down",  {-16,  24}, {-16,  86.848});
-  
-  addSegment("jump_left",  {0,     0}, {-16, -86.848});
-  addSegment("jump_left",  {-16, -24}, {-16,  38.848});
-  
-  addSegment("jump_right", {0,     0}, {16,  -38.848});
-  addSegment("jump_right", {16,   24}, {16,   86.848});
-}
+double PlayerAnimationComponent::animation_speed()       { return 0.3; }
+Vector2 PlayerAnimationComponent::jump_up_end_point()    { return { 16, -24}; };
+Vector2 PlayerAnimationComponent::jump_down_end_point()  { return {-16,  24}; };
+Vector2 PlayerAnimationComponent::jump_left_end_point()  { return {-16, -24}; };
+Vector2 PlayerAnimationComponent::jump_right_end_point() { return { 16,  24}; };
 
 
 //
@@ -89,18 +80,19 @@ void PlayerPhysicsComponent::init(Entity * entity)
 {
   ControllerPhysicsComponent::init(entity);
 
-  auto did_jump = [this](Event, vector<GameObject*> *)
-  {
-    _has_jumped_once = true;
-  };
-  auto did_move_out_of_view = [entity](Event, vector<GameObject*> *)
+  auto did_jump = [this](Event) { _has_jumped_once = true; };
+  auto did_move_out_of_view = [entity](Event)
   {
     entity->order(-1);
-    entity->core()->createTimer(1, [entity]() { entity->core()->reset(); });
+    entity->core()->createTimer(1, [entity]()
+    {
+      entity->core()->reset();
+    });
   };
   
-  NotificationCenter::main().observe(DidJump,          did_jump);
-  NotificationCenter::main().observe(DidMoveOutOfView, did_move_out_of_view);
+  auto input = entity->input();
+  NotificationCenter::observe(did_jump, DidJump, input);
+  NotificationCenter::observe(did_move_out_of_view, DidMoveOutOfView, this);
 }
 
 void PlayerPhysicsComponent::reset()
@@ -110,12 +102,12 @@ void PlayerPhysicsComponent::reset()
   _has_jumped_once = false;
 }
 
-bool PlayerPhysicsComponent::collision_event(Entity * collided_entity)
+bool PlayerPhysicsComponent::should_break_for_collision(Entity * collided_entity)
 {
   string id_prefix = collided_entity->id().substr(0, 5);
   if (collided_entity->id().compare(0, 5, "block") == 0)
   {
-    ((Block*)collided_entity)->toggle_state();
+    ((Block*)collided_entity)->touch();
     return true;
   }
   return false;
@@ -128,6 +120,16 @@ bool PlayerPhysicsComponent::should_update()
 
 
 //
+// MARK: - PlayerGraphicsComponent
+//
+
+string PlayerGraphicsComponent::default_sprite_id()
+{
+  return "qbert_standing_1";
+}
+
+
+//
 // MARK: - Player
 //
 
@@ -136,7 +138,7 @@ Player::Player(string id)
                new PlayerInputComponent(),
                new PlayerAnimationComponent(),
                new PlayerPhysicsComponent(),
-               new ControllerGraphicsComponent())
+               new PlayerGraphicsComponent())
 {}
 
 void Player::reset()
@@ -147,12 +149,6 @@ void Player::reset()
   moveTo(view_dimensions.x/2-8, view_dimensions.y-176-16-8);
 }
 
-string Player::prefix_standing()
-{
-  return "qbert_standing";
-}
-
-string Player::prefix_jumping()
-{
-  return "qbert_jumping";
-}
+string Player::prefix_standing() { return "qbert_standing"; }
+string Player::prefix_jumping()  { return "qbert_jumping";  }
+int Player::direction_mask()     { return 0b1111;           }

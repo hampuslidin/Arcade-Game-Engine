@@ -95,8 +95,7 @@ string PhysicsComponent::trait() { return "physics"; }
 PhysicsComponent::PhysicsComponent()
 {
   collision_bounds({0, 0, 16, 16});
-  gravity(9.82);
-  pixels_per_meter(80);
+  gravity({0.0, 9.82});
   dynamic(false);
   collision_detection(false);
   collision_response(false);
@@ -111,11 +110,16 @@ void PhysicsComponent::init(Entity * entity)
   _out_of_view = true;
   _did_collide = false;
   
-  auto f1 = [this](Event, vector<GameObject*> *) { _should_simulate = false; };
-  auto f2 = [this](Event, vector<GameObject*> *) { _should_simulate = true;  };
+  auto did_start_animating = [this](Event) { _should_simulate = false; };
+  auto did_stop_animating = [this](Event) { _should_simulate = true;  };
   
-  NotificationCenter::main().observe(DidStartAnimating, f1);
-  NotificationCenter::main().observe(DidStopAnimating,  f2);
+  auto animation = entity->animation();
+  NotificationCenter::observe(did_start_animating,
+                              DidStartAnimating,
+                              animation);
+  NotificationCenter::observe(did_stop_animating,
+                              DidStopAnimating,
+                              animation);
 }
 
 void PhysicsComponent::update(Core & core)
@@ -125,8 +129,8 @@ void PhysicsComponent::update(Core & core)
   {
     if (dynamic())
     {
-      const auto vel_y = gravity() * core.delta_time() * pixels_per_meter();
-      entity()->changeVelocityBy(0, vel_y);
+      const auto velocity = gravity() * core.delta_time() * pixels_per_meter;
+      entity()->changeVelocityBy(velocity.x, velocity.y);
       const auto distance = entity()->velocity() * core.delta_time();
       entity()->moveBy(distance.x, distance.y);
       
@@ -137,7 +141,7 @@ void PhysicsComponent::update(Core & core)
           world_position.y >= core.view_dimensions().y) && !_out_of_view)
       {
         _out_of_view = true;
-        NotificationCenter::main().notify(DidMoveOutOfView);
+        NotificationCenter::notify(DidMoveOutOfView, *this);
       }
       else if ((world_position.x >= 0 &&
                 world_position.x < core.view_dimensions().x &&
@@ -145,7 +149,7 @@ void PhysicsComponent::update(Core & core)
                 world_position.y < core.view_dimensions().y) && _out_of_view)
       {
         _out_of_view = false;
-        NotificationCenter::main().notify(DidMoveIntoView);
+        NotificationCenter::notify(DidMoveIntoView, *this);
       }
 
     }
@@ -159,9 +163,7 @@ void PhysicsComponent::update(Core & core)
       {
         if (!_did_collide)
         {
-          vector<GameObject*> game_objects(collided_entities().begin(),
-                                           collided_entities().end());
-          NotificationCenter::main().notify(DidCollide, &game_objects);
+          NotificationCenter::notify(DidCollide, *this);
           _did_collide = true;
         }
       }

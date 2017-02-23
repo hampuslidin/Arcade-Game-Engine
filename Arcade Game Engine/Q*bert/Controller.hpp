@@ -35,6 +35,7 @@ class ControllerInputComponent
   bool _did_jump_off;
 protected:
   virtual ControllerDirection update_direction(Core & core) = 0;
+  virtual double animation_ending_delay() = 0;
 public:
   virtual void init(Entity * entity);
   virtual void reset();
@@ -49,6 +50,12 @@ public:
 class ControllerAnimationComponent
   : public AnimationComponent
 {
+protected:
+  virtual double animation_speed() = 0;
+  virtual Vector2 jump_up_end_point()    { return {}; };
+  virtual Vector2 jump_down_end_point()  { return {}; };
+  virtual Vector2 jump_left_end_point()  { return {}; };
+  virtual Vector2 jump_right_end_point() { return {}; };
 public:
   virtual void init(Entity * entity);
 };
@@ -64,7 +71,7 @@ class ControllerPhysicsComponent
   bool _animating;
   bool _did_fall_off;
 protected:
-  virtual bool collision_event(Entity * collided_entity) = 0;
+  virtual bool should_break_for_collision(Entity * collided_entity) = 0;
   virtual bool should_update() = 0;
 public:
   virtual void init(Entity * entity);
@@ -82,6 +89,8 @@ class ControllerGraphicsComponent
 {
   int _current_direction;
   bool _jumping;
+protected:
+  virtual string default_sprite_id() = 0;
 public:
   virtual void init(Entity * entity);
   virtual void reset();
@@ -94,6 +103,8 @@ public:
 
 class Controller : public Entity
 {
+protected:
+  virtual int direction_mask() = 0;
 public:
   Controller(string id,
              ControllerInputComponent * input,

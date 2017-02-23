@@ -5,11 +5,13 @@
 
 #pragma once
 
+#define BOARD_DIMENSIONS ((Dimension2){224, 176})
+
 #include "core.hpp"
 
-const Event DidClearBoard("DidClearBoard");
 
 // MARK: Events
+const Event DidClearBoard("DidClearBoard");
 const Event DidSetBlock("DidSetBlock");
 
 /**
@@ -51,7 +53,7 @@ public:
   
   Block(string id, int x, int y);
   void reset();
-  void toggle_state();
+  void touch();
 };
 
 /**

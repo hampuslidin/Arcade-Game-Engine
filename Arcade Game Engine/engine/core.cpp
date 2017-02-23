@@ -143,46 +143,55 @@ void SpriteCollection::draw(string id, int x, int y, int w, int h, int scale)
 // MARK: - NotificationCenter
 //
 
-NotificationCenter & NotificationCenter::main()
+void NotificationCenter::notify(Event event, GameObject & sender)
+{
+  for (auto pair : _instance()._blocks[event])
+  {
+    if (pair.second == nullptr || pair.second == &sender) pair.first(event);
+  }
+}
+
+ObserverID NotificationCenter::observe(function<void(Event)> block,
+                                       Event event,
+                                       GameObject * sender)
+{
+  auto size = _instance()._blocks[event].size();
+  _instance()._blocks[event].push_back({block, sender});
+  return hash<string>{}(event.string_value() + to_string(size));
+}
+
+void NotificationCenter::unobserve(ObserverID id,
+                                          Event event,
+                                          GameObject * sender)
+{
+  auto blocks_for_event = _instance()._blocks[event];
+  for (auto i = 0; i < blocks_for_event.size(); i++)
+  {
+    auto sender_for_block = blocks_for_event[i].second;
+    if (sender_for_block == nullptr || sender_for_block == sender)
+    {
+      size_t h = hash<string>{}(event.string_value() + to_string(i));
+      if (h == id)
+      {
+        _instance()._blocks[event].erase(blocks_for_event.begin()+i);
+        return;
+      }
+    }
+  }
+}
+
+// MARK: Private member functions
+NotificationCenter & NotificationCenter::_instance()
 {
   static NotificationCenter instance;
   return instance;
 }
 
-void NotificationCenter::notify(Event event, vector<GameObject*> * game_objects)
-{
-  for (auto f : _blocks[event]) f(event, game_objects);
-}
-
-size_t NotificationCenter::observe(Event event,
-                                   function<void(Event,
-                                                 vector<GameObject*>*)> block)
-{
-  auto size = _blocks[event].size();
-  _blocks[event].push_back(block);
-  return hash<string>{}(event.string_value() + to_string(size));
-}
-
-void NotificationCenter::unobserve(Event event, size_t id)
-{
-  auto blocks_for_event = _blocks[event];
-  for (auto i = 0; i < blocks_for_event.size(); i++)
-  {
-    size_t h = hash<string>{}(event.string_value() + to_string(i));
-    if (h == id)
-    {
-      _blocks[event].erase(blocks_for_event.begin()+i);
-      return;
-    }
-  }
-}
-
-
 //
 // MARK: - Core
 //
 
-//MARK: Member functions
+// MARK: Member functions
 
 Core::Core()
 {
@@ -338,30 +347,78 @@ bool Core::update()
       }
     }
     
-    // update root
+    // possibly do a reset
     if (_reset)
     {
+      _timers.clear();
       root()->reset();
       _reset = false;
     }
+    
+    // update root
     root()->update();
+    
+#ifdef GAME_ENGINE_DEBUG
+    // draw bounding boxes
+    RGBAColor prev_color;
+    SDL_GetRenderDrawColor(renderer(),
+                           &prev_color.r,
+                           &prev_color.g,
+                           &prev_color.b,
+                           &prev_color.a);
+    SDL_SetRenderDrawColor(renderer(), 0xFF, 0xFF, 0xFF, 0xFF);
+    stack<Entity*> entity_stack;
+    entity_stack.push(root());
+    while (entity_stack.size() > 0)
+    {
+      Entity * current_entity = entity_stack.top();
+      entity_stack.pop();
+      
+      PhysicsComponent * current_physics_component;
+      if ((current_physics_component = current_entity->physics()))
+      {
+        SDL_Rect rect;
+        Rectangle bounds = current_physics_component->collision_bounds();
+        Vector2 world_position;
+        current_entity->calculateWorldPosition(world_position);
+        rect.x = (world_position.x + bounds.pos.x) * scale();
+        rect.y = (world_position.y + bounds.pos.y) * scale();
+        rect.w = bounds.dim.x * scale();
+        rect.h = bounds.dim.y * scale();
+        SDL_RenderDrawRect(renderer(), &rect);
+      }
+      
+      for (auto child : current_entity->children())
+      {
+        entity_stack.push(child);
+      }
+    }
+    SDL_SetRenderDrawColor(renderer(),
+                           prev_color.r,
+                           prev_color.g,
+                           prev_color.b,
+                           prev_color.a);
+#endif
     
     // clear screen
     SDL_RenderPresent(renderer());
     SDL_RenderClear(renderer());
     
     // go through timers
-    auto tmp = _timers;
-    for (auto i = 0; i < tmp.size(); i++)
+    int i = 0;
+    while (i < _timers.size())
     {
-      auto timer = tmp[i];
+      auto timer = _timers[i];
+      auto size = _timers.size();
       const double current_time = elapsedTime();
       if (current_time >= timer.end_time)
       {
         timer.block();
-        _timers.erase(_timers.begin()+i);
+        _timers.erase(_timers.begin() + i);
       }
+      else i++;
     }
+
     
     return should_continue;
   }

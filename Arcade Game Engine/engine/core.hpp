@@ -5,6 +5,8 @@
 
 #pragma once
 
+#define GAME_ENGINE_DEBUG
+
 #include <map>
 #include <vector>
 #include <string>
@@ -92,20 +94,22 @@ public:
 // MARK: - NotificationCenter
 //
 
+typedef size_t ObserverID;
+
 class NotificationCenter
 {
-  map<Event, vector<function<void(Event, vector<GameObject*>*)>>> _blocks;
+  map<Event, vector<pair<function<void(Event)>, GameObject*>>> _blocks;
   
   NotificationCenter() {};
+  static NotificationCenter & _instance();
 public:
-  NotificationCenter(NotificationCenter const &) = delete;
-  static NotificationCenter & main();
-  void notify(Event event, vector<GameObject*> * game_objects = nullptr);
-  size_t observe(Event event,
-                 function<void(Event, vector<GameObject*>*)> block);
-  void unobserve(Event event, size_t id);
-  
-  void operator=(NotificationCenter const &) = delete;
+  static void notify(Event event, GameObject & sender);
+  static ObserverID observe(function<void(Event)> block,
+                            Event event,
+                            GameObject * sender = nullptr);
+  static void unobserve(ObserverID id,
+                        Event event,
+                        GameObject * sender = nullptr);
 };
 
 
@@ -314,6 +318,8 @@ class AnimationComponent
 {
 public:
   typedef vector<pair<Vector2, Vector2>> CubicHermiteCurve;
+  typedef pair<pair<Vector2, Vector2>, pair<Vector2, Vector2>>
+    CubicHermiteSpline;
 private:
   string trait();
   
@@ -361,9 +367,9 @@ class PhysicsComponent
 protected:
   prop_r<PhysicsComponent, vector<Entity*>> collided_entities;
 public:
+  static constexpr int pixels_per_meter = 120;
   prop<   Rectangle> collision_bounds;
-  prop<      double> gravity;
-  prop<unsigned int> pixels_per_meter;
+  prop<     Vector2> gravity;
   prop<        bool> dynamic;
   prop<        bool> collision_detection;
   prop<        bool> collision_response;

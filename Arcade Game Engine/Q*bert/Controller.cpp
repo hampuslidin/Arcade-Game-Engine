@@ -18,22 +18,27 @@ void ControllerInputComponent::init(Entity * entity)
 {
   InputComponent::init(entity);
   
-  auto did_start_animating = [this](Event, vector<GameObject*> *)
+  auto did_start_animating = [this](Event) { _animating = true; };
+  auto did_stop_animating  = [this, entity](Event)
   {
-    _animating = true;
+    entity->core()->createTimer(animation_ending_delay(), [this]
+    {
+      _animating = false;
+    });
   };
-  auto did_stop_animating = [this, entity](Event, vector<GameObject*> *)
-  {
-    entity->core()->createTimer(0.15, [this]() { _animating = false; });
-  };
-  auto did_fall_off = [this](Event, vector<GameObject*> *)
-  {
-    _did_jump_off = true;
-  };
+  auto did_fall_off = [this](Event) { _did_jump_off = true; };
   
-  NotificationCenter::main().observe(DidStartAnimating, did_start_animating);
-  NotificationCenter::main().observe(DidStopAnimating,  did_stop_animating);
-  NotificationCenter::main().observe(DidFallOff,        did_fall_off);
+  auto animation = entity->animation();
+  auto physics   = entity->physics();
+  NotificationCenter::observe(did_start_animating,
+                              DidStartAnimating,
+                              animation);
+  NotificationCenter::observe(did_stop_animating,
+                              DidStopAnimating,
+                              animation);
+  NotificationCenter::observe(did_fall_off,
+                              DidFallOff,
+                              physics);
 }
 
 void ControllerInputComponent::reset()
@@ -55,7 +60,7 @@ void ControllerInputComponent::update(Core & core)
       case DOWN:
       case LEFT:
       case RIGHT:
-        NotificationCenter::main().notify(Event(DidJump, direction));
+        NotificationCenter::notify(Event(DidJump, direction), *this);
         break;
     }
   }
@@ -66,32 +71,79 @@ void ControllerInputComponent::update(Core & core)
 // MARK: - ControllerAnimationComponent
 //
 
+// MARK: Helper functions
+
+AnimationComponent::CubicHermiteSpline calculate_spline(Vector2 & end_point,
+                                                        double duration,
+                                                        Vector2 gravity)
+{
+  gravity *= PhysicsComponent::pixels_per_meter;
+  const double t2 = duration*duration;
+  const Vector2 m0 = end_point - gravity/2*t2;
+  const Vector2 m1 = end_point + gravity/2*t2;
+  return {{{0,0}, m0}, {end_point, m1}};
+}
+
 // MARK: Member functions
 
 void ControllerAnimationComponent::init(Entity * entity)
 {
   AnimationComponent::init(entity);
   
-  auto did_jump = [this](Event event, vector<GameObject*> *)
+  Vector2 gravity = entity->physics()->gravity();
+  Vector2 end_point = jump_up_end_point();
+  if (end_point.x != 0 || end_point.y != 0)
+  {
+    auto spline = calculate_spline(end_point, animation_speed(), gravity);
+    addSegment("jump_up", spline.first.first,  spline.first.second);
+    addSegment("jump_up", spline.second.first, spline.second.second);
+  }
+  
+  end_point = jump_down_end_point();
+  if (end_point.x != 0 || end_point.y != 0)
+  {
+    auto spline = calculate_spline(end_point, animation_speed(), gravity);
+    addSegment("jump_down", spline.first.first,  spline.first.second);
+    addSegment("jump_down", spline.second.first, spline.second.second);
+  }
+  
+  end_point = jump_left_end_point();
+  if (end_point.x != 0 || end_point.y != 0)
+  {
+    auto spline = calculate_spline(end_point, animation_speed(), gravity);
+    addSegment("jump_left", spline.first.first,  spline.first.second);
+    addSegment("jump_left", spline.second.first, spline.second.second);
+  }
+  
+  end_point = jump_right_end_point();
+  if (end_point.x != 0 || end_point.y != 0)
+  {
+    auto spline = calculate_spline(end_point, animation_speed(), gravity);
+    addSegment("jump_right", spline.first.first,  spline.first.second);
+    addSegment("jump_right", spline.second.first, spline.second.second);
+  }
+  
+  auto did_jump = [this](Event event)
   {
     switch (event.parameter())
     {
       case UP:
-        performAnimation("jump_up", 0.4, true);
+        performAnimation("jump_up", animation_speed(), true);
         break;
       case DOWN:
-        performAnimation("jump_down", 0.4, true);
+        performAnimation("jump_down", animation_speed(), true);
         break;
       case LEFT:
-        performAnimation("jump_left", 0.4, true);
+        performAnimation("jump_left", animation_speed(), true);
         break;
       case RIGHT:
-        performAnimation("jump_right", 0.4, true);
+        performAnimation("jump_right", animation_speed(), true);
         break;
     }
   };
   
-  NotificationCenter::main().observe(DidJump, did_jump);
+  auto input = entity->input();
+  NotificationCenter::observe(did_jump, DidJump, input);
 }
 
 
@@ -105,17 +157,16 @@ void ControllerPhysicsComponent::init(Entity * entity)
 {
   PhysicsComponent::init(entity);
   
-  auto did_start_animating = [this](Event, vector<GameObject*> *)
-  {
-    _animating       = true;
-  };
-  auto did_stop_animating = [this](Event, vector<GameObject*> *)
-  {
-    _animating       = false;
-  };
+  auto did_start_animating = [this](Event) { _animating = true;  };
+  auto did_stop_animating  = [this](Event) { _animating = false; };
   
-  NotificationCenter::main().observe(DidStartAnimating, did_start_animating);
-  NotificationCenter::main().observe(DidStopAnimating,  did_stop_animating);
+  auto animation = entity->animation();
+  NotificationCenter::observe(did_start_animating,
+                              DidStartAnimating,
+                              animation);
+  NotificationCenter::observe(did_stop_animating,
+                              DidStopAnimating,
+                              animation);
 }
 
 void ControllerPhysicsComponent::reset()
@@ -136,7 +187,7 @@ void ControllerPhysicsComponent::update(Core & core)
   {
     for (auto collided_entity : collided_entities())
     {
-      bool should_break = collision_event(collided_entity);
+      bool should_break = should_break_for_collision(collided_entity);
       if (should_break) break;
     }
     if (collided_entities().size() > 0) return;
@@ -147,7 +198,7 @@ void ControllerPhysicsComponent::update(Core & core)
       dynamic(true);
       collision_detection(false);
       entity()->order(0);
-      NotificationCenter::main().notify(DidFallOff);
+      NotificationCenter::notify(DidFallOff, *this);
     }
   }
 }
@@ -165,7 +216,7 @@ void ControllerGraphicsComponent::init(Entity * entity)
   
   Controller * controller = (Controller*)entity;
   
-  auto did_jump = [this, controller](Event event, vector<GameObject*> *)
+  auto did_jump = [this, controller](Event event)
   {
     _current_direction = event.parameter();
     _jumping = true;
@@ -174,7 +225,7 @@ void ControllerGraphicsComponent::init(Entity * entity)
     current_sprite(SpriteCollection::main().retrieve(id));
   };
   
-  auto did_stop_animating = [this, controller](Event, vector<GameObject*> *)
+  auto did_stop_animating = [this, controller](Event)
   {
     _jumping = false;
     const string prefix_standing = controller->prefix_standing();
@@ -182,8 +233,10 @@ void ControllerGraphicsComponent::init(Entity * entity)
     current_sprite(SpriteCollection::main().retrieve(id));
   };
   
-  NotificationCenter::main().observe(DidJump,           did_jump);
-  NotificationCenter::main().observe(DidStopAnimating,  did_stop_animating);
+  auto input     = entity->input();
+  auto animation = entity->animation();
+  NotificationCenter::observe(did_jump, DidJump, input);
+  NotificationCenter::observe(did_stop_animating, DidStopAnimating, animation);
   
   resizeTo(16, 16);
 }
@@ -194,7 +247,7 @@ void ControllerGraphicsComponent::reset()
   
   _current_direction = DOWN;
   _jumping = false;
-  current_sprite(SpriteCollection::main().retrieve("qbert_standing_1"));
+  current_sprite(SpriteCollection::main().retrieve(default_sprite_id()));
 }
 
 
@@ -215,15 +268,20 @@ void Controller::init(Core * core)
   Entity::init(core);
   
   SpriteCollection & sprites = SpriteCollection::main();
-  const string prefixes[] {prefix_standing(), prefix_jumping()};
-  for (auto i = 0; i < 2; i++)
+  for (auto prefix : {prefix_standing(), prefix_jumping()})
   {
-    const string prefix = prefixes[i];
-    for (auto j = 0; j < 4; j++)
+    int direction_mask = this->direction_mask();
+    int direction = UP;
+    while (direction_mask > 0)
     {
-      const string id = prefix + "_" + to_string(j);
-      const string filename = "textures/" + id + ".png";
-      sprites.create(id, filename.c_str());
+      if (direction_mask & 0b0001)
+      {
+        const string id = prefix + "_" + to_string(direction);
+        const string filename = "textures/" + id + ".png";
+        sprites.create(id, filename.c_str());
+      }
+      direction_mask >>= 1;
+      direction++;
     }
   }
 }

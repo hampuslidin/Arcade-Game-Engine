@@ -55,7 +55,7 @@ void AnimationComponent::performAnimation(string id,
     _start_time = entity()->core()->elapsedTime();
     _duration = duration;
     _update_velocity = update_velocity;
-    NotificationCenter::main().notify(DidStartAnimating);
+    NotificationCenter::notify(DidStartAnimating, *this);
   }
 }
 
@@ -93,7 +93,7 @@ void AnimationComponent::update(Core & world)
                                    last_half_segment.second.y/_duration);
       }
       animating(false);
-      NotificationCenter::main().notify(DidStopAnimating);
+      NotificationCenter::notify(DidStopAnimating, *this);
     }
   }
 }

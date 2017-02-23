@@ -5,8 +5,6 @@
 
 #include "Board.hpp"
 
-#define BOARD_DIMENSIONS ((Dimension2){224, 176})
-
 
 //
 // MARK: - BlockPhysicsComponent
@@ -80,14 +78,14 @@ void Block::reset()
   state(NOT_SET);
 }
 
-void Block::toggle_state()
+void Block::touch()
 {
   if (state() == NOT_SET)
   {
     auto block_graphics = (BlockGraphicsComponent*)graphics();
     block_graphics->changeDetailColor(1);
     state(FULL_SET);
-    NotificationCenter::main().notify(Event(DidSetBlock, FULL_SET));
+    NotificationCenter::notify(Event(DidSetBlock, FULL_SET), *this);
   }
 }
 
@@ -123,7 +121,7 @@ void Board::init(Core * core)
     }
   }
   
-  auto did_set_block = [this, core](Event event, vector<GameObject*> *)
+  auto did_set_block = [this, core](Event event)
   {
     switch (event.parameter())
     {
@@ -136,7 +134,7 @@ void Board::init(Core * core)
     }
     if (_sum == 0)
     {
-      NotificationCenter::main().notify(DidClearBoard);
+      NotificationCenter::notify(DidClearBoard, *this);
       core->createTimer(1, [core]()
       {
         core->reset();
@@ -144,7 +142,7 @@ void Board::init(Core * core)
     }
   };
   
-  NotificationCenter::main().observe(DidSetBlock, did_set_block);
+  NotificationCenter::observe(did_set_block, DidSetBlock);
   
   const Dimension2 view_dimensions = core->view_dimensions();
   moveTo((view_dimensions.x-BOARD_DIMENSIONS.x)/2,
