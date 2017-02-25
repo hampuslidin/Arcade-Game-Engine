@@ -5,8 +5,6 @@
 
 #pragma once
 
-#define GAME_ENGINE_DEBUG
-
 #include <map>
 #include <vector>
 #include <string>

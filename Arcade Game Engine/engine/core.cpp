@@ -253,6 +253,7 @@ bool Core::init(Entity * root,
   _key_status.up   = _key_status.down  = false;
   _key_status.left = _key_status.right = false;
   _reset = false;
+  _pause = false;
   SpriteCollection::main().init(renderer());
   
   // initialize entities
