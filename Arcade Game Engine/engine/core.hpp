@@ -140,9 +140,9 @@ private:
   
   KeyStatus _key_status;
   vector<_Timer> _timers;
-  double _prev_time;
-  bool _initialized;
+  double _pause_duration;
   bool _reset;
+  bool _pause;
 public:
   prop_r<Core,      SDL_Window*> window;
   prop_r<Core,    SDL_Renderer*> renderer;
@@ -165,6 +165,7 @@ public:
                          vector<Entity*> & result);
   void keyStatus(KeyStatus & keys);
   double elapsedTime();
+  double effectiveElapsedTime();
 };
 
 
@@ -275,7 +276,7 @@ public:
   void changeHorizontalVelocityTo(double vx);
   void changeVerticalVelocityTo(double vy);
   void changeVelocityBy(double dvs, double dvy);
-  void update();
+  void update(uint8_t mask = 0b1111);
 };
 
 

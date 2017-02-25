@@ -8,7 +8,7 @@
 
 // MARK: Helper functions
 
-void _tmp_update(Entity * root, Core * core, int c_type)
+void _tmp_update(Entity * root, Core * core, int component_type)
 {
   Component * component = nullptr;
   
@@ -20,7 +20,7 @@ void _tmp_update(Entity * root, Core * core, int c_type)
     current_entity = entity_stack.top();
     entity_stack.pop();
     
-    switch (c_type) {
+    switch (component_type) {
       case 0:
         component = current_entity->input();
         break;
@@ -252,7 +252,6 @@ bool Core::init(Entity * root,
   // initialize member properties
   _key_status.up   = _key_status.down  = false;
   _key_status.left = _key_status.right = false;
-  _prev_time = 0;
   _reset = false;
   SpriteCollection::main().init(renderer());
   
@@ -272,7 +271,6 @@ void Core::destroy()
   SDL_DestroyRenderer(renderer());
   SDL_DestroyWindow(window());
   SDL_Quit();
-  _initialized = false;
 }
 
 void Core::reset()
@@ -282,135 +280,144 @@ void Core::reset()
 
 void Core::createTimer(double duration, function<void ()> block)
 {
-  _timers.push_back({elapsedTime() + duration, block});
+  _timers.push_back({effectiveElapsedTime() + duration, block});
 }
 
 bool Core::update()
 {
+  static double prev_time;
+  
   // record time
   double start_time = elapsedTime();
-  delta_time(start_time - _prev_time);
-  _prev_time = start_time;
+  delta_time(start_time - prev_time);
+  prev_time = start_time;
   
-  // check if initialized
-  if (_initialized)
-  {
-    // check user input
-    SDL_Event event;
-    bool should_continue = true;
-    while (SDL_PollEvent(&event))
-    {
-      if (event.type == SDL_QUIT)
-      {
-        should_continue = false;
-        break;
-      }
-      if (event.type == SDL_KEYDOWN)
-      {
-        switch (event.key.keysym.sym)
-        {
-          case SDLK_UP:
-            _key_status.up = true;
-            break;
-          case SDLK_DOWN:
-            _key_status.down = true;
-            break;
-          case SDLK_LEFT:
-            _key_status.left = true;
-            break;
-          case SDLK_RIGHT:
-            _key_status.right = true;
-            break;
-        }
-      }
-      if (event.type == SDL_KEYUP)
-      {
-        switch (event.key.keysym.sym)
-        {
-          case SDLK_UP:
-            _key_status.up = false;
-            break;
-          case SDLK_DOWN:
-            _key_status.down = false;
-            break;
-          case SDLK_LEFT:
-            _key_status.left = false;
-            break;
-          case SDLK_RIGHT:
-            _key_status.right = false;
-            break;
-          case SDLK_ESCAPE:
-          case SDLK_q:
-            should_continue = false;
-            break;
-        }
-      }
-    }
-    
-    // possibly do a reset
-    if (_reset)
-    {
-      _timers.clear();
-      root()->reset();
-      _reset = false;
-    }
-    
-    // update root
-    root()->update();
-    
 #ifdef GAME_ENGINE_DEBUG
-    // draw bounding boxes
-    RGBAColor prev_color;
-    SDL_GetRenderDrawColor(renderer(),
-                           &prev_color.r,
-                           &prev_color.g,
-                           &prev_color.b,
-                           &prev_color.a);
-    SDL_SetRenderDrawColor(renderer(), 0xFF, 0xFF, 0xFF, 0xFF);
-    stack<Entity*> entity_stack;
-    entity_stack.push(root());
-    while (entity_stack.size() > 0)
+  effectiveElapsedTime();
+#endif
+  
+  // check user input
+  SDL_Event event;
+  bool should_continue = true;
+  while (SDL_PollEvent(&event))
+  {
+    if (event.type == SDL_QUIT)
     {
-      Entity * current_entity = entity_stack.top();
-      entity_stack.pop();
-      
-      PhysicsComponent * current_physics_component;
-      if ((current_physics_component = current_entity->physics()))
+      should_continue = false;
+      break;
+    }
+    if (event.type == SDL_KEYDOWN)
+    {
+      switch (event.key.keysym.sym)
       {
-        SDL_Rect rect;
-        Rectangle bounds = current_physics_component->collision_bounds();
-        Vector2 world_position;
-        current_entity->calculateWorldPosition(world_position);
-        rect.x = (world_position.x + bounds.pos.x) * scale();
-        rect.y = (world_position.y + bounds.pos.y) * scale();
-        rect.w = bounds.dim.x * scale();
-        rect.h = bounds.dim.y * scale();
-        SDL_RenderDrawRect(renderer(), &rect);
-      }
-      
-      for (auto child : current_entity->children())
-      {
-        entity_stack.push(child);
+        case SDLK_UP:
+          _key_status.up = true;
+          break;
+        case SDLK_DOWN:
+          _key_status.down = true;
+          break;
+        case SDLK_LEFT:
+          _key_status.left = true;
+          break;
+        case SDLK_RIGHT:
+          _key_status.right = true;
+          break;
       }
     }
-    SDL_SetRenderDrawColor(renderer(),
-                           prev_color.r,
-                           prev_color.g,
-                           prev_color.b,
-                           prev_color.a);
+    if (event.type == SDL_KEYUP)
+    {
+      switch (event.key.keysym.sym)
+      {
+        case SDLK_UP:
+          _key_status.up = false;
+          break;
+        case SDLK_DOWN:
+          _key_status.down = false;
+          break;
+        case SDLK_LEFT:
+          _key_status.left = false;
+          break;
+        case SDLK_RIGHT:
+          _key_status.right = false;
+          break;
+        case SDLK_p:
+          _pause = !_pause;
+          effectiveElapsedTime();
+          break;
+        case SDLK_ESCAPE:
+        case SDLK_q:
+          should_continue = false;
+          break;
+      }
+    }
+  }
+  
+  // possibly do a reset
+  if (!_pause && _reset)
+  {
+    _timers.clear();
+    root()->reset();
+    _reset = false;
+  }
+  
+  // update root
+  if (!_pause) root()->update();
+  else         root()->update(0b0001);
+  
+#ifdef GAME_ENGINE_DEBUG
+  // draw bounding boxes
+  RGBAColor prev_color;
+  SDL_GetRenderDrawColor(renderer(),
+                         &prev_color.r,
+                         &prev_color.g,
+                         &prev_color.b,
+                         &prev_color.a);
+  SDL_SetRenderDrawColor(renderer(), 0xFF, 0xFF, 0xFF, 0xFF);
+  stack<Entity*> entity_stack;
+  entity_stack.push(root());
+  while (entity_stack.size() > 0)
+  {
+    Entity * current_entity = entity_stack.top();
+    entity_stack.pop();
+    
+    PhysicsComponent * current_physics_component;
+    if ((current_physics_component = current_entity->physics()))
+    {
+      SDL_Rect rect;
+      Rectangle bounds = current_physics_component->collision_bounds();
+      Vector2 world_position;
+      current_entity->calculateWorldPosition(world_position);
+      rect.x = (world_position.x + bounds.pos.x) * scale();
+      rect.y = (world_position.y + bounds.pos.y) * scale();
+      rect.w = bounds.dim.x * scale();
+      rect.h = bounds.dim.y * scale();
+      SDL_RenderDrawRect(renderer(), &rect);
+    }
+    
+    for (auto child : current_entity->children())
+    {
+      entity_stack.push(child);
+    }
+  }
+  SDL_SetRenderDrawColor(renderer(),
+                         prev_color.r,
+                         prev_color.g,
+                         prev_color.b,
+                         prev_color.a);
 #endif
-    
-    // clear screen
-    SDL_RenderPresent(renderer());
-    SDL_RenderClear(renderer());
-    
-    // go through timers
+  
+  // clear screen
+  SDL_RenderPresent(renderer());
+  SDL_RenderClear(renderer());
+  
+  // go through timers
+  if (!_pause)
+  {
     int i = 0;
     while (i < _timers.size())
     {
       auto timer = _timers[i];
-      auto size = _timers.size();
-      const double current_time = elapsedTime();
+      const double current_time = effectiveElapsedTime();
       if (current_time >= timer.end_time)
       {
         timer.block();
@@ -418,12 +425,10 @@ bool Core::update()
       }
       else i++;
     }
-
-    
-    return should_continue;
   }
-  _initialized = true;
-  
+
+  return should_continue;
+
   return true;
 }
 
@@ -438,6 +443,57 @@ void Core::keyStatus(Core::KeyStatus & key_status)
 double Core::elapsedTime()
 {
   return SDL_GetTicks() / 1000.f;
+}
+
+double Core::effectiveElapsedTime()
+{
+  static double last_pause_time;
+  static double total_pause_duration;
+  static bool pause_toggle;
+  
+  const double elapsed = elapsedTime();
+  
+  if (_pause && !pause_toggle)
+  {
+    pause_toggle = true;
+    last_pause_time = elapsed;
+    
+#ifdef GAME_ENGINE_DEBUG
+    printf("/**************** PAUSED ****************/\n");
+#endif
+    
+  }
+  else if (!_pause && pause_toggle)
+  {
+    pause_toggle = false;
+    total_pause_duration += elapsed - last_pause_time;
+    
+#ifdef GAME_ENGINE_DEBUG
+    printf("/**************** RESUMED ***************/\n");
+#endif
+    
+  }
+  
+#ifdef GAME_ENGINE_DEBUG
+  static double last_print_time;
+  
+  if (elapsed - last_print_time >= 0.1)
+  {
+    printf("Elapsed: %f\t\t", elapsed);
+    printf("Effective elapsed: %f\t\t",
+           !_pause
+             ? elapsed - total_pause_duration
+             : last_pause_time - total_pause_duration);
+    printf("Last pause time: %f\t\t", last_pause_time);
+    printf("Total pause duration: %f\n",
+           !_pause
+             ? total_pause_duration
+             : total_pause_duration + elapsed - last_pause_time);
+    last_print_time = elapsed;
+  }
+#endif
+
+  return (!_pause ? elapsed : last_pause_time) - total_pause_duration;
 }
 
 
@@ -630,12 +686,14 @@ void Entity::changeVelocityBy(double dvx, double dvy)
   velocity().y += dvy;
 }
 
-void Entity::update()
+void Entity::update(uint8_t mask)
 {
-  _tmp_update(this, core(), 0);
-  _tmp_update(this, core(), 1);
-  _tmp_update(this, core(), 2);
-  _tmp_update(this, core(), 3);
+  uint8_t use_component = mask;
+  int component_type = 3;
+  while (use_component > 0) {
+    if (use_component & 0b0001) _tmp_update(this, core(), component_type--);
+    use_component >>= 1;
+  }
 }
 
 

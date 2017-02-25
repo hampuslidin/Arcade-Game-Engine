@@ -271,7 +271,7 @@ void Controller::init(Core * core)
   for (auto prefix : {prefix_standing(), prefix_jumping()})
   {
     int direction_mask = this->direction_mask();
-    int direction = UP;
+    int direction = RIGHT;
     while (direction_mask > 0)
     {
       if (direction_mask & 0b0001)
@@ -281,7 +281,7 @@ void Controller::init(Core * core)
         sprites.create(id, filename.c_str());
       }
       direction_mask >>= 1;
-      direction++;
+      direction--;
     }
   }
 }

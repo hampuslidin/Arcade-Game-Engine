@@ -52,7 +52,7 @@ void AnimationComponent::performAnimation(string id,
     animating(true);
     _current_curve = _curves[id];
     _start_position = entity()->local_position();
-    _start_time = entity()->core()->elapsedTime();
+    _start_time = entity()->core()->effectiveElapsedTime();
     _duration = duration;
     _update_velocity = update_velocity;
     NotificationCenter::notify(DidStartAnimating, *this);
@@ -64,7 +64,7 @@ void AnimationComponent::update(Core & world)
   if (animating())
   {
     const double dt = _duration / (_current_curve.size() - 1);
-    const double elapsed  = world.elapsedTime() - _start_time;
+    const double elapsed  = world.effectiveElapsedTime() - _start_time;
     if (elapsed < _duration)
     {
       const int i = floor(elapsed / dt);

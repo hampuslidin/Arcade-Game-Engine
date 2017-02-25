@@ -126,4 +126,4 @@ void Enemy::reset()
 
 string Enemy::prefix_standing() { return id() + "_jumping"; }
 string Enemy::prefix_jumping()  { return id() + "_jumping"; }
-int Enemy::direction_mask()     { return 0b0101;        }
+int Enemy::direction_mask()     { return 0b1010;            }
