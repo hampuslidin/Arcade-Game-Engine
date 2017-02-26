@@ -36,14 +36,14 @@ void BlockGraphicsComponent::reset()
 {
   GraphicsComponent::reset();
   
-  current_sprite(SpriteCollection::main().retrieve("block_0_0"));
+  current_sprite(SpriteCollection::main().retrieve("block00"));
 }
 
 void BlockGraphicsComponent::changeColor(int base_i, int detail_i)
 {
   _base_i = base_i;
   _detail_i = detail_i;
-  string id = "block_" + to_string(_base_i*6) + "_" + to_string(_detail_i);
+  string id = "block" + to_string(_base_i*6) + to_string(_detail_i);
   current_sprite(SpriteCollection::main().retrieve(id));
 }
 
@@ -116,7 +116,7 @@ void Board::init(Core * core)
   {
     for (auto j = 0; j < 6; j++)
     {
-      string id = "block_" + to_string(i) + "_" + to_string(j);
+      string id = "block" + to_string(i) + to_string(j);
       string filename = "textures/" + id + ".png";
       sprites.create(id, filename.c_str());
     }
