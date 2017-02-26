@@ -48,13 +48,20 @@ EnemyAnimationComponent::EnemyAnimationComponent(double speed,
 EnemyPhysicsComponent::EnemyPhysicsComponent(Vector2 gravity)
   : ControllerPhysicsComponent()
 {
-  collision_bounds({2, 0, 2, 2});
   this->gravity(gravity);
 }
 
-bool EnemyPhysicsComponent::should_break_for_collision(Entity * collided_entity)
+void EnemyPhysicsComponent::init(Entity * entity)
 {
-  return true;
+  ControllerPhysicsComponent::init(entity);
+  
+  auto did_move_out_of_view = [entity](Event)
+  {
+    entity->enabled(false);
+    entity->reset();
+  };
+  
+  NotificationCenter::observe(did_move_out_of_view, DidMoveOutOfView, this);
 }
 
 
@@ -81,13 +88,13 @@ Enemy::Enemy(string id,
              Vector2 gravity,
              Vector2 end_points[],
              pair<int, int> board_position_changes[])
-  : Controller(id,
-               order,
-               new EnemyInputComponent(board_position_changes),
-               new EnemyAnimationComponent(speed, end_points),
-               new EnemyPhysicsComponent(gravity),
-               new EnemyGraphicsComponent())
+  : Controller(id, order)
 {
+  addInput(new EnemyInputComponent(board_position_changes));
+  addAnimation(new EnemyAnimationComponent(speed, end_points));
+  addPhysics(new EnemyPhysicsComponent(gravity));
+  addGraphics(new EnemyGraphicsComponent());
+  
   _default_board_position = default_board_position;
   _default_order = order;
   this->default_direction(default_direction);
@@ -97,14 +104,23 @@ void Enemy::reset()
 {
   Controller::reset();
   
+  enabled(false);
+  order(default_order());
+  board_position(default_board_position());
+  
+  core()->createEffectiveTimer(arc4random_uniform(3)+2, [this]
+  {
+    enabled(true);
+  });
+  
   const Dimension2 view_dimensions = core()->view_dimensions();
   moveTo(view_dimensions.x/2 + 102, view_dimensions.y-30);
 }
 
-string Enemy::prefix_standing() { return id() + "_jumping"; }
-string Enemy::prefix_jumping()  { return id() + "_jumping"; }
-int Enemy::direction_mask()     { return 0b0101;            }
-int Enemy::default_order()      { return _default_order;    }
+string Enemy::prefix_standing() { return id() + "_jumping";  }
+string Enemy::prefix_jumping()  { return id() + "_jumping";  }
+int Enemy::direction_mask()     { return 0b0101;             }
+int Enemy::default_order()      { return _default_order;     }
 pair<int, int> Enemy::default_board_position()
 {
   return _default_board_position;

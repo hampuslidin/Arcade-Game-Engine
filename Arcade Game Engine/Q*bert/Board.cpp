@@ -15,7 +15,7 @@
 BlockPhysicsComponent::BlockPhysicsComponent()
   : PhysicsComponent()
 {
-  collision_bounds({8, 8, 16, 16});
+  collision_bounds({10, 8, 12, 16});
 }
 
 
@@ -136,10 +136,7 @@ void Board::init(Core * core)
     if (_sum == 0)
     {
       NotificationCenter::notify(DidClearBoard, *this);
-      core->createTimer(1, [core]()
-      {
-        core->reset();
-      });
+      core->reset(1.0);
     }
   };
   

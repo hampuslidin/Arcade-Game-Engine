@@ -49,7 +49,7 @@ class PlayerPhysicsComponent
   : public ControllerPhysicsComponent
 {
 protected:
-  bool should_break_for_collision(Entity * collided_entity);
+  void collision(Entity * collided_entity);
 public:
   PlayerPhysicsComponent();
   void init(Entity * entity);

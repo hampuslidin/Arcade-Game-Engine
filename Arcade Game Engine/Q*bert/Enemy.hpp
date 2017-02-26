@@ -46,10 +46,9 @@ public:
 class EnemyPhysicsComponent
   : public ControllerPhysicsComponent
 {
-protected:
-  bool should_break_for_collision(Entity * collided_entity);
 public:
   EnemyPhysicsComponent(Vector2 gravity);
+  void init(Entity * entity);
 };
 
 //

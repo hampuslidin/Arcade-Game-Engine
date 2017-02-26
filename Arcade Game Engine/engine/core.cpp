@@ -9,18 +9,31 @@
 
 // MARK: Helper functions
 
-void _buildEntityPriorityQueue(Entity * root,
-                               priority_queue<Entity*,
-                                              vector<Entity*>,
-                                              EntityCompare> & queue)
+void _buildEntityPriorityQueue(Entity & root, vector<Entity*> & result)
 {
-  if (root)
+  int root_order = root.order();
+  long low = 0;
+  long high = result.size()-1;
+  while (low <= high)
   {
-    queue.push(root);
-    for (auto child : root->children())
+    long middle = (high+low+1)/2;
+    Entity * middle_entity = result.at(middle);
+    int order = middle_entity->order();
+    
+    if (root_order < order)
     {
-      _buildEntityPriorityQueue(child, queue);
+      high = middle - 1;
     }
+    else if (root_order >= order)
+    {
+      low = middle + 1;
+    }
+  }
+  result.insert(result.begin()+low, &root);
+  
+  for (auto child : root.children())
+  {
+    if (child) _buildEntityPriorityQueue(*child, result);
   }
 }
 
@@ -255,14 +268,42 @@ void Core::destroy()
   SDL_Quit();
 }
 
-void Core::reset()
+void Core::reset(double after_duration)
 {
-  _reset = true;
+  if (after_duration > 0)
+  {
+    createAccumulativeTimer(after_duration, [this] { _reset = true; });
+  }
 }
 
-void Core::createTimer(double duration, function<void ()> block)
+void Core::pause()
 {
-  _timers.push_back({effectiveElapsedTime() + duration, block});
+  _pause = true;
+  effectiveElapsedTime();
+}
+
+void Core::resume()
+{
+  _pause = false;
+  effectiveElapsedTime();
+}
+
+void Core::createEffectiveTimer(double duration, function<void()> block)
+{
+  _timers.push_back
+  ({
+    {effectiveElapsedTime() + duration, block},
+    _EFFECTIVE
+  });
+}
+
+void Core::createAccumulativeTimer(double duration, function<void()> block)
+{
+  _timers.push_back
+  ({
+    {elapsedTime() + duration, block},
+    _ACCUMULATIVE
+  });
 }
 
 bool Core::update()
@@ -322,10 +363,12 @@ bool Core::update()
         case SDLK_RIGHT:
           _key_status.right = false;
           break;
+#ifdef GAME_ENGINE_DEBUG
         case SDLK_p:
-          _pause = !_pause;
-          effectiveElapsedTime();
+          if (!_pause) pause();
+          else         resume();
           break;
+#endif
         case SDLK_ESCAPE:
         case SDLK_q:
           should_continue = false;
@@ -335,22 +378,25 @@ bool Core::update()
   }
   
   // possibly do a reset
-  if (!_pause && _reset)
+  if (_reset)
   {
     _timers.clear();
     root()->reset();
     _reset = false;
+    resume();
   }
   
   // update entities
-  auto entities = priority_queue<Entity*, vector<Entity*>, EntityCompare>();
-  _buildEntityPriorityQueue(root(), entities);
+  auto entities = vector<Entity*>();
+  _buildEntityPriorityQueue(*root(), entities);
   
-  uint8_t mask = !_pause ? 0b1111 : 0b1000;
-  while (entities.size() > 0)
+  uint8_t mask = !_pause ? 0b1111 : 0b0001;
+  for (uint8_t i = 0b1000; i > 0; i = i >>= 1)
   {
-    entities.top()->update(mask);
-    entities.pop();
+    for (auto entity : entities)
+    {
+      entity->update(mask & i);
+    }
   }
   
 #ifdef GAME_ENGINE_DEBUG
@@ -400,20 +446,19 @@ bool Core::update()
   SDL_RenderClear(renderer());
   
   // go through timers
-  if (!_pause)
+  int i = 0;
+  while (i < _timers.size())
   {
-    int i = 0;
-    while (i < _timers.size())
+    auto pair = _timers[i];
+    const double current_time = pair.second == _EFFECTIVE
+      ? effectiveElapsedTime()
+      : elapsedTime();
+    if (current_time >= pair.first.end_time)
     {
-      auto timer = _timers[i];
-      const double current_time = effectiveElapsedTime();
-      if (current_time >= timer.end_time)
-      {
-        timer.block();
-        _timers.erase(_timers.begin() + i);
-      }
-      else i++;
+      pair.first.block();
+      _timers.erase(_timers.begin() + i);
     }
+    else i++;
   }
 
   return should_continue;
@@ -535,6 +580,7 @@ void Entity::addGraphics(GraphicsComponent * graphics)
 void Entity::init(Core * core)
 {
   this->core(core);
+  this->enabled(true);
   
   if (input()) input()->init(this);
   if (animation()) animation()->init(this);
@@ -664,41 +710,15 @@ void Entity::changeVelocityBy(double dvx, double dvy)
   velocity().y += dvy;
 }
 
-void Entity::update(uint8_t mask)
+void Entity::update(uint8_t component_mask)
 {
-  uint8_t use_component = mask;
-  int component = 0;
-  while (use_component > 0) {
-    if (use_component & 0b0001)
-    {
-      switch (component)
-      {
-        case 0:
-          if (input()) input()->update(*core());
-          break;
-        case 1:
-          if (animation()) animation()->update(*core());
-          break;
-        case 2:
-          if (physics()) physics()->update(*core());
-          break;
-        case 3:
-          if (graphics()) graphics()->update(*core());
-          break;
-      }
-    }
-    use_component >>= 1;
-    component++;
+  if (enabled())
+  {
+    if (component_mask & 0b1000 && input())     input()->update(*core());
+    if (component_mask & 0b0100 && animation()) animation()->update(*core());
+    if (component_mask & 0b0010 && physics())   physics()->update(*core());
+    if (component_mask & 0b0001 && graphics())  graphics()->update(*core());
   }
-}
-
-//
-// MARK: - EntityCompare
-//
-
-bool EntityCompare::operator()(Entity * l, Entity * r)
-{
-  return l->order() > r->order();
 }
 
 

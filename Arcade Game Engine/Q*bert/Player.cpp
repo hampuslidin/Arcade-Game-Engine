@@ -78,7 +78,7 @@ PlayerAnimationComponent::PlayerAnimationComponent(Vector2 end_points[])
 PlayerPhysicsComponent::PlayerPhysicsComponent()
   : ControllerPhysicsComponent()
 {
-  collision_bounds({7, 14, 2, 2});
+  collision_bounds({7, 2, 2, 14});
 }
 
 void PlayerPhysicsComponent::init(Entity * entity)
@@ -87,24 +87,25 @@ void PlayerPhysicsComponent::init(Entity * entity)
 
   auto did_move_out_of_view = [entity](Event)
   {
-    entity->core()->createTimer(1, [entity]()
-    {
-      entity->core()->reset();
-    });
+    entity->core()->pause();
+    entity->core()->reset(1.0);
   };
   
   NotificationCenter::observe(did_move_out_of_view, DidMoveOutOfView, this);
 }
 
-bool PlayerPhysicsComponent::should_break_for_collision(Entity * collided_entity)
+void PlayerPhysicsComponent::collision(Entity * collided_entity)
 {
-  string id_prefix = collided_entity->id().substr(0, 5);
-  if (collided_entity->id().compare(0, 5, "block") == 0)
+  string id = collided_entity->id();
+  if (id.compare(0, 5, "block") == 0)
   {
     ((Block*)collided_entity)->touch();
-    return true;
   }
-  return false;
+  else if (id.compare(0, 5, "enemy") == 0)
+  {
+    entity()->core()->pause();
+    entity()->core()->reset(1.0);
+  }
 }
 
 
@@ -123,26 +124,40 @@ string PlayerGraphicsComponent::default_sprite_id()
 //
 
 Player::Player(string id)
-  : Controller(id,
-               11,
-               new PlayerInputComponent((pair<int, int>[]){{-1,  0},
-                                                           { 1,  0},
-                                                           {-1, -1},
-                                                           { 1,  1}}),
-               new PlayerAnimationComponent((Vector2[]){{ 16, -24},
-                                                        {-16,  24},
-                                                        {-16, -24},
-                                                        { 16,  24}}),
-               new PlayerPhysicsComponent(),
-               new PlayerGraphicsComponent())
-{}
+  : Controller(id, 11)
+{
+  pair<int, int> board_position_changes[4]
+  {
+    {-1,  0},
+    { 1,  0},
+    {-1, -1},
+    { 1,  1}
+  };
+  addInput(new PlayerInputComponent(board_position_changes));
+  
+  Vector2 end_points[4]
+  {
+    { 16, -24},
+    {-16,  24},
+    {-16, -24},
+    { 16,  24}
+  };
+  addAnimation(new PlayerAnimationComponent(end_points));
+  
+  addPhysics(new PlayerPhysicsComponent());
+  addGraphics(new PlayerGraphicsComponent());
+}
 
 void Player::reset()
 {
   Controller::reset();
   
   const Dimension2 view_dimensions = core()->view_dimensions();
-  moveTo(view_dimensions.x/2-8, view_dimensions.y-176-16-8);
+  const int row = board_position().first;
+  const int column = board_position().second;
+  const double x_pos = view_dimensions.x/2 - 8   - 16*row + 32*column;
+  const double y_pos = view_dimensions.y   - 200 + 24*row;
+  moveTo(x_pos, y_pos);
 }
 
 string Player::prefix_standing()                { return "qbert_standing"; }

@@ -30,6 +30,7 @@ string AnimationComponent::trait() { return "animation"; }
 void AnimationComponent::reset()
 {
   animating(false);
+  end_velocity({0, 0});
   _update_velocity = false;
 }
 
@@ -61,6 +62,7 @@ void AnimationComponent::performAnimation(string id,
 
 void AnimationComponent::update(Core & world)
 {
+  end_velocity({0, 0});
   if (animating())
   {
     const double dt = _duration / (_current_curve.size() - 1);
@@ -84,13 +86,14 @@ void AnimationComponent::update(Core & world)
     }
     else
     {
-      auto last_half_segment = _current_curve.back();
-      entity()->moveTo(_start_position.x + last_half_segment.first.x,
-                       _start_position.y + last_half_segment.first.y);
+      auto last_half_spline = _current_curve.back();
+      entity()->moveTo(_start_position.x + last_half_spline.first.x,
+                       _start_position.y + last_half_spline.first.y);
+//      end_velocity(last_half_spline.second/_duration);
       if (_update_velocity)
       {
-        entity()->changeVelocityTo(last_half_segment.second.x/_duration,
-                                   last_half_segment.second.y/_duration);
+        entity()->changeVelocityTo(last_half_spline.second.x/_duration,
+                                   last_half_spline.second.y/_duration);
       }
       animating(false);
       NotificationCenter::notify(DidStopAnimating, *this);

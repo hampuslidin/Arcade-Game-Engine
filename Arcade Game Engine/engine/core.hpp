@@ -135,9 +135,10 @@ private:
     double end_time;
     function<void(void)> block;
   };
+  enum _TimerType { _EFFECTIVE, _ACCUMULATIVE };
   
   KeyStatus _key_status;
-  vector<_Timer> _timers;
+  vector<pair<_Timer, _TimerType>> _timers;
   double _pause_duration;
   bool _reset;
   bool _pause;
@@ -147,7 +148,7 @@ public:
   prop_r<Core,          Entity*> root;
   prop_r<Core,           double> delta_time;
   prop_r<Core,       Dimension2> view_dimensions;
-  prop<int> scale;
+  prop<int>  scale;
   
   Core();
   bool init(Entity * root,
@@ -155,8 +156,11 @@ public:
             Dimension2 dimensions,
             RGBAColor background_color = {0x00, 0x00, 0x00, 0xFF});
   void destroy();
-  void reset();
-  void createTimer(double duration, function<void(void)> block);
+  void reset(double after_duration = 0);
+  void pause();
+  void resume();
+  void createEffectiveTimer(double duration, function<void()> block);
+  void createAccumulativeTimer(double duration, function<void()> block);
   bool update();
   void resolveCollisions(Entity & collider,
                          bool collision_response,
@@ -200,7 +204,8 @@ public:
   prop_r<Entity,  GraphicsComponent*> graphics;
   prop_r<Entity,             Vector2> local_position;
   prop_r<Entity,             Vector2> velocity;
-  prop<int> order;
+  prop<int>  order;
+  prop<bool> enabled;
   
   string id();
     
@@ -260,12 +265,7 @@ public:
   void changeHorizontalVelocityTo(double vx);
   void changeVerticalVelocityTo(double vy);
   void changeVelocityBy(double dvs, double dvy);
-  void update(uint8_t mask = 0b1111);
-};
-
-class EntityCompare {
-public:
-  bool operator()(Entity * l, Entity * r);
+  void update(uint8_t component_mask);
 };
 
 
@@ -322,6 +322,7 @@ private:
 public:
   
   prop_r<AnimationComponent, bool> animating;
+  prop_r<AnimationComponent, Vector2> end_velocity;
   
   virtual void reset();
   

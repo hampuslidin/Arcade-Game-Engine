@@ -28,7 +28,7 @@ Level::Level(string id)
   pair<int, int> board_position_changes[4];
   
   // Ugg
-  enemy_id = "ugg";
+  enemy_id = "enemy_ugg";
   order = 91; // TODO: should work from 81 and up, but it doesn't for some reason
   default_direction = UP;
   default_board_position = {6, 6};

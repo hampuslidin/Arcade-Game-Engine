@@ -35,7 +35,7 @@ void ControllerInputComponent::init(Entity * entity)
   };
   auto did_stop_animating  = [this, entity](Event)
   {
-    entity->core()->createTimer(animation_ending_delay(), [this]
+    entity->core()->createEffectiveTimer(animation_ending_delay(), [this]
     {
       _animating = false;
     });
@@ -78,13 +78,7 @@ void ControllerInputComponent::update(Core & core)
         board_position.second + board_position_change.second
       });
       
-#ifdef GAME_ENGINE_DEBUG
-      printf("Old order: %i\n", controller->order());
-#endif
       controller->order(entity()->order() + board_position_change.first*10);
-#ifdef GAME_ENGINE_DEBUG
-      printf("New order: %i\n", controller->order());
-#endif
       
       board_position = controller->board_position();
       if (board_position.first < 0 ||
@@ -235,8 +229,7 @@ void ControllerPhysicsComponent::update(Core & core)
   
   for (auto collided_entity : collided_entities())
   {
-    bool should_break = should_break_for_collision(collided_entity);
-    if (should_break) break;
+    collision(collided_entity);
   }
 }
 
@@ -292,19 +285,9 @@ void ControllerGraphicsComponent::reset()
 // MARK: - Controller
 //
 
-Controller::Controller(string id,
-                       int order,
-                       ControllerInputComponent * input,
-                       ControllerAnimationComponent * animation,
-                       ControllerPhysicsComponent * physics,
-                       ControllerGraphicsComponent * graphics)
+Controller::Controller(string id, int order)
   : Entity(id, order)
-{
-  addInput(input);
-  addAnimation(animation);
-  addPhysics(physics);
-  addGraphics(graphics);
-}
+{}
 
 void Controller::init(Core * core)
 {
@@ -327,15 +310,4 @@ void Controller::init(Core * core)
       direction++;
     }
   }
-}
-
-void Controller::reset()
-{
-  Entity::reset();
-  
-  order(default_order());
-  board_position(default_board_position());
-  
-  const Dimension2 view_dimensions = core()->view_dimensions();
-  moveTo(view_dimensions.x/2-8, view_dimensions.y-176-16-8);
 }

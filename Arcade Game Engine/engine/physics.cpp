@@ -35,7 +35,7 @@ void _resolveCollisions(Entity & collider,
     {
       result.push_back(&collided);
       
-      if (collision_response)
+      if (collision_response && !collided.physics()->dynamic())
       {
         double * min = &up_overlap;
         const auto overlaps =

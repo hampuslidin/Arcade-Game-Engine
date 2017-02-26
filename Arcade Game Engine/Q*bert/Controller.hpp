@@ -74,7 +74,7 @@ class ControllerPhysicsComponent
   bool _animating;
   bool _has_jumped_once;
 protected:
-  virtual bool should_break_for_collision(Entity * collided_entity) = 0;
+  virtual void collision(Entity * collided_entity) {};
 public:
   virtual void init(Entity * entity);
   virtual void reset();
@@ -112,14 +112,8 @@ protected:
 public:
   prop<pair<int, int>> board_position;
   
-  Controller(string id,
-             int order,
-             ControllerInputComponent * input,
-             ControllerAnimationComponent * animation,
-             ControllerPhysicsComponent * physics,
-             ControllerGraphicsComponent * graphics);
+  Controller(string id, int order);
   virtual void init(Core * core);
-  virtual void reset();
   virtual string prefix_standing() = 0;
   virtual string prefix_jumping()  = 0;
 };
