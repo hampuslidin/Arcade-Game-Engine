@@ -21,6 +21,7 @@ protected:
   ControllerDirection update_direction(Core & core);
   double animation_ending_delay();
 public:
+  PlayerInputComponent(pair<int, int> board_position_changes[4]);
   void init(Entity * entity);
   void reset();
 };
@@ -35,10 +36,8 @@ class PlayerAnimationComponent
 {
 protected:
   double animation_speed();
-  Vector2 jump_up_end_point();
-  Vector2 jump_down_end_point();
-  Vector2 jump_left_end_point();
-  Vector2 jump_right_end_point();
+public:
+  PlayerAnimationComponent(Vector2 end_points[4]);
 };
 
 
@@ -49,14 +48,11 @@ protected:
 class PlayerPhysicsComponent
   : public ControllerPhysicsComponent
 {
-  bool _has_jumped_once;
 protected:
   bool should_break_for_collision(Entity * collided_entity);
-  bool should_update();
 public:
   PlayerPhysicsComponent();
   void init(Entity * entity);
-  void reset();
 };
 
 
@@ -80,6 +76,8 @@ class Player
 {
 protected:
   int direction_mask();
+  int default_order();
+  pair<int, int> default_board_position();
 public:
   Player(string id);
   void reset();

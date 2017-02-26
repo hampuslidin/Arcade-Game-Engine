@@ -19,6 +19,11 @@ ControllerDirection EnemyInputComponent::update_direction(Core & core)
 
 double EnemyInputComponent::animation_ending_delay() { return 0.2; };
 
+EnemyInputComponent::
+  EnemyInputComponent(pair<int, int> board_position_changes[])
+  : ControllerInputComponent(board_position_changes)
+{}
+
 //
 // MARK: - EnemyAnimationComponent
 //
@@ -26,35 +31,12 @@ double EnemyInputComponent::animation_ending_delay() { return 0.2; };
 // MARK: Member functions
 
 double EnemyAnimationComponent::animation_speed() { return _speed; };
-Vector2 EnemyAnimationComponent::jump_up_end_point()
-{
-  return _jump_up_end_point;
-};
-Vector2 EnemyAnimationComponent::jump_down_end_point()
-{
-  return _jump_down_end_point;
-};
-Vector2 EnemyAnimationComponent::jump_left_end_point()
-{
-  return _jump_left_end_point;
-};
-Vector2 EnemyAnimationComponent::jump_right_end_point()
-{
-  return _jump_right_end_point;
-};
 
 EnemyAnimationComponent::EnemyAnimationComponent(double speed,
-                                                 Vector2 jump_up_end_point,
-                                                 Vector2 jump_down_end_point,
-                                                 Vector2 jump_left_end_point,
-                                                 Vector2 jump_right_end_point)
-  : ControllerAnimationComponent()
+                                                 Vector2 end_points[])
+  : ControllerAnimationComponent(end_points)
 {
   _speed = speed;
-  _jump_up_end_point = jump_up_end_point;
-  _jump_down_end_point = jump_down_end_point;
-  _jump_left_end_point = jump_left_end_point;
-  _jump_right_end_point = jump_right_end_point;
 }
 
 //
@@ -75,10 +57,6 @@ bool EnemyPhysicsComponent::should_break_for_collision(Entity * collided_entity)
   return true;
 }
 
-bool EnemyPhysicsComponent::should_update()
-{
-  return false;
-}
 
 //
 // MARK: - EnemyGraphicsComponent
@@ -96,23 +74,22 @@ string EnemyGraphicsComponent::default_sprite_id()
 //
 
 Enemy::Enemy(string id,
+             int order,
              ControllerDirection default_direction,
+             pair<int, int> default_board_position,
              double speed,
              Vector2 gravity,
-             Vector2 jump_up_end_point,
-             Vector2 jump_down_end_point,
-             Vector2 jump_left_end_point,
-             Vector2 jump_right_end_point)
+             Vector2 end_points[],
+             pair<int, int> board_position_changes[])
   : Controller(id,
-               new EnemyInputComponent(),
-               new EnemyAnimationComponent(speed,
-                                           jump_up_end_point,
-                                           jump_down_end_point,
-                                           jump_left_end_point,
-                                           jump_right_end_point),
+               order,
+               new EnemyInputComponent(board_position_changes),
+               new EnemyAnimationComponent(speed, end_points),
                new EnemyPhysicsComponent(gravity),
                new EnemyGraphicsComponent())
 {
+  _default_board_position = default_board_position;
+  _default_order = order;
   this->default_direction(default_direction);
 }
 
@@ -121,9 +98,14 @@ void Enemy::reset()
   Controller::reset();
   
   const Dimension2 view_dimensions = core()->view_dimensions();
-  moveTo(view_dimensions.x/2 + 70, view_dimensions.y-30);
+  moveTo(view_dimensions.x/2 + 102, view_dimensions.y-30);
 }
 
 string Enemy::prefix_standing() { return id() + "_jumping"; }
 string Enemy::prefix_jumping()  { return id() + "_jumping"; }
-int Enemy::direction_mask()     { return 0b1010;            }
+int Enemy::direction_mask()     { return 0b0101;            }
+int Enemy::default_order()      { return _default_order;    }
+pair<int, int> Enemy::default_board_position()
+{
+  return _default_board_position;
+}

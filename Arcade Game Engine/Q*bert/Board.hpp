@@ -51,7 +51,7 @@ public:
   
   prop_r<Block, State> state;
   
-  Block(string id, int x, int y);
+  Block(string id, int order, int x, int y);
   void reset();
   void touch();
 };

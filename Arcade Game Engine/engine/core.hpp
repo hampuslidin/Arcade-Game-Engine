@@ -190,7 +190,6 @@ class Entity
 {
   string _id;
 public:
-  // MARK: Property functions
   
   prop_r<Entity,               Core*> core;
   prop_r<Entity,             Entity*> parent;
@@ -201,30 +200,17 @@ public:
   prop_r<Entity,  GraphicsComponent*> graphics;
   prop_r<Entity,             Vector2> local_position;
   prop_r<Entity,             Vector2> velocity;
+  prop<int> order;
   
   string id();
-  
-  /**
-   *  Change the order in the layer. Affects the update order on the parents
-   *  children.
-   *
-   *  IMPORTANT: do not call this in the reset method function, it will lead
-   *  to undefined behavior.
-   */
-  void order(int order);
-  
-  /**
-   *  Retrieve the order in the layer.
-   */
-  int order();
-  
+    
   // MARK: Member functions
   
-  Entity(string id,
-         InputComponent * input,
-         AnimationComponent * animation,
-         PhysicsComponent * physics,
-         GraphicsComponent * graphics);
+  Entity(string id, int order);
+  void addInput(InputComponent * input);
+  void addAnimation(AnimationComponent * animation);
+  void addPhysics(PhysicsComponent * physics);
+  void addGraphics(GraphicsComponent * graphics);
   
   /**
    *  Initializes an entity.
@@ -275,6 +261,11 @@ public:
   void changeVerticalVelocityTo(double vy);
   void changeVelocityBy(double dvs, double dvy);
   void update(uint8_t mask = 0b1111);
+};
+
+class EntityCompare {
+public:
+  bool operator()(Entity * l, Entity * r);
 };
 
 

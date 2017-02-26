@@ -13,6 +13,11 @@
 
 // MARK: Member functions
 
+PlayerInputComponent::
+  PlayerInputComponent(pair<int, int> board_position_changes[])
+  : ControllerInputComponent(board_position_changes)
+{}
+
 void PlayerInputComponent::init(Entity * entity)
 {
   ControllerInputComponent::init(entity);
@@ -57,11 +62,11 @@ double PlayerInputComponent::animation_ending_delay() { return 0.15; }
 
 // MARK: Member functions
 
-double PlayerAnimationComponent::animation_speed()       { return 0.3; }
-Vector2 PlayerAnimationComponent::jump_up_end_point()    { return { 16, -24}; };
-Vector2 PlayerAnimationComponent::jump_down_end_point()  { return {-16,  24}; };
-Vector2 PlayerAnimationComponent::jump_left_end_point()  { return {-16, -24}; };
-Vector2 PlayerAnimationComponent::jump_right_end_point() { return { 16,  24}; };
+double PlayerAnimationComponent::animation_speed() { return 0.3; }
+
+PlayerAnimationComponent::PlayerAnimationComponent(Vector2 end_points[])
+  : ControllerAnimationComponent(end_points)
+{}
 
 
 //
@@ -80,26 +85,15 @@ void PlayerPhysicsComponent::init(Entity * entity)
 {
   ControllerPhysicsComponent::init(entity);
 
-  auto did_jump = [this](Event) { _has_jumped_once = true; };
   auto did_move_out_of_view = [entity](Event)
   {
-    entity->order(-1);
     entity->core()->createTimer(1, [entity]()
     {
       entity->core()->reset();
     });
   };
   
-  auto input = entity->input();
-  NotificationCenter::observe(did_jump, DidJump, input);
   NotificationCenter::observe(did_move_out_of_view, DidMoveOutOfView, this);
-}
-
-void PlayerPhysicsComponent::reset()
-{
-  ControllerPhysicsComponent::reset();
-  
-  _has_jumped_once = false;
 }
 
 bool PlayerPhysicsComponent::should_break_for_collision(Entity * collided_entity)
@@ -111,11 +105,6 @@ bool PlayerPhysicsComponent::should_break_for_collision(Entity * collided_entity
     return true;
   }
   return false;
-}
-
-bool PlayerPhysicsComponent::should_update()
-{
-  return _has_jumped_once;
 }
 
 
@@ -135,8 +124,15 @@ string PlayerGraphicsComponent::default_sprite_id()
 
 Player::Player(string id)
   : Controller(id,
-               new PlayerInputComponent(),
-               new PlayerAnimationComponent(),
+               11,
+               new PlayerInputComponent((pair<int, int>[]){{-1,  0},
+                                                           { 1,  0},
+                                                           {-1, -1},
+                                                           { 1,  1}}),
+               new PlayerAnimationComponent((Vector2[]){{ 16, -24},
+                                                        {-16,  24},
+                                                        {-16, -24},
+                                                        { 16,  24}}),
                new PlayerPhysicsComponent(),
                new PlayerGraphicsComponent())
 {}
@@ -149,6 +145,8 @@ void Player::reset()
   moveTo(view_dimensions.x/2-8, view_dimensions.y-176-16-8);
 }
 
-string Player::prefix_standing() { return "qbert_standing"; }
-string Player::prefix_jumping()  { return "qbert_jumping";  }
-int Player::direction_mask()     { return 0b1111;           }
+string Player::prefix_standing()                { return "qbert_standing"; }
+string Player::prefix_jumping()                 { return "qbert_jumping";  }
+int Player::direction_mask()                    { return 0b1111;           }
+int Player::default_order()                     { return 15;               }
+pair<int, int> Player::default_board_position() { return {0, 0};           }

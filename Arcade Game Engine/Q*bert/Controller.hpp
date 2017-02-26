@@ -9,7 +9,7 @@
 
 // Events
 const Event DidJump("DidJump");
-const Event DidFallOff("DidFallOff");
+const Event DidJumpOff("DidJumpOff");
 
 
 //
@@ -31,12 +31,14 @@ const ControllerDirection RIGHT = 3;
 class ControllerInputComponent
   : public InputComponent
 {
+  pair<int, int> _board_position_changes[4];
   bool _animating;
-  bool _did_jump_off;
+  bool _airborn;
 protected:
   virtual ControllerDirection update_direction(Core & core) = 0;
   virtual double animation_ending_delay() = 0;
 public:
+  ControllerInputComponent(pair<int, int> board_position_changes[4]);
   virtual void init(Entity * entity);
   virtual void reset();
   void update(Core & core);
@@ -50,14 +52,15 @@ public:
 class ControllerAnimationComponent
   : public AnimationComponent
 {
+  Vector2 _end_points[4];
+  bool _did_jump_off;
 protected:
+  Vector2 * end_points();
   virtual double animation_speed() = 0;
-  virtual Vector2 jump_up_end_point()    { return {}; };
-  virtual Vector2 jump_down_end_point()  { return {}; };
-  virtual Vector2 jump_left_end_point()  { return {}; };
-  virtual Vector2 jump_right_end_point() { return {}; };
 public:
+  ControllerAnimationComponent(Vector2 end_points[4]);
   virtual void init(Entity * entity);
+  virtual void reset();
 };
 
 
@@ -69,10 +72,9 @@ class ControllerPhysicsComponent
   : public PhysicsComponent
 {
   bool _animating;
-  bool _did_fall_off;
+  bool _has_jumped_once;
 protected:
   virtual bool should_break_for_collision(Entity * collided_entity) = 0;
-  virtual bool should_update() = 0;
 public:
   virtual void init(Entity * entity);
   virtual void reset();
@@ -105,8 +107,13 @@ class Controller : public Entity
 {
 protected:
   virtual int direction_mask() = 0;
+  virtual int default_order() = 0;
+  virtual pair<int, int> default_board_position() = 0;
 public:
+  prop<pair<int, int>> board_position;
+  
   Controller(string id,
+             int order,
              ControllerInputComponent * input,
              ControllerAnimationComponent * animation,
              ControllerPhysicsComponent * physics,

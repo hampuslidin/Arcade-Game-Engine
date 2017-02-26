@@ -19,6 +19,8 @@ class EnemyInputComponent
 protected:
   ControllerDirection update_direction(Core & core);
   double animation_ending_delay();
+public:
+  EnemyInputComponent(pair<int, int> board_poistion_changes[4]);
 };
 
 
@@ -30,22 +32,10 @@ class EnemyAnimationComponent
   : public ControllerAnimationComponent
 {
   double _speed;
-  Vector2 _jump_up_end_point;
-  Vector2 _jump_down_end_point;
-  Vector2 _jump_left_end_point;
-  Vector2 _jump_right_end_point;
 protected:
   double animation_speed();
-  Vector2 jump_up_end_point();
-  Vector2 jump_down_end_point();
-  Vector2 jump_left_end_point();
-  Vector2 jump_right_end_point();
 public:
-  EnemyAnimationComponent(double speed,
-                          Vector2 jump_up_end_point,
-                          Vector2 jump_down_end_point,
-                          Vector2 jump_left_end_point,
-                          Vector2 jump_right_end_point);
+  EnemyAnimationComponent(double speed, Vector2 end_points[4]);
 };
 
 
@@ -58,7 +48,6 @@ class EnemyPhysicsComponent
 {
 protected:
   bool should_break_for_collision(Entity * collided_entity);
-  bool should_update();
 public:
   EnemyPhysicsComponent(Vector2 gravity);
 };
@@ -81,19 +70,23 @@ class EnemyGraphicsComponent
 class Enemy
   : public Controller
 {
+  int _default_order;
+  pair<int, int> _default_board_position;
 protected:
   int direction_mask();
+  int default_order();
+  pair<int, int> default_board_position();
 public:
   prop_r<Enemy, ControllerDirection> default_direction;
   
   Enemy(string id,
+        int order,
         ControllerDirection default_direction,
+        pair<int, int> default_board_position,
         double speed,
         Vector2 gravity,
-        Vector2 jump_up_end_point,
-        Vector2 jump_down_end_point,
-        Vector2 jump_left_end_point,
-        Vector2 jump_right_end_point);
+        Vector2 end_points[4],
+        pair<int, int> board_position_changes[4]);
   void reset();
   string prefix_standing();
   string prefix_jumping();

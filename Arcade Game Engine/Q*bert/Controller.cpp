@@ -14,11 +14,25 @@
 
 // MARK: Member functions
 
+ControllerInputComponent::
+  ControllerInputComponent(pair<int, int> board_position_changes[4])
+  : InputComponent()
+{
+  _board_position_changes[UP]    = board_position_changes[UP];
+  _board_position_changes[DOWN]  = board_position_changes[DOWN];
+  _board_position_changes[LEFT]  = board_position_changes[LEFT];
+  _board_position_changes[RIGHT] = board_position_changes[RIGHT];
+}
+
 void ControllerInputComponent::init(Entity * entity)
 {
   InputComponent::init(entity);
   
-  auto did_start_animating = [this](Event) { _animating = true; };
+  auto did_start_animating = [this](Event)
+  {
+    _airborn = true;
+    _animating = true;
+  };
   auto did_stop_animating  = [this, entity](Event)
   {
     entity->core()->createTimer(animation_ending_delay(), [this]
@@ -26,7 +40,7 @@ void ControllerInputComponent::init(Entity * entity)
       _animating = false;
     });
   };
-  auto did_fall_off = [this](Event) { _did_jump_off = true; };
+  auto did_collide = [this](Event) { _airborn = false; };
   
   auto animation = entity->animation();
   auto physics   = entity->physics();
@@ -36,8 +50,8 @@ void ControllerInputComponent::init(Entity * entity)
   NotificationCenter::observe(did_stop_animating,
                               DidStopAnimating,
                               animation);
-  NotificationCenter::observe(did_fall_off,
-                              DidFallOff,
+  NotificationCenter::observe(did_collide,
+                              DidCollide,
                               physics);
 }
 
@@ -46,22 +60,41 @@ void ControllerInputComponent::reset()
   InputComponent::reset();
   
   _animating = false;
-  _did_jump_off = false;
+  _airborn = false;
 }
 
 void ControllerInputComponent::update(Core & core)
 {
-  if (!_animating && !_did_jump_off)
+  if (!_animating && !_airborn)
   {
-    ControllerDirection direction;
-    switch (direction = update_direction(core))
+    auto controller = (Controller*)entity();
+    ControllerDirection direction = update_direction(core);
+    if (direction != NONE)
     {
-      case UP:
-      case DOWN:
-      case LEFT:
-      case RIGHT:
-        NotificationCenter::notify(Event(DidJump, direction), *this);
-        break;
+      auto board_position = controller->board_position();
+      auto board_position_change = _board_position_changes[direction];
+      controller->board_position({
+        board_position.first + board_position_change.first,
+        board_position.second + board_position_change.second
+      });
+      
+#ifdef GAME_ENGINE_DEBUG
+      printf("Old order: %i\n", controller->order());
+#endif
+      controller->order(entity()->order() + board_position_change.first*10);
+#ifdef GAME_ENGINE_DEBUG
+      printf("New order: %i\n", controller->order());
+#endif
+      
+      board_position = controller->board_position();
+      if (board_position.first < 0 ||
+          board_position.first > 6 ||
+          board_position.second < 0 ||
+          board_position.second > board_position.first)
+      {
+        NotificationCenter::notify(DidJumpOff, *this);
+      }
+      NotificationCenter::notify(Event(DidJump, direction), *this);
     }
   }
 }
@@ -86,64 +119,68 @@ AnimationComponent::CubicHermiteSpline calculate_spline(Vector2 & end_point,
 
 // MARK: Member functions
 
+Vector2 * ControllerAnimationComponent::end_points()
+{
+  return _end_points;
+}
+
+ControllerAnimationComponent::ControllerAnimationComponent(Vector2 end_points[])
+  : AnimationComponent()
+{
+  _end_points[0] = end_points[0];
+  _end_points[1] = end_points[1];
+  _end_points[2] = end_points[2];
+  _end_points[3] = end_points[3];
+}
+
 void ControllerAnimationComponent::init(Entity * entity)
 {
   AnimationComponent::init(entity);
   
   Vector2 gravity = entity->physics()->gravity();
-  Vector2 end_point = jump_up_end_point();
-  if (end_point.x != 0 || end_point.y != 0)
+  string ids[4] {"jump_up", "jump_down", "jump_left", "jump_right"};
+  for (auto i = 0; i < 4; i++)
   {
-    auto spline = calculate_spline(end_point, animation_speed(), gravity);
-    addSegment("jump_up", spline.first.first,  spline.first.second);
-    addSegment("jump_up", spline.second.first, spline.second.second);
+    auto end_point = end_points()[i];
+    auto id = ids[i];
+    if (end_point.x != 0 || end_point.y != 0)
+    {
+      auto spline = calculate_spline(end_point, animation_speed(), gravity);
+      addSegment(id, spline.first.first,  spline.first.second);
+      addSegment(id, spline.second.first, spline.second.second);
+    }
   }
-  
-  end_point = jump_down_end_point();
-  if (end_point.x != 0 || end_point.y != 0)
-  {
-    auto spline = calculate_spline(end_point, animation_speed(), gravity);
-    addSegment("jump_down", spline.first.first,  spline.first.second);
-    addSegment("jump_down", spline.second.first, spline.second.second);
-  }
-  
-  end_point = jump_left_end_point();
-  if (end_point.x != 0 || end_point.y != 0)
-  {
-    auto spline = calculate_spline(end_point, animation_speed(), gravity);
-    addSegment("jump_left", spline.first.first,  spline.first.second);
-    addSegment("jump_left", spline.second.first, spline.second.second);
-  }
-  
-  end_point = jump_right_end_point();
-  if (end_point.x != 0 || end_point.y != 0)
-  {
-    auto spline = calculate_spline(end_point, animation_speed(), gravity);
-    addSegment("jump_right", spline.first.first,  spline.first.second);
-    addSegment("jump_right", spline.second.first, spline.second.second);
-  }
-  
+    
   auto did_jump = [this](Event event)
   {
     switch (event.parameter())
     {
       case UP:
-        performAnimation("jump_up", animation_speed(), true);
+        performAnimation("jump_up", animation_speed(), _did_jump_off);
         break;
       case DOWN:
-        performAnimation("jump_down", animation_speed(), true);
+        performAnimation("jump_down", animation_speed(), _did_jump_off);
         break;
       case LEFT:
-        performAnimation("jump_left", animation_speed(), true);
+        performAnimation("jump_left", animation_speed(), _did_jump_off);
         break;
       case RIGHT:
-        performAnimation("jump_right", animation_speed(), true);
+        performAnimation("jump_right", animation_speed(), _did_jump_off);
         break;
     }
   };
+  auto did_jump_off = [this](Event) { _did_jump_off = true; };
   
   auto input = entity->input();
   NotificationCenter::observe(did_jump, DidJump, input);
+  NotificationCenter::observe(did_jump_off, DidJumpOff, input);
+}
+
+void ControllerAnimationComponent::reset()
+{
+  AnimationComponent::reset();
+  
+  _did_jump_off = false;
 }
 
 
@@ -157,10 +194,22 @@ void ControllerPhysicsComponent::init(Entity * entity)
 {
   PhysicsComponent::init(entity);
   
+  auto did_jump = [this](Event)
+  {
+    _has_jumped_once = true;
+    dynamic(true);
+  };
+  auto did_jump_off = [this](Event)
+  {
+    collision_detection(false);
+  };
   auto did_start_animating = [this](Event) { _animating = true;  };
   auto did_stop_animating  = [this](Event) { _animating = false; };
   
+  auto input = entity->input();
   auto animation = entity->animation();
+  NotificationCenter::observe(did_jump, DidJump, input);
+  NotificationCenter::observe(did_jump_off, DidJumpOff, input);
   NotificationCenter::observe(did_start_animating,
                               DidStartAnimating,
                               animation);
@@ -174,32 +223,20 @@ void ControllerPhysicsComponent::reset()
   PhysicsComponent::reset();
   
   _animating       = false;
-  _did_fall_off    = false;
+  _has_jumped_once = false;
   dynamic(false);
   collision_detection(true);
+  collision_response(true);
 }
 
 void ControllerPhysicsComponent::update(Core & core)
 {
   PhysicsComponent::update(core);
   
-  if (should_update())
+  for (auto collided_entity : collided_entities())
   {
-    for (auto collided_entity : collided_entities())
-    {
-      bool should_break = should_break_for_collision(collided_entity);
-      if (should_break) break;
-    }
-    if (collided_entities().size() > 0) return;
-    
-    if (!_did_fall_off && !_animating)
-    {
-      _did_fall_off = true;
-      dynamic(true);
-      collision_detection(false);
-      entity()->order(0);
-      NotificationCenter::notify(DidFallOff, *this);
-    }
+    bool should_break = should_break_for_collision(collided_entity);
+    if (should_break) break;
   }
 }
 
@@ -256,12 +293,18 @@ void ControllerGraphicsComponent::reset()
 //
 
 Controller::Controller(string id,
+                       int order,
                        ControllerInputComponent * input,
                        ControllerAnimationComponent * animation,
                        ControllerPhysicsComponent * physics,
                        ControllerGraphicsComponent * graphics)
-  : Entity(id, input, animation, physics, graphics)
-{}
+  : Entity(id, order)
+{
+  addInput(input);
+  addAnimation(animation);
+  addPhysics(physics);
+  addGraphics(graphics);
+}
 
 void Controller::init(Core * core)
 {
@@ -271,7 +314,7 @@ void Controller::init(Core * core)
   for (auto prefix : {prefix_standing(), prefix_jumping()})
   {
     int direction_mask = this->direction_mask();
-    int direction = RIGHT;
+    int direction = UP;
     while (direction_mask > 0)
     {
       if (direction_mask & 0b0001)
@@ -281,7 +324,7 @@ void Controller::init(Core * core)
         sprites.create(id, filename.c_str());
       }
       direction_mask >>= 1;
-      direction--;
+      direction++;
     }
   }
 }
@@ -289,6 +332,9 @@ void Controller::init(Core * core)
 void Controller::reset()
 {
   Entity::reset();
+  
+  order(default_order());
+  board_position(default_board_position());
   
   const Dimension2 view_dimensions = core()->view_dimensions();
   moveTo(view_dimensions.x/2-8, view_dimensions.y-176-16-8);

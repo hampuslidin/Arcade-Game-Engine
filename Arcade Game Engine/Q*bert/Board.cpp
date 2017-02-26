@@ -15,7 +15,7 @@
 BlockPhysicsComponent::BlockPhysicsComponent()
   : PhysicsComponent()
 {
-  collision_bounds({15, 6, 2, 2});
+  collision_bounds({8, 8, 16, 16});
 }
 
 
@@ -62,13 +62,12 @@ void BlockGraphicsComponent::changeDetailColor(int index)
 // MARK: - Block
 //
 
-Block::Block(string id, int x, int y)
-  : Entity(id,
-           nullptr,
-           nullptr,
-           new BlockPhysicsComponent(),
-           new BlockGraphicsComponent())
+Block::Block(string id, int order, int x, int y)
+  : Entity(id, order)
 {
+  addPhysics(new BlockPhysicsComponent());
+  addGraphics(new BlockGraphicsComponent());
+  
   moveTo(x, y);
 }
 
@@ -94,14 +93,16 @@ void Block::touch()
 //
 
 Board::Board(string id)
-  : Entity(id, nullptr, nullptr, nullptr, nullptr)
+  : Entity(id, 10)
 {
   for (auto n = 0; n < 7; n++)
   {
     for (auto m = 0; m < n + 1; m++)
     {
       string id = "block" + to_string(n+1) + to_string(m+1);
-      addChild(new Block(id, BOARD_DIMENSIONS.x/2 - 16*(n+1) + 32*m, 24*n));
+      addChild(new Block(id,
+                         order() + 10*n,
+                         BOARD_DIMENSIONS.x/2 - 16*(n+1) + 32*m, 24*n));
     }
   }
 }

@@ -5,45 +5,22 @@
 
 #include "core.hpp"
 #include <stack>
+#include <queue>
 
 // MARK: Helper functions
 
-void _tmp_update(Entity * root, Core * core, int component_type)
+void _buildEntityPriorityQueue(Entity * root,
+                               priority_queue<Entity*,
+                                              vector<Entity*>,
+                                              EntityCompare> & queue)
 {
-  Component * component = nullptr;
-  
-  stack<Entity*> entity_stack;
-  entity_stack.push(root);
-  Entity * current_entity;
-  while (entity_stack.size())
+  if (root)
   {
-    current_entity = entity_stack.top();
-    entity_stack.pop();
-    
-    switch (component_type) {
-      case 0:
-        component = current_entity->input();
-        break;
-      case 1:
-        component = current_entity->animation();
-        break;
-      case 2:
-        component = current_entity->physics();
-        break;
-      case 3:
-        component = current_entity->graphics();
-        break;
-    }
-    if (component) component->update(*core);
-    
-    if (current_entity->children().size() > 0)
+    queue.push(root);
+    for (auto child : root->children())
     {
-      for (long i = current_entity->children().size() - 1; i >= 0; i--)
-      {
-        entity_stack.push(current_entity->children()[i]);
-      }
+      _buildEntityPriorityQueue(child, queue);
     }
-    
   }
 }
 
@@ -160,20 +137,24 @@ ObserverID NotificationCenter::observe(function<void(Event)> block,
   return hash<string>{}(event.string_value() + to_string(size));
 }
 
+// TODO: fix so that elements are not erased, but the spot it occupied is made
+// available for the next observer. This is so that possible, but unlikely, hash
+// clashes won't happen.
 void NotificationCenter::unobserve(ObserverID id,
-                                          Event event,
-                                          GameObject * sender)
+                                   Event event,
+                                   GameObject * sender)
 {
   auto blocks_for_event = _instance()._blocks[event];
   for (auto i = 0; i < blocks_for_event.size(); i++)
   {
     auto sender_for_block = blocks_for_event[i].second;
-    if (sender_for_block == nullptr || sender_for_block == sender)
+    if (sender_for_block == nullptr || sender == nullptr ||
+        sender_for_block == sender)
     {
       size_t h = hash<string>{}(event.string_value() + to_string(i));
       if (h == id)
       {
-        _instance()._blocks[event].erase(blocks_for_event.begin()+i);
+        _instance()._blocks[event].erase(_instance()._blocks[event].begin()+i);
         return;
       }
     }
@@ -361,9 +342,16 @@ bool Core::update()
     _reset = false;
   }
   
-  // update root
-  if (!_pause) root()->update();
-  else         root()->update(0b0001);
+  // update entities
+  auto entities = priority_queue<Entity*, vector<Entity*>, EntityCompare>();
+  _buildEntityPriorityQueue(root(), entities);
+  
+  uint8_t mask = !_pause ? 0b1111 : 0b1000;
+  while (entities.size() > 0)
+  {
+    entities.top()->update(mask);
+    entities.pop();
+  }
   
 #ifdef GAME_ENGINE_DEBUG
   // draw bounding boxes
@@ -429,8 +417,6 @@ bool Core::update()
   }
 
   return should_continue;
-
-  return true;
 }
 
 void Core::keyStatus(Core::KeyStatus & key_status)
@@ -485,8 +471,8 @@ double Core::effectiveElapsedTime()
            !_pause
              ? elapsed - total_pause_duration
              : last_pause_time - total_pause_duration);
-    printf("Last pause time: %f\t\t", last_pause_time);
-    printf("Total pause duration: %f\n",
+    printf("Pause time: %f\t\t", last_pause_time);
+    printf("Pause duration: %f\n",
            !_pause
              ? total_pause_duration
              : total_pause_duration + elapsed - last_pause_time);
@@ -509,49 +495,40 @@ string Entity::id()
   return _id;
 }
 
-void Entity::order(int order)
-{
-  if (parent())
-  {
-    auto tmp = parent();
-    tmp->removeChild(id());
-    tmp->addChild(this, order);
-  }
-}
-
-int Entity::order()
-{
-  if (parent())
-  {
-    for (int i = 0; i < parent()->children().size(); i++)
-    {
-      auto child = parent()->children()[i];
-      if (child->id() == id())
-      {
-        return i;
-      }
-    }
-  }
-  return 0;
-}
-
 
 // MARK: Member functions
 
-Entity::Entity(string id,
-               InputComponent * input,
-               AnimationComponent * animation,
-               PhysicsComponent * physics,
-               GraphicsComponent * graphics)
+Entity::Entity(string id, int order)
 {
+  addInput(nullptr);
+  addAnimation(nullptr);
+  addPhysics(nullptr);
+  addGraphics(nullptr);
+  
   _id = id;
+  this->order(order);
   core(nullptr);
   parent(nullptr);
   local_position({0, 0});
-  
+}
+
+void Entity::addInput(InputComponent * input)
+{
   this->input(input);
+}
+
+void Entity::addAnimation(AnimationComponent * animation)
+{
   this->animation(animation);
+}
+
+void Entity::addPhysics(PhysicsComponent * physics)
+{
   this->physics(physics);
+}
+
+void Entity::addGraphics(GraphicsComponent * graphics)
+{
   this->graphics(graphics);
 }
 
@@ -690,11 +667,38 @@ void Entity::changeVelocityBy(double dvx, double dvy)
 void Entity::update(uint8_t mask)
 {
   uint8_t use_component = mask;
-  int component_type = 3;
+  int component = 0;
   while (use_component > 0) {
-    if (use_component & 0b0001) _tmp_update(this, core(), component_type--);
+    if (use_component & 0b0001)
+    {
+      switch (component)
+      {
+        case 0:
+          if (input()) input()->update(*core());
+          break;
+        case 1:
+          if (animation()) animation()->update(*core());
+          break;
+        case 2:
+          if (physics()) physics()->update(*core());
+          break;
+        case 3:
+          if (graphics()) graphics()->update(*core());
+          break;
+      }
+    }
     use_component >>= 1;
+    component++;
   }
+}
+
+//
+// MARK: - EntityCompare
+//
+
+bool EntityCompare::operator()(Entity * l, Entity * r)
+{
+  return l->order() > r->order();
 }
 
 

@@ -63,8 +63,10 @@ void PlayerTextGraphicsComponent::update(Core & core)
 //
 
 PlayerText::PlayerText(string id)
-  : Entity(id, nullptr, nullptr, nullptr, new PlayerTextGraphicsComponent())
-{}
+  : Entity(id, 100)
+{
+  addGraphics(new PlayerTextGraphicsComponent());
+}
 
 void PlayerText::init(Core * core)
 {
@@ -88,7 +90,7 @@ void PlayerText::init(Core * core)
 // MARK: Member functions
 
 Score::Score(string id)
-  : Entity(id, nullptr, nullptr, nullptr, nullptr)
+  : Entity(id, 100)
 {
   for (auto n = 0; n < 10; n++)
   {
@@ -183,8 +185,9 @@ void ScoreDigitGraphicsComponent::update(Core & core)
 //
 
 ScoreDigit::ScoreDigit(string id, int x, int y)
-  : Entity(id, nullptr, nullptr, nullptr, new ScoreDigitGraphicsComponent())
+  : Entity(id, 100)
 {
+  addGraphics(new ScoreDigitGraphicsComponent());
   moveTo(x, y);
 }
 
@@ -206,7 +209,7 @@ void ScoreDigit::reset()
 //
 
 HUD::HUD(string id)
-: Entity(id, nullptr, nullptr, nullptr, nullptr)
+  : Entity(id, 100)
 {
   addChild(new PlayerText("player_text"));
   addChild(new Score("score"));

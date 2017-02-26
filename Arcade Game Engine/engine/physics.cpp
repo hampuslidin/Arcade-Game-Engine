@@ -8,6 +8,7 @@
 /********************************
  * Core
  ********************************/
+// TODO: implement continuous collision detection.
 void _resolveCollisions(Entity & collider,
                         Entity & collided,
                         bool collision_response,
@@ -48,23 +49,21 @@ void _resolveCollisions(Entity & collider,
         if (min == &left_overlap)
         {
           collider.moveBy(-left_overlap, 0);
-          collider.changeHorizontalVelocityTo(0);
+          collider.changeVelocityTo(0,0);
         }
         else if (min == &up_overlap)
         {
           collider.moveBy(0, -up_overlap);
-          collider.changeVerticalVelocityTo(0);
         }
         else if (min == &right_overlap)
         {
           collider.moveBy(right_overlap, 0);
-          collider.changeHorizontalVelocityTo(0);
         }
         else if (min == &down_overlap)
         {
           collider.moveBy(0, down_overlap);
-          collider.changeVerticalVelocityTo(0);
         }
+        collider.changeVelocityTo(0,0);
       }
     }
   }
