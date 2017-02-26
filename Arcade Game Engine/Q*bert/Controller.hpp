@@ -6,10 +6,13 @@
 #pragma once
 
 #include "core.hpp"
+#include "Board.hpp"
 
 // Events
 const Event DidJump("DidJump");
 const Event DidJumpOff("DidJumpOff");
+const Event DidCollideWithBlock("DidCollideWithBlock");
+const Event DidCollideWithEnemy("DidCollideWithEnemy");
 
 
 //
@@ -31,14 +34,14 @@ const ControllerDirection RIGHT = 3;
 class ControllerInputComponent
   : public InputComponent
 {
-  pair<int, int> _board_position_changes[4];
   bool _animating;
-  bool _airborn;
 protected:
+  prop_r<ControllerInputComponent, bool> airborn;
+  
   virtual ControllerDirection update_direction(Core & core) = 0;
   virtual double animation_ending_delay() = 0;
+  virtual vector<pair<int, int>> board_position_changes() = 0;
 public:
-  ControllerInputComponent(pair<int, int> board_position_changes[4]);
   virtual void init(Entity * entity);
   virtual void reset();
   void update(Core & core);
@@ -52,13 +55,11 @@ public:
 class ControllerAnimationComponent
   : public AnimationComponent
 {
-  Vector2 _end_points[4];
   bool _did_jump_off;
 protected:
-  Vector2 * end_points();
+  virtual vector<Vector2> end_points() = 0;
   virtual double animation_speed() = 0;
 public:
-  ControllerAnimationComponent(Vector2 end_points[4]);
   virtual void init(Entity * entity);
   virtual void reset();
 };
@@ -74,7 +75,8 @@ class ControllerPhysicsComponent
   bool _animating;
   bool _has_jumped_once;
 protected:
-  virtual void collision(Entity * collided_entity) {};
+  virtual void collision_with_block(Block * block) {};
+  virtual void collision_with_entity(Entity * entity) {};
 public:
   virtual void init(Entity * entity);
   virtual void reset();
@@ -92,7 +94,6 @@ class ControllerGraphicsComponent
   int _current_direction;
   bool _jumping;
 protected:
-  virtual string default_sprite_id() = 0;
 public:
   virtual void init(Entity * entity);
   virtual void reset();
@@ -107,10 +108,14 @@ class Controller : public Entity
 {
 protected:
   virtual int direction_mask() = 0;
-  virtual int default_order() = 0;
   virtual pair<int, int> default_board_position() = 0;
+  virtual int default_order() = 0;
+  virtual ControllerDirection default_direction() = 0;
 public:
-  prop<pair<int, int>> board_position;
+  prop<     pair<int, int>> previous_board_position;
+  prop<     pair<int, int>> board_position;
+  prop<                int> previous_order;
+  prop<ControllerDirection> direction;
   
   Controller(string id, int order);
   virtual void init(Core * core);

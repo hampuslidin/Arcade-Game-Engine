@@ -1,5 +1,5 @@
 //
-//  Player.hpp
+//  Wrongway.hpp
 //  Game Engine
 //
 
@@ -10,75 +10,69 @@
 
 
 //
-// MARK: - PlayerInputComponent
+// MARK: - WrongwayInputComponent
 //
 
-class PlayerInputComponent
+class WrongwayInputComponent
   : public ControllerInputComponent
 {
-  bool _did_clear_board;
 protected:
   ControllerDirection update_direction(Core & core);
   double animation_ending_delay();
   vector<pair<int, int>> board_position_changes();
 public:
-  void init(Entity * entity);
-  void reset();
 };
 
 
 //
-// MARK: - PlayerAnimationComponent
+// MARK: - WrongwayAnimationComponent
 //
 
-class PlayerAnimationComponent
+class WrongwayAnimationComponent
   : public ControllerAnimationComponent
 {
 protected:
   vector<Vector2> end_points();
   double animation_speed();
+public:
 };
 
 
 //
-// MARK: - PlayerPhysicsComponent
+// MARK: - WrongwayPhysicsComponent
 //
 
-class PlayerPhysicsComponent
+class WrongwayPhysicsComponent
   : public ControllerPhysicsComponent
 {
-protected:
-  void collision_with_block(Block * block);
-  void collision_with_entity(Entity * entity);
 public:
-  PlayerPhysicsComponent();
+  WrongwayPhysicsComponent();
   void init(Entity * entity);
 };
 
 
 //
-// MARK: - PlayerGraphicsComponent
+// MARK: - WrongwayGraphicsComponent
 //
 
-typedef ControllerGraphicsComponent PlayerGraphicsComponent;
+typedef ControllerGraphicsComponent WrongwayGraphicsComponent;
 
 
 //
-// MARK: - Player
+// MARK: - Wrongway
 //
 
-class Player
+class Wrongway
   : public Controller
 {
-  bool _did_clear_board;
 protected:
   int direction_mask();
   pair<int, int> default_board_position();
   int default_order();
-  ControllerDirection default_direction();
 public:
-  Player(string id);
-  void init(Core * core);
+  ControllerDirection default_direction();
+  
+  Wrongway();
   void reset();
   string prefix_standing();
   string prefix_jumping();

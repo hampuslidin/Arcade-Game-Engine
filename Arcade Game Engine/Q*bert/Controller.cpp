@@ -14,23 +14,13 @@
 
 // MARK: Member functions
 
-ControllerInputComponent::
-  ControllerInputComponent(pair<int, int> board_position_changes[4])
-  : InputComponent()
-{
-  _board_position_changes[UP]    = board_position_changes[UP];
-  _board_position_changes[DOWN]  = board_position_changes[DOWN];
-  _board_position_changes[LEFT]  = board_position_changes[LEFT];
-  _board_position_changes[RIGHT] = board_position_changes[RIGHT];
-}
-
 void ControllerInputComponent::init(Entity * entity)
 {
   InputComponent::init(entity);
   
   auto did_start_animating = [this](Event)
   {
-    _airborn = true;
+    airborn(true);
     _animating = true;
   };
   auto did_stop_animating  = [this, entity](Event)
@@ -40,7 +30,7 @@ void ControllerInputComponent::init(Entity * entity)
       _animating = false;
     });
   };
-  auto did_collide = [this](Event) { _airborn = false; };
+  auto did_collide_with_block = [this](Event) { airborn(false); };
   
   auto animation = entity->animation();
   auto physics   = entity->physics();
@@ -50,8 +40,8 @@ void ControllerInputComponent::init(Entity * entity)
   NotificationCenter::observe(did_stop_animating,
                               DidStopAnimating,
                               animation);
-  NotificationCenter::observe(did_collide,
-                              DidCollide,
+  NotificationCenter::observe(did_collide_with_block,
+                              DidCollideWithBlock,
                               physics);
 }
 
@@ -60,27 +50,35 @@ void ControllerInputComponent::reset()
   InputComponent::reset();
   
   _animating = false;
-  _airborn = false;
+  airborn(false);
 }
 
 void ControllerInputComponent::update(Core & core)
 {
-  if (!_animating && !_airborn)
+  if (!_animating && !airborn())
   {
     auto controller = (Controller*)entity();
     ControllerDirection direction = update_direction(core);
+    
     if (direction != NONE)
     {
-      auto board_position = controller->board_position();
-      auto board_position_change = _board_position_changes[direction];
+      auto previous_board_position = controller->board_position();
+      controller->previous_board_position(previous_board_position);
+      
+      auto previous_order = controller->order();
+      controller->previous_order(previous_order);
+      
+      ((Controller*)entity())->direction(direction);
+      
+      auto board_position_change = board_position_changes()[direction];
       controller->board_position({
-        board_position.first + board_position_change.first,
-        board_position.second + board_position_change.second
+        previous_board_position.first  + board_position_change.first,
+        previous_board_position.second + board_position_change.second
       });
       
-      controller->order(entity()->order() + board_position_change.first*10);
+      controller->order(previous_order + board_position_change.first*10);
       
-      board_position = controller->board_position();
+      auto board_position = controller->board_position();
       if (board_position.first < 0 ||
           board_position.first > 6 ||
           board_position.second < 0 ||
@@ -112,20 +110,6 @@ AnimationComponent::CubicHermiteSpline calculate_spline(Vector2 & end_point,
 }
 
 // MARK: Member functions
-
-Vector2 * ControllerAnimationComponent::end_points()
-{
-  return _end_points;
-}
-
-ControllerAnimationComponent::ControllerAnimationComponent(Vector2 end_points[])
-  : AnimationComponent()
-{
-  _end_points[0] = end_points[0];
-  _end_points[1] = end_points[1];
-  _end_points[2] = end_points[2];
-  _end_points[3] = end_points[3];
-}
 
 void ControllerAnimationComponent::init(Entity * entity)
 {
@@ -229,7 +213,15 @@ void ControllerPhysicsComponent::update(Core & core)
   
   for (auto collided_entity : collided_entities())
   {
-    collision(collided_entity);
+    string id = collided_entity->id();
+    if (id.compare(0, 5, "block") == 0)
+    {
+      NotificationCenter::notify(DidCollideWithBlock, *this);
+      collision_with_block(((Block*)collided_entity));
+      continue;
+    }
+    
+    collision_with_entity(collided_entity);
   }
 }
 
@@ -277,7 +269,10 @@ void ControllerGraphicsComponent::reset()
   
   _current_direction = DOWN;
   _jumping = false;
-  current_sprite(SpriteCollection::main().retrieve(default_sprite_id()));
+  const auto controller = (Controller*)entity();
+  const string direction_string = "_" + to_string(controller->direction());
+  const string sprite_id = controller->prefix_standing() + direction_string;
+  current_sprite(SpriteCollection::main().retrieve(sprite_id));
 }
 
 
@@ -293,21 +288,35 @@ void Controller::init(Core * core)
 {
   Entity::init(core);
   
+  previous_board_position(default_board_position());
+  previous_order(default_order());
+  direction(default_direction());
+  
   SpriteCollection & sprites = SpriteCollection::main();
   for (auto prefix : {prefix_standing(), prefix_jumping()})
   {
+    vector<string> direction_strings;
+    
     int direction_mask = this->direction_mask();
-    int direction = UP;
-    while (direction_mask > 0)
+    if (direction_mask & 0b1000) direction_strings.push_back("_0");
+    if (direction_mask & 0b0100) direction_strings.push_back("_1");
+    if (direction_mask & 0b0010) direction_strings.push_back("_2");
+    if (direction_mask & 0b0001) direction_strings.push_back("_3");
+    
+    for (auto direction_string : direction_strings)
     {
-      if (direction_mask & 0b0001)
-      {
-        const string id = prefix + "_" + to_string(direction);
-        const string filename = "textures/" + id + ".png";
-        sprites.create(id, filename.c_str());
-      }
-      direction_mask >>= 1;
-      direction++;
+      const string id = prefix + direction_string;
+      const string filename = "textures/" + id + ".png";
+      sprites.create(id, filename.c_str());
     }
   }
+  
+  auto did_clear_board = [this](Event)
+  {
+    previous_board_position(default_board_position());
+    previous_order(default_order());
+    direction(default_direction());
+  };
+  
+  NotificationCenter::observe(did_clear_board, DidClearBoard);
 }

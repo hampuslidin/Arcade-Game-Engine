@@ -15,7 +15,7 @@
 BlockPhysicsComponent::BlockPhysicsComponent()
   : PhysicsComponent()
 {
-  collision_bounds({10, 8, 12, 16});
+  collision_bounds({10, 8, 12, 12});
 }
 
 
@@ -29,6 +29,9 @@ void BlockGraphicsComponent::init(Entity * entity)
 {
   GraphicsComponent::init(entity);
   
+  _base_i = 0;
+  _detail_i = 0;
+  
   resizeTo(32, 32);
 }
 
@@ -36,7 +39,13 @@ void BlockGraphicsComponent::reset()
 {
   GraphicsComponent::reset();
   
-  current_sprite(SpriteCollection::main().retrieve("block00"));
+  if (((Block*)entity())->state() == Block::NOT_SET)
+  {
+    _base_i   = 0;
+    _detail_i = 0;
+  }
+  
+  changeColor(_base_i, _detail_i);
 }
 
 void BlockGraphicsComponent::changeColor(int base_i, int detail_i)
@@ -71,10 +80,16 @@ Block::Block(string id, int order, int x, int y)
   moveTo(x, y);
 }
 
-void Block::reset()
+void Block::init(Core * core)
 {
-  Entity::reset();
-  state(NOT_SET);
+  Entity::init(core);
+  
+  auto did_clear_board = [this](Event)
+  {
+    state(NOT_SET);
+  };
+  
+  NotificationCenter::observe(did_clear_board, DidClearBoard, parent());
 }
 
 void Block::touch()
@@ -111,6 +126,8 @@ void Board::init(Core * core)
 {
   Entity::init(core);
   
+  _sum = 28;
+  
   SpriteCollection & sprites = SpriteCollection::main();
   for (auto i = 0; i < 9; i++)
   {
@@ -136,6 +153,8 @@ void Board::init(Core * core)
     if (_sum == 0)
     {
       NotificationCenter::notify(DidClearBoard, *this);
+      _sum = 28;
+      core->pause();
       core->reset(1.0);
     }
   };
@@ -150,6 +169,4 @@ void Board::init(Core * core)
 void Board::reset()
 {
   Entity::reset();
-  
-  _sum = 28;
 }

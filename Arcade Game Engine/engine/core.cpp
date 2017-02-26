@@ -175,6 +175,7 @@ void NotificationCenter::unobserve(ObserverID id,
 }
 
 // MARK: Private member functions
+
 NotificationCenter & NotificationCenter::_instance()
 {
   static NotificationCenter instance;
@@ -226,6 +227,7 @@ bool Core::init(Entity * root,
     SDL_Log("SDL_CreateWindow: %s\n", SDL_GetError());
     return false;
   }
+//  SDL_SetWindowFullscreen(window(), SDL_WINDOW_FULLSCREEN_DESKTOP);
   
   // create renderer for window
   renderer(SDL_CreateRenderer(window(), -1, SDL_RENDERER_ACCELERATED));
@@ -614,6 +616,11 @@ void Entity::destroy()
   if (animation()) delete animation();
   if (physics())   delete physics();
   if (graphics())  delete graphics();
+}
+
+Dimension2 Entity::dimensions()
+{
+  return graphics() ? graphics()->bounds().dim : (Dimension2){};
 }
 
 void Entity::addChild(Entity * child, int order)

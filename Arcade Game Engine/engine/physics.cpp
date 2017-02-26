@@ -98,7 +98,6 @@ PhysicsComponent::PhysicsComponent()
   dynamic(false);
   collision_detection(false);
   collision_response(false);
-  simulate_with_animations(false);
 }
 
 void PhysicsComponent::init(Entity * entity)
@@ -124,56 +123,51 @@ void PhysicsComponent::init(Entity * entity)
 void PhysicsComponent::update(Core & core)
 {
   collided_entities().clear();
-  if (_should_simulate || simulate_with_animations())
+  if (_should_simulate && dynamic())
   {
-    if (dynamic())
-    {
-      const auto velocity = gravity() * core.delta_time() * pixels_per_meter;
-      entity()->changeVelocityBy(velocity.x, velocity.y);
-      const auto distance = entity()->velocity() * core.delta_time();
-      entity()->moveBy(distance.x, distance.y);
-      
-      Vector2 world_position;
-      entity()->calculateWorldPosition(world_position);
-      if ((world_position.x < 0 || world_position.y < 0 ||
-          world_position.x >= core.view_dimensions().x ||
-          world_position.y >= core.view_dimensions().y) && !_out_of_view)
-      {
-        _out_of_view = true;
-        NotificationCenter::notify(DidMoveOutOfView, *this);
-      }
-      else if ((world_position.x >= 0 &&
-                world_position.x < core.view_dimensions().x &&
-                world_position.y >= 0 &&
-                world_position.y < core.view_dimensions().y) && _out_of_view)
-      {
-        _out_of_view = false;
-        NotificationCenter::notify(DidMoveIntoView, *this);
-      }
-
-    }
+    const auto velocity = gravity() * core.delta_time() * pixels_per_meter;
+    entity()->changeVelocityBy(velocity.x, velocity.y);
+    const auto distance = entity()->velocity() * core.delta_time();
+    entity()->moveBy(distance.x, distance.y);
     
-    if (collision_detection())
+    Vector2 world_position;
+    Dimension2 dimensions = entity()->dimensions();
+    entity()->calculateWorldPosition(world_position);
+    if ((world_position.x < -dimensions.x ||
+         world_position.y < -dimensions.y ||
+        world_position.x >= core.view_dimensions().x ||
+        world_position.y >= core.view_dimensions().y) && !_out_of_view)
     {
-      core.resolveCollisions(*entity(),
-                             collision_response(),
-                             collided_entities());
-      if (collided_entities().size() > 0)
+      _out_of_view = true;
+      NotificationCenter::notify(DidMoveOutOfView, *this);
+    }
+    else if ((world_position.x >= 0 &&
+              world_position.x < core.view_dimensions().x &&
+              world_position.y >= 0 &&
+              world_position.y < core.view_dimensions().y) && _out_of_view)
+    {
+      _out_of_view = false;
+      NotificationCenter::notify(DidMoveIntoView, *this);
+    }
+
+  }
+  
+  if (collision_detection())
+  {
+    core.resolveCollisions(*entity(),
+                           _should_simulate && collision_response(),
+                           collided_entities());
+    if (collided_entities().size() > 0)
+    {
+      if (!_did_collide)
       {
-        if (!_did_collide)
-        {
-          NotificationCenter::notify(DidCollide, *this);
-          _did_collide = true;
-        }
-      }
-      else
-      {
-        _did_collide = false;
+        NotificationCenter::notify(DidCollide, *this);
+        _did_collide = true;
       }
     }
-  }
-  else
-  {
-    _did_collide = false;
+    else
+    {
+      _did_collide = false;
+    }
   }
 }

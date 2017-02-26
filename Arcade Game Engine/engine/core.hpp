@@ -240,6 +240,8 @@ public:
    */
   virtual void destroy();
   
+  Dimension2 dimensions();
+  
   /**
    *  Adds a child with a given identity string to the entity.
    *
@@ -364,7 +366,6 @@ public:
   prop<        bool> dynamic;
   prop<        bool> collision_detection;
   prop<        bool> collision_response;
-  prop<        bool> simulate_with_animations;
   
   PhysicsComponent();
   virtual void init(Entity * entity);
@@ -381,8 +382,9 @@ class GraphicsComponent : public Component
   string trait();
 protected:
   prop<  Sprite*> current_sprite;
-  prop<Rectangle> bounds;
 public:
+  prop_r<GraphicsComponent, Rectangle> bounds;
+  
   void offsetTo(int x, int y);
   void offsetBy(int dx, int dy);
   void resizeTo(int w, int h);
