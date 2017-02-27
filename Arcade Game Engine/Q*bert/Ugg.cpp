@@ -99,13 +99,13 @@ void Ugg::reset()
   order(default_order());
   direction(default_direction());
   
-  core()->createEffectiveTimer(arc4random_uniform(3)+2, [this]
-                               {
-                                 enabled(true);
-                               });
+  core()->createEffectiveTimer(arc4random_uniform(7)+3, [this]
+  {
+   enabled(true);
+  });
   
   const Dimension2 view_dimensions = core()->view_dimensions();
-  moveTo(view_dimensions.x/2 + 102, view_dimensions.y-30);
+  moveTo(view_dimensions.x/2 + 102, view_dimensions.y-32);
 }
 
 string Ugg::prefix_standing()

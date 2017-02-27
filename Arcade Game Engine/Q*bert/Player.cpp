@@ -5,6 +5,7 @@
 
 #include "Player.hpp"
 #include "Board.hpp"
+#include "HUD.hpp"
 
 
 //
@@ -18,23 +19,18 @@ void PlayerInputComponent::init(Entity * entity)
   ControllerInputComponent::init(entity);
   
   auto did_clear_board = [this](Event) { _did_clear_board = true; };
-  auto revert_to_previous_position = [this, entity](Event)
-  {
-    auto controller = (Controller*)entity;
-    controller->board_position(controller->previous_board_position());
-    controller->order(controller->previous_order());
-  };
-  auto did_collide_with_enemy = [this, revert_to_previous_position](Event event)
+  auto did_collide_with_enemy = [this, entity](Event event)
   {
     if (airborn())
-      revert_to_previous_position(event);
+    {
+      auto controller = (Controller*)entity;
+      controller->board_position(controller->previous_board_position());
+      controller->order(controller->previous_order());
+    }
   };
 
   auto physics = entity->physics();
   NotificationCenter::observe(did_clear_board, DidClearBoard);
-  NotificationCenter::observe(revert_to_previous_position,
-                              DidMoveOutOfView,
-                              physics);
   NotificationCenter::observe(did_collide_with_enemy,
                               DidCollideWithEnemy,
                               physics);
@@ -160,20 +156,24 @@ void Player::init(Core * core)
 {
   Controller::init(core);
   
-  _did_clear_board = false;
+  _should_revert = false;
   
-  auto did_clear_board = [this](Event) { _did_clear_board = true; };
+  auto should_revert = [this](Event) { _should_revert = true; };
   
-  NotificationCenter::observe(did_clear_board, DidClearBoard);
+  NotificationCenter::observe(should_revert, DidClearBoard);
+  NotificationCenter::observe(should_revert,
+                              DidMoveOutOfView,
+                              physics());
+  NotificationCenter::observe(should_revert, DidDie);
 }
 
 void Player::reset()
 {
   Controller::reset();
   
-  if (_did_clear_board)
+  if (_should_revert)
   {
-    _did_clear_board = false;
+    _should_revert = false;
     board_position(previous_board_position());
     order(previous_order());
   }

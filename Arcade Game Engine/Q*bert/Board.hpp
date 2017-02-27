@@ -62,6 +62,7 @@ public:
 class Board
   : public Entity
 {
+  bool _did_die;
   int _sum;
 public:
   Board(string id);

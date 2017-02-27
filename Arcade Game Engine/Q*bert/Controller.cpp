@@ -5,6 +5,7 @@
 
 #include "Controller.hpp"
 #include "Board.hpp"
+#include "HUD.hpp"
 #include <fstream>
 
 
@@ -311,12 +312,14 @@ void Controller::init(Core * core)
     }
   }
   
-  auto did_clear_board = [this](Event)
+  auto reset_to_default = [this](Event)
   {
     previous_board_position(default_board_position());
     previous_order(default_order());
     direction(default_direction());
   };
   
-  NotificationCenter::observe(did_clear_board, DidClearBoard);
+  NotificationCenter::observe(reset_to_default, DidClearBoard);
+  NotificationCenter::observe(reset_to_default, DidMoveOutOfView, physics());
+  NotificationCenter::observe(reset_to_default, DidDie);
 }

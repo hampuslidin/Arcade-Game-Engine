@@ -102,13 +102,13 @@ void Wrongway::reset()
   order(default_order());
   direction(default_direction());
   
-  core()->createEffectiveTimer(arc4random_uniform(4)+1, [this]
+  core()->createEffectiveTimer(arc4random_uniform(5)+3, [this]
   {
    enabled(true);
   });
   
   const Dimension2 view_dimensions = core()->view_dimensions();
-  moveTo(view_dimensions.x/2 - 118, view_dimensions.y-30);
+  moveTo(view_dimensions.x/2 - 118, view_dimensions.y-32);
 }
 
 string Wrongway::prefix_standing()

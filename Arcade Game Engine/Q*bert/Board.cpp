@@ -4,6 +4,7 @@
 //
 
 #include "Board.hpp"
+#include "HUD.hpp"
 
 
 //
@@ -84,12 +85,13 @@ void Block::init(Core * core)
 {
   Entity::init(core);
   
-  auto did_clear_board = [this](Event)
+  auto reset = [this](Event)
   {
     state(NOT_SET);
   };
   
-  NotificationCenter::observe(did_clear_board, DidClearBoard, parent());
+  NotificationCenter::observe(reset, DidClearBoard);
+  NotificationCenter::observe(reset, DidDie);
 }
 
 void Block::touch()
@@ -126,6 +128,7 @@ void Board::init(Core * core)
 {
   Entity::init(core);
   
+  _did_die = false;
   _sum = 28;
   
   SpriteCollection & sprites = SpriteCollection::main();
@@ -158,8 +161,10 @@ void Board::init(Core * core)
       core->reset(1.0);
     }
   };
+  auto did_die = [this](Event) { _did_die = true; };
   
   NotificationCenter::observe(did_set_block, DidSetBlock);
+  NotificationCenter::observe(did_die, DidDie);
   
   const Dimension2 view_dimensions = core->view_dimensions();
   moveTo((view_dimensions.x-BOARD_DIMENSIONS.x)/2,
@@ -169,4 +174,10 @@ void Board::init(Core * core)
 void Board::reset()
 {
   Entity::reset();
+  
+  if (_did_die)
+  {
+    _did_die = false;
+    _sum = 28;
+  }
 }

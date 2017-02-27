@@ -11,9 +11,15 @@
 #include "Player.hpp"
 
 
-/**
- *  Defines player text graphics.
- */
+// MARK: Events
+
+const Event DidDie("DidDie");
+
+
+//
+// MARK: - PlayerTextGraphicsComponent
+//
+
 class PlayerTextGraphicsComponent
   : public GraphicsComponent
 {
@@ -26,9 +32,11 @@ public:
   void update(Core & core);
 };
 
-/**
- *  Defines player text.
- */
+
+//
+// MARK: - PlayerText
+//
+
 class PlayerText : public Entity
 {
 public:
@@ -36,12 +44,45 @@ public:
   void init(Core * core);
 };
 
-/**
- *  Defines score.
- */
-class Score
+
+//
+// MARK: - ScoreDigitGraphicsComponent
+//
+
+class ScoreDigitGraphicsComponent
+  : public GraphicsComponent
+{
+public:
+  void init(Entity * entity);
+  void update(Core & core);
+};
+
+
+//
+// MARK: - ScoreDigit
+//
+
+class ScoreDigit
   : public Entity
 {
+  bool _did_die;
+public:
+  prop<int> digit;
+  
+  ScoreDigit(string id, int x, int y);
+  void init(Core * core);
+  void reset();
+};
+
+
+//
+// MARK: - Score
+//
+
+class Score
+: public Entity
+{
+  bool _did_die;
   Level * _level;
   
   void update_digits();
@@ -53,10 +94,12 @@ public:
   void reset();
 };
 
-/**
- *  Defines score graphics.
- */
-class ScoreDigitGraphicsComponent
+
+//
+// MARK: - LifeGraphicsComponent
+//
+
+class LifeGraphicsComponent
   : public GraphicsComponent
 {
 public:
@@ -64,25 +107,34 @@ public:
   void update(Core & core);
 };
 
-/**
- *  Defines a score digit.
- */
-class ScoreDigit : public Entity
+
+//
+// MARK: - Life
+//
+
+class Life
+  : public Entity
 {
+  bool _did_die;
 public:
-  prop<int> digit;
+  prop<bool> visible;
   
-  ScoreDigit(string id, int x, int y);
+  Life(string id, int x, int y);
   void init(Core * core);
   void reset();
 };
 
-/**
- *  Defines a heads-up display.
- */
+
+//
+// MARK: - HUD
+//
+
 class HUD : public Entity
 {
+  int _lives = 3;
+  bool _did_die;
 public:
   HUD(string id);
   void init(Core * core);
+  void reset();
 };

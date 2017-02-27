@@ -70,7 +70,7 @@ typedef ControllerGraphicsComponent PlayerGraphicsComponent;
 class Player
   : public Controller
 {
-  bool _did_clear_board;
+  bool _should_revert;
 protected:
   int direction_mask();
   pair<int, int> default_board_position();
