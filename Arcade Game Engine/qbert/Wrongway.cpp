@@ -3,6 +3,7 @@
 //  Game Engine
 //
 
+#include <random>
 #include "Wrongway.hpp"
 
 
@@ -14,7 +15,10 @@
 
 ControllerDirection WrongwayInputComponent::update_direction(Core & core)
 {
-  return arc4random_uniform(2)*3;
+  random_device rd;
+  mt19937 gen(rd());
+  uniform_int_distribution<int> distribution(0, 1);
+  return distribution(gen)*3;
 }
 
 double WrongwayInputComponent::animation_ending_delay()
@@ -102,7 +106,10 @@ void Wrongway::reset()
   order(default_order());
   direction(default_direction());
   
-  core()->createEffectiveTimer(arc4random_uniform(5)+3, [this]
+  random_device rd;
+  mt19937 gen(rd());
+  uniform_int_distribution<int> distribution(0, 4);
+  core()->createEffectiveTimer(distribution(gen)+3, [this]
   {
    enabled(true);
   });

@@ -5,9 +5,9 @@
 
 #pragma once
 
-#define BOARD_DIMENSIONS ((Dimension2){224, 176})
-
 #include "core.hpp"
+
+const Dimension2 BOARD_DIMENSIONS { 224, 176 };
 
 
 // MARK: Events

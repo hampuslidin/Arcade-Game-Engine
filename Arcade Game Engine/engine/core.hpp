@@ -8,12 +8,13 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <functional>
 #include "types.hpp"
 
 #ifdef __APPLE__
 # include <SDL2/SDL.h>
 # include <SDL2_image/SDL_image.h>
-#elif defined(__WIN32__)
+#elif defined(_WIN32)
 # include "SDL.h"
 # include "SDL_image.h"
 #endif

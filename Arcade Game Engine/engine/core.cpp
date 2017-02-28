@@ -620,7 +620,7 @@ void Entity::destroy()
 
 Dimension2 Entity::dimensions()
 {
-  return graphics() ? graphics()->bounds().dim : (Dimension2){};
+  return graphics() ? graphics()->bounds().dim : Dimension2 {};
 }
 
 void Entity::addChild(Entity * child, int order)
