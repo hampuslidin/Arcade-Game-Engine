@@ -3,6 +3,7 @@
 //  Game Engine
 //
 
+#include <algorithm>
 #include "core.hpp"
 
 

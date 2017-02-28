@@ -170,7 +170,8 @@ void Score::init(Core * core)
   Entity::init(core);
   
   _did_die = false;
-  
+  score(0);
+
   SpriteCollection & sprites = SpriteCollection::main();
   for (auto n = 0; n < 10; n++)
   {

@@ -125,7 +125,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GAME_ENGINE_DEBUG;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>Arcade Game Engine\qbert\textures;Arcade Game Engine\external\SDL2-2.0.5\include;Arcade Game Engine\external\SDL2_image-2.0.1\include;Arcade Game Engine\engine</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>

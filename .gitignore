@@ -33,6 +33,9 @@
 *.xcodeproj/project.xcworkspace
 
 # Visual Studio
-Debug
-x64
-.vs
+Debug/
+x64/
+.vs/
+*.VC.db
+*.VC.opendb
+*.vcxproj.filters
