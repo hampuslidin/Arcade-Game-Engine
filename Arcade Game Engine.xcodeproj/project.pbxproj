@@ -38,30 +38,30 @@
 
 /* Begin PBXFileReference section */
 		D215B0B11E59951C00846D94 /* animation.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = animation.cpp; path = engine/animation.cpp; sourceTree = "<group>"; };
-		D22E02391E632AF900453534 /* Wrongway.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Wrongway.cpp; path = "Q*bert/Wrongway.cpp"; sourceTree = "<group>"; };
-		D22E023A1E632AF900453534 /* Wrongway.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Wrongway.hpp; path = "Q*bert/Wrongway.hpp"; sourceTree = "<group>"; };
-		D23CC4BF1E57514E00B774C9 /* Level.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Level.cpp; path = "Q*bert/Level.cpp"; sourceTree = "<group>"; };
-		D23CC4C01E57514E00B774C9 /* Level.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Level.hpp; path = "Q*bert/Level.hpp"; sourceTree = "<group>"; };
-		D23CC4C21E57533E00B774C9 /* HUD.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = HUD.cpp; path = "Q*bert/HUD.cpp"; sourceTree = "<group>"; };
-		D23CC4C31E57533E00B774C9 /* HUD.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = HUD.hpp; path = "Q*bert/HUD.hpp"; sourceTree = "<group>"; };
-		D2548F7A1E5AF64200777499 /* Controller.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Controller.cpp; path = "Q*bert/Controller.cpp"; sourceTree = "<group>"; };
-		D2548F7B1E5AF64200777499 /* Controller.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Controller.hpp; path = "Q*bert/Controller.hpp"; sourceTree = "<group>"; };
+		D22E02391E632AF900453534 /* Wrongway.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Wrongway.cpp; path = qbert/Wrongway.cpp; sourceTree = "<group>"; };
+		D22E023A1E632AF900453534 /* Wrongway.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Wrongway.hpp; path = qbert/Wrongway.hpp; sourceTree = "<group>"; };
+		D23CC4BF1E57514E00B774C9 /* Level.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Level.cpp; path = qbert/Level.cpp; sourceTree = "<group>"; };
+		D23CC4C01E57514E00B774C9 /* Level.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Level.hpp; path = qbert/Level.hpp; sourceTree = "<group>"; };
+		D23CC4C21E57533E00B774C9 /* HUD.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = HUD.cpp; path = qbert/HUD.cpp; sourceTree = "<group>"; };
+		D23CC4C31E57533E00B774C9 /* HUD.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = HUD.hpp; path = qbert/HUD.hpp; sourceTree = "<group>"; };
+		D2548F7A1E5AF64200777499 /* Controller.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Controller.cpp; path = qbert/Controller.cpp; sourceTree = "<group>"; };
+		D2548F7B1E5AF64200777499 /* Controller.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Controller.hpp; path = qbert/Controller.hpp; sourceTree = "<group>"; };
 		D29DC52B1E509D120005EC95 /* Q*bert */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "Q*bert"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D29DC5381E509D780005EC95 /* core.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = core.hpp; path = engine/core.hpp; sourceTree = "<group>"; };
 		D29DC53A1E509D780005EC95 /* types.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = types.hpp; path = engine/types.hpp; sourceTree = "<group>"; };
 		D29DC53B1E509D780005EC95 /* core.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = core.cpp; path = engine/core.cpp; sourceTree = "<group>"; };
 		D29DC53C1E509D780005EC95 /* physics.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = physics.cpp; path = engine/physics.cpp; sourceTree = "<group>"; };
-		D29DC5411E509E250005EC95 /* Player.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Player.hpp; path = "Q*bert/Player.hpp"; sourceTree = "<group>"; };
-		D29DC5421E509E250005EC95 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = main.cpp; path = "Q*bert/main.cpp"; sourceTree = "<group>"; };
-		D29DC5431E509E250005EC95 /* Player.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Player.cpp; path = "Q*bert/Player.cpp"; sourceTree = "<group>"; };
+		D29DC5411E509E250005EC95 /* Player.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Player.hpp; path = qbert/Player.hpp; sourceTree = "<group>"; };
+		D29DC5421E509E250005EC95 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = main.cpp; path = qbert/main.cpp; sourceTree = "<group>"; };
+		D29DC5431E509E250005EC95 /* Player.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Player.cpp; path = qbert/Player.cpp; sourceTree = "<group>"; };
 		D29DC5491E509F5E0005EC95 /* SDL2.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = SDL2.framework; sourceTree = "<group>"; };
 		D29DC54A1E509F5E0005EC95 /* SDL2_image.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = SDL2_image.framework; sourceTree = "<group>"; };
 		D29DC54B1E509F5E0005EC95 /* SDL2_ttf.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = SDL2_ttf.framework; sourceTree = "<group>"; };
-		D2B67DB81E5DD4AC00AC8922 /* Ugg.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Ugg.cpp; path = "Q*bert/Ugg.cpp"; sourceTree = "<group>"; };
-		D2B67DB91E5DD4AC00AC8922 /* Ugg.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Ugg.hpp; path = "Q*bert/Ugg.hpp"; sourceTree = "<group>"; };
+		D2B67DB81E5DD4AC00AC8922 /* Ugg.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Ugg.cpp; path = qbert/Ugg.cpp; sourceTree = "<group>"; };
+		D2B67DB91E5DD4AC00AC8922 /* Ugg.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Ugg.hpp; path = qbert/Ugg.hpp; sourceTree = "<group>"; };
 		D2F614D41E53183C00B33DAB /* types.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = types.cpp; path = engine/types.cpp; sourceTree = "<group>"; };
-		D2F614F11E54C7D400B33DAB /* Board.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Board.cpp; path = "Q*bert/Board.cpp"; sourceTree = "<group>"; };
-		D2F614F21E54C7D400B33DAB /* Board.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Board.hpp; path = "Q*bert/Board.hpp"; sourceTree = "<group>"; };
+		D2F614F11E54C7D400B33DAB /* Board.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Board.cpp; path = qbert/Board.cpp; sourceTree = "<group>"; };
+		D2F614F21E54C7D400B33DAB /* Board.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Board.hpp; path = qbert/Board.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
