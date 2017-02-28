@@ -163,7 +163,22 @@ public:
   void createEffectiveTimer(double duration, function<void()> block);
   void createAccumulativeTimer(double duration, function<void()> block);
   bool update();
+  
+  /**
+   *  Collision detection for AABB.
+   *
+   *  Note: obsticles are assumed static in the calculations.
+   *
+   *  @param  collider            The dynamic entity to detect collision for.
+   *  @param  travel_distance     The distance the entity will travel until the
+   *                              next frame.
+   *  @param  collision_response  Specifies whether the collider should respond
+   *                              to the collision or not.
+   *  @param  result              The entities that the collider has collided 
+   *                              with will be stored here.
+   */
   void resolveCollisions(Entity & collider,
+                         Vector2 & new_position,
                          bool collision_response,
                          vector<Entity*> & result);
   void keyStatus(KeyStatus & keys);

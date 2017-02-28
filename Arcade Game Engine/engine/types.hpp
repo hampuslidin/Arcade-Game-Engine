@@ -8,6 +8,12 @@
 #include <stdlib.h>
 #include <string>
 
+#ifdef __APPLE__
+# include <SDL2/SDL.h>
+#elif defined(_WIN32)
+# include "SDL.h"
+#endif
+
 using namespace std;
 
 /**
@@ -129,3 +135,8 @@ inline double min_x(Rectangle r) { return r.pos.x; }
 inline double min_y(Rectangle r) { return r.pos.y; }
 inline double max_x(Rectangle r) { return r.pos.x + r.dim.x; }
 inline double max_y(Rectangle r) { return r.pos.y + r.dim.y; }
+
+inline double min_x(SDL_Rect r) { return r.x; }
+inline double min_y(SDL_Rect r) { return r.y; }
+inline double max_x(SDL_Rect r) { return r.x + r.w; }
+inline double max_y(SDL_Rect r) { return r.y + r.h; }

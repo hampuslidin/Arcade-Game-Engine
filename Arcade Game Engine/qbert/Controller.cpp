@@ -135,16 +135,16 @@ void ControllerAnimationComponent::init(Entity * entity)
     switch (event.parameter())
     {
       case UP:
-        performAnimation("jump_up", animation_speed(), _did_jump_off);
+        performAnimation("jump_up", animation_speed(), true);
         break;
       case DOWN:
-        performAnimation("jump_down", animation_speed(), _did_jump_off);
+        performAnimation("jump_down", animation_speed(), true);
         break;
       case LEFT:
-        performAnimation("jump_left", animation_speed(), _did_jump_off);
+        performAnimation("jump_left", animation_speed(), true);
         break;
       case RIGHT:
-        performAnimation("jump_right", animation_speed(), _did_jump_off);
+        performAnimation("jump_right", animation_speed(), true);
         break;
     }
   };
