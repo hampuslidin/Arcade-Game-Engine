@@ -3,6 +3,7 @@
 //  Game Engine
 //
 
+#include <random>
 #include "Ugg.hpp"
 
 
@@ -14,7 +15,10 @@
 
 ControllerDirection UggInputComponent::update_direction(Core & core)
 {
-  return arc4random_uniform(2)*2;
+  random_device rd;
+  mt19937 gen(rd());
+  uniform_int_distribution<int> distribution(0, 1);
+  return distribution(gen)*2;
 }
 
 double UggInputComponent::animation_ending_delay()
@@ -98,8 +102,10 @@ void Ugg::reset()
   board_position(default_board_position());
   order(default_order());
   direction(default_direction());
-  
-  core()->createEffectiveTimer(arc4random_uniform(7)+3, [this]
+
+  default_random_engine generator;
+  uniform_int_distribution<int> distribution(0, 6);
+  core()->createEffectiveTimer(distribution(generator) + 3, [this]
   {
    enabled(true);
   });

@@ -31,3 +31,8 @@
 # Xcode
 *.xcodeproj/xcuserdata
 *.xcodeproj/project.xcworkspace
+
+# Visual Studio
+Debug
+x64
+.vs
