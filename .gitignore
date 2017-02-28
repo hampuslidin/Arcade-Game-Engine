@@ -39,3 +39,4 @@ x64/
 *.VC.db
 *.VC.opendb
 *.vcxproj.filters
+*.vcxproj.user
