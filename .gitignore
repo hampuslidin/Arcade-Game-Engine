@@ -33,5 +33,6 @@
 *.xcodeproj/project.xcworkspace
 
 # Visual Studio
-Debug/*
-x64/*
+Debug
+x64
+.vs
