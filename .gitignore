@@ -8,7 +8,9 @@
 *.gch
 *.pch
 
-# Compiled Dynamic Arcade Game Engine/external/.so
+# Compiled Dynamic libraries
+Arcade Game Engine/external/
+*.so
 *.dylib
 *.dll
 
