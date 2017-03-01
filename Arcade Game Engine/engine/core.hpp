@@ -13,9 +13,11 @@
 
 #ifdef __APPLE__
 # include <SDL2/SDL.h>
+# include <SDL2/SDL_audio.h>
 # include <SDL2_image/SDL_image.h>
 #elif defined(_WIN32)
 # include "SDL.h"
+# include "SDL_audio.h"
 # include "SDL_image.h"
 #endif
 
@@ -32,6 +34,7 @@ class Component;
 class InputComponent;
 class AnimationComponent;
 class PhysicsComponent;
+class AudioComponent;
 class GraphicsComponent;
 
 // MARK: Events
@@ -149,7 +152,7 @@ public:
   prop_r<Core,          Entity*> root;
   prop_r<Core,           double> delta_time;
   prop_r<Core,       Dimension2> view_dimensions;
-  prop<int>  scale;
+  prop<int> scale;
   
   Core();
   bool init(Entity * root,
@@ -217,6 +220,7 @@ public:
   prop_r<Entity,     InputComponent*> input;
   prop_r<Entity, AnimationComponent*> animation;
   prop_r<Entity,   PhysicsComponent*> physics;
+  prop_r<Entity,     AudioComponent*> audio;
   prop_r<Entity,  GraphicsComponent*> graphics;
   prop_r<Entity,             Vector2> local_position;
   prop_r<Entity,             Vector2> velocity;
@@ -231,6 +235,7 @@ public:
   void addInput(InputComponent * input);
   void addAnimation(AnimationComponent * animation);
   void addPhysics(PhysicsComponent * physics);
+  void addAudio(AudioComponent * audio);
   void addGraphics(GraphicsComponent * graphics);
   
   /**
@@ -384,6 +389,25 @@ public:
   prop<        bool> collision_response;
   
   PhysicsComponent();
+  virtual void init(Entity * entity);
+  virtual void update(Core & core);
+};
+
+
+/**
+ *  AudioComponent is responsible for generating and playing sounds.
+ */
+class AudioComponent
+  : public Component
+{
+  const int _sample_rate = 44100;
+  unsigned int _v;
+  
+  string trait();
+public:
+  prop<int> frequency;
+  
+  virtual ~AudioComponent();
   virtual void init(Entity * entity);
   virtual void update(Core & core);
 };

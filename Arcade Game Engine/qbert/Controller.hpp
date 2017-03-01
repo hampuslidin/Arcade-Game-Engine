@@ -85,6 +85,13 @@ public:
 
 
 //
+// MARK: - ControllerAudioComponent
+//
+
+typedef AudioComponent ControllerAudioComponent;
+
+
+//
 // MARK: - ControllerGraphicsComponent
 //
 

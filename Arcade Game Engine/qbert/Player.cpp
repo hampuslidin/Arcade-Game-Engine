@@ -149,6 +149,7 @@ Player::Player(string id)
   addInput(new PlayerInputComponent());
   addAnimation(new PlayerAnimationComponent());
   addPhysics(new PlayerPhysicsComponent());
+  addAudio(new PlayerAudioComponent());
   addGraphics(new PlayerGraphicsComponent());
 }
 

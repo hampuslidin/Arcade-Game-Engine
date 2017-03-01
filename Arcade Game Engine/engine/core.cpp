@@ -392,8 +392,8 @@ bool Core::update()
   auto entities = vector<Entity*>();
   _buildEntityPriorityQueue(*root(), entities);
   
-  uint8_t mask = !_pause ? 0b1111 : 0b0001;
-  for (uint8_t i = 0b1000; i > 0; i = i >>= 1)
+  uint8_t mask = !_pause ? 0b11111 : 0b00001;
+  for (uint8_t i = 0b10000; i > 0; i = i >>= 1)
   {
     for (auto entity : entities)
     {
@@ -574,6 +574,11 @@ void Entity::addPhysics(PhysicsComponent * physics)
   this->physics(physics);
 }
 
+void Entity::addAudio(AudioComponent * audio)
+{
+  this->audio(audio);
+}
+
 void Entity::addGraphics(GraphicsComponent * graphics)
 {
   this->graphics(graphics);
@@ -584,10 +589,11 @@ void Entity::init(Core * core)
   this->core(core);
   this->enabled(true);
   
-  if (input()) input()->init(this);
+  if (input())     input()->init(this);
   if (animation()) animation()->init(this);
-  if (physics()) physics()->init(this);
-  if (graphics()) graphics()->init(this);
+  if (physics())   physics()->init(this);
+  if (audio())     audio()->init(this);
+  if (graphics())  graphics()->init(this);
   
   for (auto child : children()) child->init(core);
 }
@@ -596,10 +602,11 @@ void Entity::reset()
 {
   velocity({0, 0});
   
-  if (input()) input()->reset();
+  if (input())     input()->reset();
   if (animation()) animation()->reset();
-  if (physics()) physics()->reset();
-  if (graphics()) graphics()->reset();
+  if (physics())   physics()->reset();
+  if (audio())     audio()->reset();
+  if (graphics())  graphics()->reset();
   
   for (auto child : children()) child->reset();
 }
@@ -615,6 +622,7 @@ void Entity::destroy()
   if (input())     delete input();
   if (animation()) delete animation();
   if (physics())   delete physics();
+  if (audio())     delete audio();
   if (graphics())  delete graphics();
 }
 
@@ -721,10 +729,11 @@ void Entity::update(uint8_t component_mask)
 {
   if (enabled())
   {
-    if (component_mask & 0b1000 && input())     input()->update(*core());
-    if (component_mask & 0b0100 && animation()) animation()->update(*core());
-    if (component_mask & 0b0010 && physics())   physics()->update(*core());
-    if (component_mask & 0b0001 && graphics())  graphics()->update(*core());
+    if (component_mask & 0b10000 && input())     input()->update(*core());
+    if (component_mask & 0b01000 && animation()) animation()->update(*core());
+    if (component_mask & 0b00100 && physics())   physics()->update(*core());
+    if (component_mask & 0b00010 && audio())     audio()->update(*core());
+    if (component_mask & 0b00001 && graphics())  graphics()->update(*core());
   }
 }
 
