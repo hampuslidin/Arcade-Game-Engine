@@ -67,7 +67,7 @@ double WrongwayAnimationComponent::animation_speed()
 WrongwayPhysicsComponent::WrongwayPhysicsComponent()
   : ControllerPhysicsComponent()
 {
-  this->gravity({1.417, -0.818});
+  gravity({1.417, -0.818});
 }
 
 void WrongwayPhysicsComponent::init(Entity * entity)

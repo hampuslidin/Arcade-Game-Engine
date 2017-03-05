@@ -98,6 +98,33 @@ double PlayerAnimationComponent::animation_speed() { return 0.3; }
 
 
 //
+// MARK: - PlayerAudioComponent
+//
+
+void PlayerAudioComponent::init(Entity * entity)
+{
+  AudioComponent::init(entity);
+  
+  synthesizer().load("synthesizer/alien_gibberish.synth");
+  synthesizer().load("synthesizer/fall_off.synth");
+  
+  auto did_move_out_of_view  = [this](Event) { playSound("fall_off", 1); };
+  auto did_collide_with_enemy = [this](Event)
+  {
+    playSound("alien_gibberish", 0.66);
+  };
+  
+  auto player_physics = ((Player*)entity)->physics();
+  NotificationCenter::observe(did_move_out_of_view,
+                              DidMoveOutOfView,
+                              player_physics);
+  NotificationCenter::observe(did_collide_with_enemy,
+                              DidCollideWithEnemy,
+                              player_physics);
+}
+
+
+//
 // MARK: - PlayerPhysicsComponent
 //
 

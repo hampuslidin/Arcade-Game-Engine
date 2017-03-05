@@ -74,9 +74,8 @@ void BlockGraphicsComponent::changeDetailColor(int index)
 
 Block::Block(string id, int order, int x, int y)
   : Entity(id, order)
+  , state(NOT_SET)
 {
-  state(NOT_SET);
-
   addPhysics(new BlockPhysicsComponent());
   addGraphics(new BlockGraphicsComponent());
   

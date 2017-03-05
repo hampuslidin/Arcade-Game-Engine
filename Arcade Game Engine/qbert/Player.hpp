@@ -60,7 +60,12 @@ public:
 // MARK: - PlayerAudioComponent
 //
 
-typedef ControllerAudioComponent PlayerAudioComponent;
+class PlayerAudioComponent
+  : public AudioComponent
+{
+public:
+  void init(Entity * entity);
+};
 
 
 //

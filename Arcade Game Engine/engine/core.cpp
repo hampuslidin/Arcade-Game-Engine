@@ -189,9 +189,10 @@ NotificationCenter & NotificationCenter::_instance()
 // MARK: Member functions
 
 Core::Core()
-{
-  scale(1);
-}
+  : sample_rate(44100)
+  , max_volume(0.05)
+  , scale(1)
+{}
 
 bool Core::init(Entity * root,
                 const char * title,
@@ -212,6 +213,43 @@ bool Core::init(Entity * root,
     return false;
   }
   
+  // initialize audio
+  auto fill_stream = [](void * userdata, uint8_t * stream, int length)
+  {
+    Core * core          = (Core*)userdata;
+    int16_t * stream_16b = (int16_t*)stream;
+    double max_volume    = core->max_volume();
+    
+    for (int i = 0; i < length/2; i++) stream_16b[i] = 0;
+    
+    function<void(Entity*)> callbacks;
+    callbacks = [max_volume, stream_16b, length, &callbacks](Entity * entity)
+    {
+      AudioComponent * audio = entity->audio();
+      if (audio) audio->audioStreamCallback(max_volume, stream_16b, length/2);
+      
+      for (auto child : entity->children())
+      {
+        callbacks(child);
+      }
+    };
+    
+    callbacks(core->root());
+  };
+  
+  SDL_AudioSpec desired_audio_spec;
+  
+  desired_audio_spec.freq     = sample_rate();
+  desired_audio_spec.format   = AUDIO_S16SYS;
+  desired_audio_spec.channels = 1;
+  desired_audio_spec.samples  = 2048;
+  desired_audio_spec.callback = fill_stream;
+  desired_audio_spec.userdata = this;
+  
+  SDL_OpenAudio(&desired_audio_spec, nullptr);
+  
+  SDL_PauseAudio(0);
+  
   // create window
   const int w_pos_x = dimensions.x < 0 ? SDL_WINDOWPOS_UNDEFINED : dimensions.x;
   const int w_pos_y = dimensions.y < 0 ? SDL_WINDOWPOS_UNDEFINED : dimensions.y;
@@ -227,7 +265,6 @@ bool Core::init(Entity * root,
     SDL_Log("SDL_CreateWindow: %s\n", SDL_GetError());
     return false;
   }
-//  SDL_SetWindowFullscreen(window(), SDL_WINDOW_FULLSCREEN_DESKTOP);
   
   // create renderer for window
   renderer(SDL_CreateRenderer(window(), -1, SDL_RENDERER_ACCELERATED));
@@ -253,9 +290,17 @@ bool Core::init(Entity * root,
   SpriteCollection::main().init(renderer());
   
   // initialize entities
-  this->root(root);
-  root->init(this);
-  root->reset();
+  if (root)
+  {
+    this->root(root);
+    root->init(this);
+    root->reset();
+  }
+  else
+  {
+    SDL_Log("Error: root was null, no top entity specified\n");
+    return false;
+  }
   
   return true;
 }
@@ -263,8 +308,9 @@ bool Core::init(Entity * root,
 void Core::destroy()
 {
   SpriteCollection::main().destroyAll();
-  root()->destroy();
-    
+  if (root()) root()->destroy();
+  
+  SDL_CloseAudio();
   SDL_DestroyRenderer(renderer());
   SDL_DestroyWindow(window());
   SDL_Quit();
@@ -542,22 +588,20 @@ string Entity::id()
   return _id;
 }
 
-
 // MARK: Member functions
 
 Entity::Entity(string id, int order)
-{
-  addInput(nullptr);
-  addAnimation(nullptr);
-  addPhysics(nullptr);
-  addGraphics(nullptr);
-  
-  _id = id;
-  this->order(order);
-  core(nullptr);
-  parent(nullptr);
-  local_position({0, 0});
-}
+  : _id(id)
+  , core(nullptr)
+  , parent(nullptr)
+  , input(nullptr)
+  , animation(nullptr)
+  , physics(nullptr)
+  , audio(nullptr)
+  , graphics(nullptr)
+  , order(order)
+  , local_position({0, 0})
+{}
 
 void Entity::addInput(InputComponent * input)
 {

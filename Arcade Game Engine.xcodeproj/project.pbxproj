@@ -12,6 +12,7 @@
 		D23CC4C11E57514E00B774C9 /* Level.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D23CC4BF1E57514E00B774C9 /* Level.cpp */; };
 		D23CC4C41E57533E00B774C9 /* HUD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D23CC4C21E57533E00B774C9 /* HUD.cpp */; };
 		D2548F7C1E5AF64200777499 /* Controller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D2548F7A1E5AF64200777499 /* Controller.cpp */; };
+		D2569F8C1E6AE1D100637699 /* tinyxml2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D2569F8B1E6AE1D100637699 /* tinyxml2.cpp */; };
 		D29DC53D1E509D780005EC95 /* core.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D29DC53B1E509D780005EC95 /* core.cpp */; };
 		D29DC53E1E509D780005EC95 /* physics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D29DC53C1E509D780005EC95 /* physics.cpp */; };
 		D29DC5441E509E250005EC95 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D29DC5421E509E250005EC95 /* main.cpp */; };
@@ -46,6 +47,10 @@
 		D23CC4C31E57533E00B774C9 /* HUD.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = HUD.hpp; path = qbert/HUD.hpp; sourceTree = "<group>"; };
 		D2548F7A1E5AF64200777499 /* Controller.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Controller.cpp; path = qbert/Controller.cpp; sourceTree = "<group>"; };
 		D2548F7B1E5AF64200777499 /* Controller.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Controller.hpp; path = qbert/Controller.hpp; sourceTree = "<group>"; };
+		D2569F871E6AD89200637699 /* alien_gibberish.synth */ = {isa = PBXFileReference; explicitFileType = text.xml; name = alien_gibberish.synth; path = synthesizer/alien_gibberish.synth; sourceTree = SOURCE_ROOT; };
+		D2569F8A1E6AE1D100637699 /* tinyxml2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = tinyxml2.h; path = external/tinyxml2/tinyxml2.h; sourceTree = "<group>"; };
+		D2569F8B1E6AE1D100637699 /* tinyxml2.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = tinyxml2.cpp; path = external/tinyxml2/tinyxml2.cpp; sourceTree = "<group>"; };
+		D2569F8D1E6B281100637699 /* fall_off.synth */ = {isa = PBXFileReference; explicitFileType = text.xml; fileEncoding = 4; name = fall_off.synth; path = synthesizer/fall_off.synth; sourceTree = SOURCE_ROOT; };
 		D29DC52B1E509D120005EC95 /* Q*bert */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "Q*bert"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D29DC5381E509D780005EC95 /* core.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = core.hpp; path = engine/core.hpp; sourceTree = "<group>"; };
 		D29DC53A1E509D780005EC95 /* types.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = types.hpp; path = engine/types.hpp; sourceTree = "<group>"; };
@@ -77,6 +82,32 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		D2569F861E6AD87200637699 /* resources */ = {
+			isa = PBXGroup;
+			children = (
+				D2569F871E6AD89200637699 /* alien_gibberish.synth */,
+				D2569F8D1E6B281100637699 /* fall_off.synth */,
+			);
+			name = resources;
+			sourceTree = "<group>";
+		};
+		D2569F881E6AE1B900637699 /* external */ = {
+			isa = PBXGroup;
+			children = (
+				D2569F891E6AE1BF00637699 /* tinyxml2 */,
+			);
+			name = external;
+			sourceTree = "<group>";
+		};
+		D2569F891E6AE1BF00637699 /* tinyxml2 */ = {
+			isa = PBXGroup;
+			children = (
+				D2569F8A1E6AE1D100637699 /* tinyxml2.h */,
+				D2569F8B1E6AE1D100637699 /* tinyxml2.cpp */,
+			);
+			name = tinyxml2;
+			sourceTree = "<group>";
+		};
 		D29DC5221E509D120005EC95 = {
 			isa = PBXGroup;
 			children = (
@@ -97,6 +128,7 @@
 		D29DC52D1E509D120005EC95 /* Arcade Game Engine */ = {
 			isa = PBXGroup;
 			children = (
+				D2569F881E6AE1B900637699 /* external */,
 				D29DC5351E509D2F0005EC95 /* engine */,
 				D29DC5401E509DF90005EC95 /* Q*bert */,
 			);
@@ -128,6 +160,7 @@
 		D29DC5401E509DF90005EC95 /* Q*bert */ = {
 			isa = PBXGroup;
 			children = (
+				D2569F861E6AD87200637699 /* resources */,
 				D29DC5461E509E280005EC95 /* include */,
 				D29DC5421E509E250005EC95 /* main.cpp */,
 				D2F614F11E54C7D400B33DAB /* Board.cpp */,
@@ -236,6 +269,7 @@
 				D29DC5451E509E250005EC95 /* Player.cpp in Sources */,
 				D22E023B1E632AF900453534 /* Wrongway.cpp in Sources */,
 				D23CC4C11E57514E00B774C9 /* Level.cpp in Sources */,
+				D2569F8C1E6AE1D100637699 /* tinyxml2.cpp in Sources */,
 				D215B0B21E59951C00846D94 /* animation.cpp in Sources */,
 				D2B67DBA1E5DD4AC00AC8922 /* Ugg.cpp in Sources */,
 				D29DC53D1E509D780005EC95 /* core.cpp in Sources */,

@@ -27,6 +27,7 @@ class Sprite;
 class SpriteCollection;
 class NotificationCenter;
 class Timer;
+class Synthesizer;
 class Core;
 class GameObject;
 class Entity;
@@ -116,6 +117,74 @@ public:
 
 
 //
+// MARK: - Synthesizer
+//
+
+class Synthesizer
+{
+  
+public:
+  enum WaveType { SMOOTH, TRIANGLE, SAWTOOTH, SQUARE };
+  
+  prop<int> bit_rate;
+  prop<int> sample_rate;
+  
+  Synthesizer(int bit_rate = 8, int sample_rate = 44100);
+  void load(const char * filename);
+  void select(string id);
+  bool generate(int16_t * stream,
+                int length,
+                int & frame,
+                double max_volume,
+                double duration,
+                double fade_in,
+                double fade_out);
+  
+private:
+  class _Operator
+  {
+    
+  public:
+    double frequency;
+    double modulation_index;
+    WaveType wave_type;
+    double threshold_low;
+    double threshold_high;
+    maybe<double> glissando_frequency;
+    vector<_Operator*> modulators;
+    
+    _Operator(double frequency = 440,
+              double modulation_index = 1.0,
+              WaveType wave_type = SMOOTH,
+              double threshold_low = -1.0,
+              double threshold_high = 1.0,
+              maybe<double> glissando_frequency = maybe<double>::nothing());
+    void addModulator(_Operator * modulator);
+    double calculateSample(double time, double duration);
+    
+  private:
+    double _prev_freq, _prev_gliss_freq;
+    double _log_freq, _log_gliss_freq;
+    double _tone_dist, _gliss_tone_dist;
+    
+    double _amplitude(double time, double midpoint, double duration);
+    double _calculatePhase(double time, double duration);
+    pair<double, double> _toneInterval();
+    
+  };
+  struct _Algorithm
+  {
+    vector<_Operator> operators;
+    int num_carriers;
+  };
+  
+  map<string, _Algorithm> _algorithms;
+  _Algorithm * _current_algorithm;
+  
+};
+
+
+//
 // MARK: - Core
 //
 
@@ -147,12 +216,14 @@ private:
   bool _reset;
   bool _pause;
 public:
-  prop_r<Core,      SDL_Window*> window;
-  prop_r<Core,    SDL_Renderer*> renderer;
-  prop_r<Core,          Entity*> root;
-  prop_r<Core,           double> delta_time;
-  prop_r<Core,       Dimension2> view_dimensions;
-  prop<int> scale;
+  prop_r<Core, SDL_Window*>   window;
+  prop_r<Core, SDL_Renderer*> renderer;
+  prop_r<Core, Entity*>       root;
+  prop_r<Core, double>        delta_time;
+  prop_r<Core, Dimension2>    view_dimensions;
+  prop_r<Core, int>           sample_rate;
+  prop_r<Core, double>        max_volume;
+  prop<int>                   scale;
   
   Core();
   bool init(Entity * root,
@@ -213,7 +284,6 @@ class Entity
 {
   string _id;
 public:
-  
   prop_r<Entity,               Core*> core;
   prop_r<Entity,             Entity*> parent;
   prop_r<Entity,     vector<Entity*>> children;
@@ -329,26 +399,16 @@ class InputComponent
 class AnimationComponent
   : public Component
 {
+  
 public:
   typedef vector<pair<Vector2, Vector2>> CubicHermiteCurve;
   typedef pair<pair<Vector2, Vector2>, pair<Vector2, Vector2>>
     CubicHermiteSpline;
-private:
-  string trait();
-  
-  map<string, CubicHermiteCurve> _curves;
-  CubicHermiteCurve _current_curve;
-  Vector2 _start_position;
-  double _start_time;
-  double _duration;
-  bool _update_velocity;
-public:
   
   prop_r<AnimationComponent, bool> animating;
   prop_r<AnimationComponent, Vector2> end_velocity;
   
   virtual void reset();
-  
   void addSegment(string id, Vector2 point, Vector2 velocity);
   void removeCurve(string id);
   
@@ -361,8 +421,18 @@ public:
   void performAnimation(string id,
                         double duration,
                         bool update_velocity = false);
-
+  
   virtual void update(Core & core);
+  
+private:
+  string trait();
+  
+  map<string, CubicHermiteCurve> _curves;
+  CubicHermiteCurve _current_curve;
+  Vector2 _start_position;
+  double _start_time;
+  double _duration;
+  bool _update_velocity;
 };
 
 
@@ -400,24 +470,43 @@ public:
 class AudioComponent
   : public Component
 {
-  const int _sample_rate = 44100;
-  unsigned int _v;
+  
+public:
+  friend Core;
+  
+  virtual void init(Entity * entity);
+  virtual void update(Core & core) {};
+  
+protected:
+  prop_r<AudioComponent, Synthesizer> synthesizer;
+  
+  void playSound(string id,
+                 double duration,
+                 double fade_in = 0.01,
+                 double fade_out = 0.01);
+  void audioStreamCallback(double max_volume, int16_t * stream, int length);
+  
+private:
+  struct _Audio
+  {
+    string id;
+    double duration;
+    double fade_in;
+    double fade_out;
+    int frame;
+  };
+  vector<_Audio> _audio_playback;
   
   string trait();
-public:
-  prop<int> frequency;
   
-  virtual ~AudioComponent();
-  virtual void init(Entity * entity);
-  virtual void update(Core & core);
 };
-
 
 /**
  *  GraphicsComponent is responsible for drawing an Entity to a SDL rendering
  *  context.
  */
-class GraphicsComponent : public Component
+class GraphicsComponent
+  : public Component
 {
   string trait();
 protected:

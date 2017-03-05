@@ -303,13 +303,12 @@ string PhysicsComponent::trait() { return "physics"; }
 // MARK: Member functions
 
 PhysicsComponent::PhysicsComponent()
-{
-  collision_bounds({0, 0, 16, 16});
-  gravity({0.0, 9.82});
-  dynamic(false);
-  collision_detection(false);
-  collision_response(false);
-}
+  : collision_bounds({0, 0, 16, 16})
+  , gravity({0.0, 9.82})
+  , dynamic(false)
+  , collision_detection(false)
+  , collision_response(false)
+{}
 
 void PhysicsComponent::init(Entity * entity)
 {

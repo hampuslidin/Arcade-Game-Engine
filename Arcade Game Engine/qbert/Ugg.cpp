@@ -64,7 +64,7 @@ double UggAnimationComponent::animation_speed() { return 0.7; };
 UggPhysicsComponent::UggPhysicsComponent()
   : ControllerPhysicsComponent()
 {
-  this->gravity({-1.417, -0.818});
+  gravity({-1.417, -0.818});
 }
 
 void UggPhysicsComponent::init(Entity * entity)

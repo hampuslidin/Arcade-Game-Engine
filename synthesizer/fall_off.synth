@@ -1,0 +1,4 @@
+<operator
+   frequency="880"
+   threshold_low="0.0"
+   glissando_frequency="440" />

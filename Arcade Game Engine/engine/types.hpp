@@ -23,23 +23,56 @@ using namespace std;
 
 /* read and write */
 template <typename PropertyType>
-class prop {
-  PropertyType _v;
+class prop
+{
+
 public:
+  prop()               : _v()  {};
+  prop(PropertyType v) : _v(v) {};
   PropertyType & operator()() { return _v; };
   void operator()(const PropertyType & v) { _v = v; };
+
+private:
+  PropertyType _v;
   
 };
 
 /* read-only */
-template <class entity, typename PropertyType>
-class prop_r {
-  friend entity;
-  PropertyType _v;
+template <class Friend, typename PropertyType>
+class prop_r
+{
+
 public:
+  friend Friend;
+
+  prop_r()               : _v()  {};
+  prop_r(PropertyType v) : _v(v) {};
   PropertyType & operator()() { return _v; };
+
 private:
+  PropertyType _v;
+  
   void operator()(const PropertyType & v) { _v = v; };
+};
+
+/**
+ *  A wrapper class for when a certain values are optional.
+ */
+template <typename Value>
+class maybe
+{
+  
+public:
+  static maybe<Value> just(Value & v) { return maybe(v); }
+  static maybe<Value> nothing()       { return maybe();  }
+  const Value * operator()() { return _just ? &_v : nullptr; }
+  
+private:
+  bool _just;
+  Value _v;
+  
+  maybe()        : _just(false)       {}
+  maybe(Value v) : _v(v), _just(true) {}
 };
 
 

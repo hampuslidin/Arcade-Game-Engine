@@ -19,10 +19,11 @@ int main(int argc, char * argv[])
   
   // initialize game world
   core.scale(scale);
-  core.init(&level, "Q*bert", scaled_screen_size, {0x00, 0x00, 0x00, 0xFF});
-    
-  // game loop
-  while (core.update());
+  if (core.init(&level, "Q*bert", scaled_screen_size, {0x00, 0x00, 0x00, 0xFF}))
+  {
+    // game loop
+    while (core.update());
+  }
   
   // destroy game world
   core.destroy();
