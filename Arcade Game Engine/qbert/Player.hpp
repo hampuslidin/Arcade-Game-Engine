@@ -63,8 +63,13 @@ public:
 class PlayerAudioComponent
   : public AudioComponent
 {
+  
 public:
   void init(Entity * entity);
+  void reset();
+
+private:
+  bool _did_jump_off;
 };
 
 

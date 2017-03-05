@@ -105,22 +105,43 @@ void PlayerAudioComponent::init(Entity * entity)
 {
   AudioComponent::init(entity);
   
+  _did_jump_off = false;
+  
   synthesizer().load("synthesizer/alien_gibberish.synth");
   synthesizer().load("synthesizer/fall_off.synth");
   
-  auto did_move_out_of_view  = [this](Event) { playSound("fall_off", 1); };
+  auto did_jump_off  = [this](Event) { _did_jump_off = true; };
   auto did_collide_with_enemy = [this](Event)
   {
     playSound("alien_gibberish", 0.66);
   };
+  auto did_stop_animating = [this](Event)
+  {
+    if (_did_jump_off)
+    {
+      playSound("fall_off", 1.5, 0, 1);
+    }
+  };
   
-  auto player_physics = ((Player*)entity)->physics();
-  NotificationCenter::observe(did_move_out_of_view,
-                              DidMoveOutOfView,
-                              player_physics);
+  auto player_input     = entity->input();
+  auto player_physics   = entity->physics();
+  auto player_animation = entity->animation();
+  NotificationCenter::observe(did_jump_off,
+                              DidJumpOff,
+                              player_input);
   NotificationCenter::observe(did_collide_with_enemy,
                               DidCollideWithEnemy,
                               player_physics);
+  NotificationCenter::observe(did_stop_animating,
+                              DidStopAnimating,
+                              player_animation);
+}
+
+void PlayerAudioComponent::reset()
+{
+  ControllerAudioComponent::reset();
+  
+  _did_jump_off = false;
 }
 
 
@@ -143,7 +164,7 @@ void PlayerPhysicsComponent::init(Entity * entity)
   auto did_move_out_of_view = [entity](Event)
   {
     entity->core()->pause();
-    entity->core()->reset(1.0);
+    entity->core()->reset(1.5);
   };
   
   NotificationCenter::observe(did_move_out_of_view, DidMoveOutOfView, this);
@@ -161,7 +182,7 @@ void PlayerPhysicsComponent::collision_with_entity(Entity * entity)
   {
     NotificationCenter::notify(DidCollideWithEnemy, *this);
     entity->core()->pause();
-    entity->core()->reset(1.0);
+    entity->core()->reset(1.5);
   }
 }
 

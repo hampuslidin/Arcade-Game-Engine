@@ -19,18 +19,18 @@ Synthesizer::_Operator::_Operator(double frequency,
                                   WaveType wave_type,
                                   double threshold_low,
                                   double threshold_high,
-                                  maybe<double> glissando_frequency)
+                                  maybe<double> pitch_glide)
   : frequency(frequency)
   , modulation_index(modulation_index)
   , wave_type(wave_type)
   , threshold_low(threshold_low)
   , threshold_high(threshold_high)
   , modulators()
-  , glissando_frequency(glissando_frequency)
+  , pitch_glide(pitch_glide)
   , _prev_freq(frequency)
-  , _prev_gliss_freq(glissando_frequency() ? *glissando_frequency() : 0)
+  , _prev_gliss_freq(pitch_glide() ? *pitch_glide() : 0)
   , _log_freq(log(frequency))
-  , _log_gliss_freq(glissando_frequency() ? log(*glissando_frequency()) : 0)
+  , _log_gliss_freq(pitch_glide() ? log(*pitch_glide()) : 0)
 {}
 
 void Synthesizer::_Operator::addModulator(_Operator * modulator)
@@ -44,7 +44,7 @@ double Synthesizer::_Operator::calculateSample(double time, double duration)
   double sample;
   
   double glide_freq = frequency;
-  if (glissando_frequency())
+  if (pitch_glide())
   {
     const double p = time / duration;
     const auto interval = _toneInterval();
@@ -86,7 +86,7 @@ double Synthesizer::_Operator::calculateSample(double time, double duration)
   const double phase = _calculatePhase(time, duration);
   double sample = 0;
   
-  if (glissando_frequency())
+  if (pitch_glide())
   {
     static double chromatic_ratio = pow(2, 1/12.0);
     
@@ -195,9 +195,9 @@ pair<double, double> Synthesizer::_Operator::_toneInterval()
     _prev_freq = frequency;
   }
   
-  if (_prev_gliss_freq != *glissando_frequency())
+  if (_prev_gliss_freq != *pitch_glide())
   {
-    _prev_gliss_freq = *glissando_frequency();
+    _prev_gliss_freq = *pitch_glide();
     _log_gliss_freq = log(_prev_gliss_freq);
     _gliss_tone_dist = _log_gliss_freq/log_chromatic_ratio - k;
   }
@@ -304,12 +304,12 @@ void Synthesizer::load(const char * filename)
       }
       
       // glissando frequency
-      double glissando_frequency;
-      if (!element->QueryDoubleAttribute("glissando_frequency",
-                                         &glissando_frequency))
+      double pitch_glide;
+      if (!element->QueryDoubleAttribute("pitch_glide",
+                                         &pitch_glide))
       {
-        glissando_frequency = max(glissando_frequency, 0.0);
-        op.glissando_frequency = maybe<double>::just(glissando_frequency);
+        pitch_glide = max(pitch_glide, 0.0);
+        op.pitch_glide = maybe<double>::just(pitch_glide);
       }
     }
     

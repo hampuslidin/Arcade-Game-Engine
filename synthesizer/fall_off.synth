@@ -1,4 +1,4 @@
 <operator
-   frequency="880"
+   frequency="500"
    threshold_low="0.0"
-   glissando_frequency="440" />
+   pitch_glide="400" />

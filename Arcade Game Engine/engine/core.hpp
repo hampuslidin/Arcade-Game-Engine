@@ -150,7 +150,7 @@ private:
     WaveType wave_type;
     double threshold_low;
     double threshold_high;
-    maybe<double> glissando_frequency;
+    maybe<double> pitch_glide;
     vector<_Operator*> modulators;
     
     _Operator(double frequency = 440,
@@ -158,7 +158,7 @@ private:
               WaveType wave_type = SMOOTH,
               double threshold_low = -1.0,
               double threshold_high = 1.0,
-              maybe<double> glissando_frequency = maybe<double>::nothing());
+              maybe<double> pitch_glide = maybe<double>::nothing());
     void addModulator(_Operator * modulator);
     double calculateSample(double time, double duration);
     
