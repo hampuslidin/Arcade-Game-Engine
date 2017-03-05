@@ -1,0 +1,13 @@
+<operator
+   frequency="400"
+   pitch_glide="200"
+   pitch_glide_type="INV_LOGARITHMIC">
+  <operator
+     frequency="79"
+     modulation_index="7.5">
+    <operator
+       frequency="11"
+       modulation_index="2"/>
+  </operator>
+</operator>
+      

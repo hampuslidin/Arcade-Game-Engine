@@ -19,7 +19,8 @@ Synthesizer::_Operator::_Operator(double frequency,
                                   WaveType wave_type,
                                   double threshold_low,
                                   double threshold_high,
-                                  maybe<double> pitch_glide)
+                                  maybe<double> pitch_glide,
+                                  PitchGlideType pitch_glide_type)
   : frequency(frequency)
   , modulation_index(modulation_index)
   , wave_type(wave_type)
@@ -27,10 +28,7 @@ Synthesizer::_Operator::_Operator(double frequency,
   , threshold_high(threshold_high)
   , modulators()
   , pitch_glide(pitch_glide)
-  , _prev_freq(frequency)
-  , _prev_gliss_freq(pitch_glide() ? *pitch_glide() : 0)
-  , _log_freq(log(frequency))
-  , _log_gliss_freq(pitch_glide() ? log(*pitch_glide()) : 0)
+  , pitch_glide_type(pitch_glide_type)
 {}
 
 void Synthesizer::_Operator::addModulator(_Operator * modulator)
@@ -40,37 +38,59 @@ void Synthesizer::_Operator::addModulator(_Operator * modulator)
 
 double Synthesizer::_Operator::calculateSample(double time, double duration)
 {
-  double phase = _calculatePhase(time, duration);
-  double sample;
-  
-  double glide_freq = frequency;
-  if (pitch_glide())
+  static const double two_pi = 2*M_PI;
+  double phase;
+  if (pitch_glide() && *pitch_glide() != frequency)
   {
-    const double p = time / duration;
-    const auto interval = _toneInterval();
-    const double tone = interval.first*(1-p) + interval.second*p;
-    
-    // this adjustment factor, which was found by trial and error, allows for 3
-    // octaves of pitch bending without the signal going bananas
-    const double k = 0.6025 + 0.0845*((interval.first-interval.second)/12-1);
-    
-    glide_freq = (1-k) * frequency + k * 440 * pow(2, tone/12);
-    // TODO: adjust for time
+    double f0 = frequency;
+    double f1 = *pitch_glide();
+    double k;
+    switch (pitch_glide_type)
+    {
+      case LINEAR:
+        // linear chirp
+        k = (f1-f0)/duration;
+        phase = two_pi*(f0*time + k/2*pow(time, 2));
+        break;
+      case EXPONENTIAL:
+        // exponential chirp
+        k = pow(f1/f0, 1/duration);
+        phase = two_pi*f0*((pow(k, time)-1)/log(k));
+        break;
+      case INV_LOGARITHMIC:
+        // inverse logarithmic chirp
+        time = duration-time;
+        f0 = *pitch_glide();
+        f1 = frequency;
+      case LOGARITHMIC:
+        // logarithmic chirp
+        bool reverse = f1 < f0;
+        k = log(reverse ? (f0-f1) : (f1-f0))/duration;
+        phase = two_pi*(f0*time + (reverse ? -1 : 1)*(exp(k * time)-1)/k);
+        break;
+    }
   }
+  else
+  {
+    phase = two_pi * frequency * time;
+  }
+  
+  phase += _calculatePhase(time, duration);
+  double sample;
   
   switch (wave_type)
   {
     case SMOOTH:
-      sample = sin(2* M_PI * glide_freq * time + phase);
-      break;
-    case SQUARE:
-      sample = 2*((int)(glide_freq*2*time + phase/M_PI) % 2)-1;
+      sample = sin(phase);
       break;
     case TRIANGLE:
-      sample = 2*fabs(1-2*fmod(glide_freq*time + phase/M_PI, 1))-1;
+      sample = 2*fabs(2*fmod(phase/two_pi+0.75, 1)-1)-1;
       break;
     case SAWTOOTH:
-      sample = 1-2*fmod(glide_freq*time + phase/M_PI, 1);
+      sample = 2*fmod(phase/two_pi+0.5, 1)-1;
+      break;
+    case SQUARE:
+      sample = 2*((int)(2*phase/two_pi+1) % 2)-1;
       break;
   }
   return sample < threshold_low
@@ -79,96 +99,6 @@ double Synthesizer::_Operator::calculateSample(double time, double duration)
        ? threshold_high
        : sample);
 }
-
-/*
-double Synthesizer::_Operator::calculateSample(double time, double duration)
-{
-  const double phase = _calculatePhase(time, duration);
-  double sample = 0;
-  
-  if (pitch_glide())
-  {
-    static double chromatic_ratio = pow(2, 1/12.0);
-    
-    const int divisions_per_second = 100;
-    const int divisions = ceil(divisions_per_second * duration) + 1;
-    const auto tone_interval = _toneInterval();
-    const double interp = time * divisions_per_second;
-    
-    for (int j = 0; j < 2; j++)
-    {
-      const double p = (int)(j + interp) / (double)divisions;
-      const double tone = tone_interval.first*(1-p) + tone_interval.second*p;
-      const double freq = 440*pow(chromatic_ratio, tone);
-      const double amplitude = j == 0 ? 1-fmod(interp, 1.0) : fmod(interp, 1.0);
-      
-      switch (wave_type)
-      {
-        case SMOOTH:
-          sample += amplitude*sin(2 * M_PI * freq * time + phase);
-          break;
-        case SQUARE:
-          sample += amplitude*(2*((int)(freq*2*time + phase/M_PI) % 2)-1);
-          break;
-        case TRIANGLE:
-          sample += amplitude*(2*fabs(1-2*fmod(freq*time + phase/M_PI, 1))-1);
-          break;
-        case SAWTOOTH:
-          sample += amplitude*(1-2*fmod(freq*time + phase/M_PI, 1));
-          break;
-      }
-    }
-  }
-  else
-  {
-    switch (wave_type)
-    {
-      case SMOOTH:
-        sample = sin(2 * M_PI * frequency * time + phase);
-        break;
-      case SQUARE:
-        sample = 2*((int)(frequency*2*time + phase/M_PI) % 2)-1;
-        break;
-      case TRIANGLE:
-        sample = 2*fabs(1-2*fmod(frequency*time + phase/M_PI, 1))-1;
-        break;
-      case SAWTOOTH:
-        sample = 1-2*fmod(frequency*time + phase/M_PI, 1);
-        break;
-    }
-  }
-  
-  return sample < threshold_low
-  ? threshold_low
-  : (sample > threshold_high
-     ? threshold_high
-     : sample);
-}
-*/
-
-/*
-double Synthesizer::_Operator::_amplitude(double time,
-                                          double midpoint,
-                                          double duration)
-{
-  time -= midpoint;
-  
-  if (time >= -duration/2 && time < 0.0)     return -2*time/duration;
-  else if (time >= 0.0 && time < duration/2) return 1-2*time/duration;
-  
-  return 0.0;
-};
-*/
-
-/*
-double _amplitude2(double time, double midpoint, int divisions)
-{
-  const double low = midpoint-0.5;
-  const double high = midpoint+0.5;
-  time = (time < low ? low : (time > high ? high : time));
-  return (cos(2*M_PI*(time-midpoint)) + 1) / (2*divisions);
-};
- */
 
 double Synthesizer::_Operator::_calculatePhase(double time, double duration)
 {
@@ -180,29 +110,6 @@ double Synthesizer::_Operator::_calculatePhase(double time, double duration)
     modulated_phase        += modulator_sample;
   }
   return modulated_phase;
-}
-
-pair<double, double> Synthesizer::_Operator::_toneInterval()
-{
-  static const double log_440_hz          = log(440);
-  static const double log_chromatic_ratio = log(2) / 12.0;
-  static const double k                   = log_440_hz / log_chromatic_ratio;
-  
-  if (_prev_freq != frequency)
-  {
-    _log_freq = log(frequency);
-    _tone_dist = _log_freq/log_chromatic_ratio - k;
-    _prev_freq = frequency;
-  }
-  
-  if (_prev_gliss_freq != *pitch_glide())
-  {
-    _prev_gliss_freq = *pitch_glide();
-    _log_gliss_freq = log(_prev_gliss_freq);
-    _gliss_tone_dist = _log_gliss_freq/log_chromatic_ratio - k;
-  }
-  
-  return {_tone_dist, _gliss_tone_dist};
 }
 
 Synthesizer::Synthesizer(int bit_rate, int sample_rate)
@@ -303,13 +210,35 @@ void Synthesizer::load(const char * filename)
         else if (strcmp(wave_type, "SQUARE")   == 0) op.wave_type = SQUARE;
       }
       
-      // glissando frequency
+      // pitch glide
       double pitch_glide;
       if (!element->QueryDoubleAttribute("pitch_glide",
                                          &pitch_glide))
       {
         pitch_glide = max(pitch_glide, 0.0);
         op.pitch_glide = maybe<double>::just(pitch_glide);
+      }
+      
+      // pitch glide type
+      const char * pitch_glide_type;
+      if ((pitch_glide_type = element->Attribute("pitch_glide_type")))
+      {
+        if (strcmp(pitch_glide_type, "LINEAR") == 0)
+        {
+          op.pitch_glide_type = LINEAR;
+        }
+        else if (strcmp(pitch_glide_type, "EXPONENTIAL") == 0)
+        {
+          op.pitch_glide_type = EXPONENTIAL;
+        }
+        else if (strcmp(pitch_glide_type, "LOGARITHMIC") == 0)
+        {
+          op.pitch_glide_type = LOGARITHMIC;
+        }
+        else if (strcmp(pitch_glide_type, "INV_LOGARITHMIC") == 0)
+        {
+          op.pitch_glide_type = INV_LOGARITHMIC;
+        }
       }
     }
     
@@ -367,6 +296,7 @@ bool Synthesizer::generate(int16_t * stream,
         {
           waveform += algorithm.operators[i].calculateSample(time, duration);
         }
+        assert(fabs(waveform) <= 1.0);
         
         // calculate fading volume
         double fading_volume = min(time/fade_in, 1.0) *

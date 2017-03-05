@@ -124,7 +124,20 @@ class Synthesizer
 {
   
 public:
-  enum WaveType { SMOOTH, TRIANGLE, SAWTOOTH, SQUARE };
+  enum WaveType
+  {
+    SMOOTH,
+    TRIANGLE,
+    SAWTOOTH,
+    SQUARE
+  };
+  enum PitchGlideType
+  {
+    LINEAR,
+    EXPONENTIAL,
+    LOGARITHMIC,
+    INV_LOGARITHMIC
+  };
   
   prop<int> bit_rate;
   prop<int> sample_rate;
@@ -151,6 +164,7 @@ private:
     double threshold_low;
     double threshold_high;
     maybe<double> pitch_glide;
+    PitchGlideType pitch_glide_type;
     vector<_Operator*> modulators;
     
     _Operator(double frequency = 440,
@@ -158,18 +172,13 @@ private:
               WaveType wave_type = SMOOTH,
               double threshold_low = -1.0,
               double threshold_high = 1.0,
-              maybe<double> pitch_glide = maybe<double>::nothing());
+              maybe<double> pitch_glide = maybe<double>::nothing(),
+              PitchGlideType pitch_glide_type = EXPONENTIAL);
     void addModulator(_Operator * modulator);
     double calculateSample(double time, double duration);
     
   private:
-    double _prev_freq, _prev_gliss_freq;
-    double _log_freq, _log_gliss_freq;
-    double _tone_dist, _gliss_tone_dist;
-    
-    double _amplitude(double time, double midpoint, double duration);
     double _calculatePhase(double time, double duration);
-    pair<double, double> _toneInterval();
     
   };
   struct _Algorithm

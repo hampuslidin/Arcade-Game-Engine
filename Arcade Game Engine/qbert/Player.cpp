@@ -107,20 +107,19 @@ void PlayerAudioComponent::init(Entity * entity)
   
   _did_jump_off = false;
   
-  synthesizer().load("synthesizer/alien_gibberish.synth");
+  synthesizer().load("synthesizer/land.synth");
+  synthesizer().load("synthesizer/gibberish.synth");
   synthesizer().load("synthesizer/fall_off.synth");
   
-  auto did_jump_off  = [this](Event) { _did_jump_off = true; };
+  auto did_jump_off           = [this](Event) { _did_jump_off = true; };
   auto did_collide_with_enemy = [this](Event)
   {
-    playSound("alien_gibberish", 0.66);
+    playSound("gibberish", 0.66);
   };
   auto did_stop_animating = [this](Event)
   {
-    if (_did_jump_off)
-    {
-      playSound("fall_off", 1.5, 0, 1);
-    }
+    if (_did_jump_off) playSound("fall_off", 1.5, 0, 1);
+    else               playSound("land", 0.1);
   };
   
   auto player_input     = entity->input();

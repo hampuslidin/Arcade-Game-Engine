@@ -1,4 +1,5 @@
 <operator
    frequency="500"
-   threshold_low="0.0"
-   pitch_glide="400" />
+   pitch_glide="350"
+   wave_type="SMOOTH"
+   threshold_low="0.0"/>

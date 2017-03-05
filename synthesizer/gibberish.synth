@@ -6,6 +6,6 @@
      modulation_index="10">
     <operator
        frequency="0.75"
-       modulation_index="100" />
+       modulation_index="100"/>
   </operator>
 </operator>
