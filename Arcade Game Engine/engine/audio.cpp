@@ -121,7 +121,8 @@ Synthesizer::Synthesizer(int bit_rate, int sample_rate)
 
 void Synthesizer::load(const char * filename)
 {
-  // reset synthesizer properties
+  
+  // generate id
   string id = filename;
 #ifdef __APPLE__
   long begin = id.rfind("/")+1;
@@ -130,6 +131,8 @@ void Synthesizer::load(const char * filename)
 #endif
   long length = id.rfind(".") - begin;
   id = id.substr(begin, length);
+  
+  // reset synthesizer properties
   _Algorithm & algorithm = _algorithms[id];
   algorithm.operators.clear();
   algorithm.num_carriers = 0;
@@ -296,7 +299,6 @@ bool Synthesizer::generate(int16_t * stream,
         {
           waveform += algorithm.operators[i].calculateSample(time, duration);
         }
-        assert(fabs(waveform) <= 1.0);
         
         // calculate fading volume
         double fading_volume = min(time/fade_in, 1.0) *

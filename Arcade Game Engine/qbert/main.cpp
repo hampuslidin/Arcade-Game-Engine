@@ -23,10 +23,10 @@ int main(int argc, char * argv[])
   {
     // game loop
     while (core.update());
+    
+    // destroy game world
+    core.destroy();
   }
-  
-  // destroy game world
-  core.destroy();
   
   return 0;
 }

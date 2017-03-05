@@ -6,7 +6,9 @@
 #include "core.hpp"
 #include <stack>
 #include <queue>
-
+#ifdef __APPLE__
+# include <CoreFoundation/CoreFoundation.h>
+#endif
 // MARK: Helper functions
 
 void _buildEntityPriorityQueue(Entity & root, vector<Entity*> & result)
@@ -199,6 +201,23 @@ bool Core::init(Entity * root,
                 Dimension2 dimensions,
                 RGBAColor background_color)
 {
+#ifdef __APPLE__
+  // change directory
+  CFBundleRef mainBundle = CFBundleGetMainBundle();
+  CFURLRef resourcesURL = CFBundleCopyResourcesDirectoryURL(mainBundle);
+  char path[PATH_MAX];
+  if (!CFURLGetFileSystemRepresentation(resourcesURL,
+                                        TRUE,
+                                        (UInt8*)path,
+                                        PATH_MAX))
+  {
+    printf("Core: could not set working directory.\n");
+    return false;
+  }
+  CFRelease(resourcesURL);
+  chdir(path);
+#endif
+  
   // initialize SDL
   if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
   {
