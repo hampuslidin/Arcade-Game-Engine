@@ -20,11 +20,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Arcade Game Engine\engine\animation.cpp" />
+    <ClCompile Include="Arcade Game Engine\engine\audio.cpp" />
     <ClCompile Include="Arcade Game Engine\engine\core.cpp" />
     <ClCompile Include="Arcade Game Engine\engine\physics.cpp" />
     <ClCompile Include="Arcade Game Engine\engine\types.cpp" />
+    <ClCompile Include="Arcade Game Engine\external\tinyxml2\tinyxml2.cpp" />
     <ClCompile Include="Arcade Game Engine\qbert\Board.cpp" />
-    <ClCompile Include="Arcade Game Engine\qbert\Controller.cpp" />
+    <ClCompile Include="Arcade Game Engine\qbert\Character.cpp" />
     <ClCompile Include="Arcade Game Engine\qbert\HUD.cpp" />
     <ClCompile Include="Arcade Game Engine\qbert\Level.cpp" />
     <ClCompile Include="Arcade Game Engine\qbert\main.cpp" />
@@ -35,8 +37,9 @@
   <ItemGroup>
     <ClInclude Include="Arcade Game Engine\engine\core.hpp" />
     <ClInclude Include="Arcade Game Engine\engine\types.hpp" />
+    <ClInclude Include="Arcade Game Engine\external\tinyxml2\tinyxml2.h" />
     <ClInclude Include="Arcade Game Engine\qbert\Board.hpp" />
-    <ClInclude Include="Arcade Game Engine\qbert\Controller.hpp" />
+    <ClInclude Include="Arcade Game Engine\qbert\Character.hpp" />
     <ClInclude Include="Arcade Game Engine\qbert\HUD.hpp" />
     <ClInclude Include="Arcade Game Engine\qbert\Level.hpp" />
     <ClInclude Include="Arcade Game Engine\qbert\Player.hpp" />
@@ -126,7 +129,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>GAME_ENGINE_DEBUG;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>Arcade Game Engine\qbert\textures;Arcade Game Engine\external\SDL2-2.0.5\include;Arcade Game Engine\external\SDL2_image-2.0.1\include;Arcade Game Engine\engine</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>Arcade Game Engine\qbert\textures;Arcade Game Engine\external\SDL2-2.0.5\include;Arcade Game Engine\external\SDL2_image-2.0.1\include;Arcade Game Engine\external\tinyxml2;Arcade Game Engine\engine</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -161,7 +164,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>Arcade Game Engine\qbert\textures;Arcade Game Engine\external\SDL2-2.0.5\include;Arcade Game Engine\external\SDL2_image-2.0.1\include;Arcade Game Engine\engine</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>Arcade Game Engine\qbert\textures;Arcade Game Engine\external\SDL2-2.0.5\include;Arcade Game Engine\external\SDL2_image-2.0.1\include;Arcade Game Engine\external\tinyxml2;Arcade Game Engine\engine</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

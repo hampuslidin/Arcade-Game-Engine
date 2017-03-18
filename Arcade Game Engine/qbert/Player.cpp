@@ -107,9 +107,16 @@ void PlayerAudioComponent::init(Entity * entity)
   
   _did_jump_off = false;
   
+#ifdef __APPLE__
   synthesizer().load("synthesizer/land.synth");
   synthesizer().load("synthesizer/gibberish.synth");
   synthesizer().load("synthesizer/fall_off.synth");
+#elif defined(_WIN32)
+  synthesizer().load("synthesizer\\land.synth");
+  synthesizer().load("synthesizer\\gibberish.synth");
+  synthesizer().load("synthesizer\\fall_off.synth");
+#endif
+
   
   auto did_jump_off           = [this](Event) { _did_jump_off = true; };
   auto did_collide_with_enemy = [this](Event)

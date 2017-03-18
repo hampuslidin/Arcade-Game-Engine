@@ -6,7 +6,6 @@
 #include <algorithm>
 #include "tinyxml2.h"
 #include "core.hpp"
-#include "Player.hpp"
 
 using namespace tinyxml2;
 
