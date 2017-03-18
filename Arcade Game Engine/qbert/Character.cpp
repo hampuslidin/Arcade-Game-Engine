@@ -1,21 +1,21 @@
 //
-//  Controller.cpp
+//  Character.cpp
 //  Game Engine
 //
 
-#include "Controller.hpp"
+#include "Character.hpp"
 #include "Board.hpp"
 #include "HUD.hpp"
 #include <fstream>
 
 
 //
-// MARK: - ControllerInputComponent
+// MARK: - CharacterInputComponent
 //
 
 // MARK: Member functions
 
-void ControllerInputComponent::init(Entity * entity)
+void CharacterInputComponent::init(Entity * entity)
 {
   InputComponent::init(entity);
   
@@ -46,7 +46,7 @@ void ControllerInputComponent::init(Entity * entity)
                               physics);
 }
 
-void ControllerInputComponent::reset()
+void CharacterInputComponent::reset()
 {
   InputComponent::reset();
   
@@ -54,32 +54,32 @@ void ControllerInputComponent::reset()
   airborn(false);
 }
 
-void ControllerInputComponent::update(Core & core)
+void CharacterInputComponent::update(Core & core)
 {
   if (!_animating && !airborn())
   {
-    auto controller = (Controller*)entity();
-    ControllerDirection direction = update_direction(core);
+    auto character = (Character*)entity();
+    CharacterDirection direction = update_direction(core);
     
     if (direction != NONE)
     {
-      auto previous_board_position = controller->board_position();
-      controller->previous_board_position(previous_board_position);
+      auto previous_board_position = character->board_position();
+      character->previous_board_position(previous_board_position);
       
-      auto previous_order = controller->order();
-      controller->previous_order(previous_order);
+      auto previous_order = character->order();
+      character->previous_order(previous_order);
       
-      ((Controller*)entity())->direction(direction);
+      ((Character*)entity())->direction(direction);
       
       auto board_position_change = board_position_changes()[direction];
-      controller->board_position({
+      character->board_position({
         previous_board_position.first  + board_position_change.first,
         previous_board_position.second + board_position_change.second
       });
       
-      controller->order(previous_order + board_position_change.first*10);
+      character->order(previous_order + board_position_change.first*10);
       
-      auto board_position = controller->board_position();
+      auto board_position = character->board_position();
       if (board_position.first < 0 ||
           board_position.first > 6 ||
           board_position.second < 0 ||
@@ -94,7 +94,7 @@ void ControllerInputComponent::update(Core & core)
 
 
 //
-// MARK: - ControllerAnimationComponent
+// MARK: - CharacterAnimationComponent
 //
 
 // MARK: Helper functions
@@ -112,7 +112,7 @@ AnimationComponent::CubicHermiteSpline calculate_spline(Vector2 & end_point,
 
 // MARK: Member functions
 
-void ControllerAnimationComponent::init(Entity * entity)
+void CharacterAnimationComponent::init(Entity * entity)
 {
   AnimationComponent::init(entity);
   
@@ -155,7 +155,7 @@ void ControllerAnimationComponent::init(Entity * entity)
   NotificationCenter::observe(did_jump_off, DidJumpOff, input);
 }
 
-void ControllerAnimationComponent::reset()
+void CharacterAnimationComponent::reset()
 {
   AnimationComponent::reset();
   
@@ -164,12 +164,12 @@ void ControllerAnimationComponent::reset()
 
 
 //
-// MARK: - ControllerPhysicsComponent
+// MARK: - CharacterPhysicsComponent
 //
 
 // MARK: Member functions
 
-void ControllerPhysicsComponent::init(Entity * entity)
+void CharacterPhysicsComponent::init(Entity * entity)
 {
   PhysicsComponent::init(entity);
   
@@ -197,7 +197,7 @@ void ControllerPhysicsComponent::init(Entity * entity)
                               animation);
 }
 
-void ControllerPhysicsComponent::reset()
+void CharacterPhysicsComponent::reset()
 {
   PhysicsComponent::reset();
   
@@ -208,7 +208,7 @@ void ControllerPhysicsComponent::reset()
   collision_response(true);
 }
 
-void ControllerPhysicsComponent::update(Core & core)
+void CharacterPhysicsComponent::update(Core & core)
 {
   PhysicsComponent::update(core);
   
@@ -228,30 +228,30 @@ void ControllerPhysicsComponent::update(Core & core)
 
 
 //
-// MARK: - ControllerGraphicsComponent
+// MARK: - CharacterGraphicsComponent
 //
 
 // MARK: Member functions
 
-void ControllerGraphicsComponent::init(Entity * entity)
+void CharacterGraphicsComponent::init(Entity * entity)
 {
   GraphicsComponent::init(entity);
   
-  Controller * controller = (Controller*)entity;
+  Character * character = (Character*)entity;
   
-  auto did_jump = [this, controller](Event event)
+  auto did_jump = [this, character](Event event)
   {
     _current_direction = event.parameter();
     _jumping = true;
-    const string prefix_jumping  = controller->prefix_jumping();
+    const string prefix_jumping  = character->prefix_jumping();
     const string id = prefix_jumping + "_" + to_string(_current_direction);
     current_sprite(SpriteCollection::main().retrieve(id));
   };
   
-  auto did_stop_animating = [this, controller](Event)
+  auto did_stop_animating = [this, character](Event)
   {
     _jumping = false;
-    const string prefix_standing = controller->prefix_standing();
+    const string prefix_standing = character->prefix_standing();
     const string id = prefix_standing + "_" + to_string(_current_direction);
     current_sprite(SpriteCollection::main().retrieve(id));
   };
@@ -264,28 +264,28 @@ void ControllerGraphicsComponent::init(Entity * entity)
   resizeTo(16, 16);
 }
 
-void ControllerGraphicsComponent::reset()
+void CharacterGraphicsComponent::reset()
 {
   GraphicsComponent::reset();
   
   _current_direction = DOWN;
   _jumping = false;
-  const auto controller = (Controller*)entity();
-  const string direction_string = "_" + to_string(controller->direction());
-  const string sprite_id = controller->prefix_standing() + direction_string;
+  const auto character = (Character*)entity();
+  const string direction_string = "_" + to_string(character->direction());
+  const string sprite_id = character->prefix_standing() + direction_string;
   current_sprite(SpriteCollection::main().retrieve(sprite_id));
 }
 
 
 //
-// MARK: - Controller
+// MARK: - Character
 //
 
-Controller::Controller(string id, int order)
+Character::Character(string id, int order)
   : Entity(id, order)
 {}
 
-void Controller::init(Core * core)
+void Character::init(Core * core)
 {
   Entity::init(core);
   

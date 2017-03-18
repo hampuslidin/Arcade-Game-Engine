@@ -299,6 +299,7 @@ bool Synthesizer::generate(int16_t * stream,
         {
           waveform += algorithm.operators[i].calculateSample(time, duration);
         }
+        waveform /= algorithm.num_carriers;
         
         // calculate fading volume
         double fading_volume = min(time/fade_in, 1.0) *

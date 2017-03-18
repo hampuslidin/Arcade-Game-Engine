@@ -6,7 +6,7 @@
 #pragma once
 
 #include "core.hpp"
-#include "Controller.hpp"
+#include "Character.hpp"
 
 
 //
@@ -14,10 +14,10 @@
 //
 
 class WrongwayInputComponent
-  : public ControllerInputComponent
+  : public CharacterInputComponent
 {
 protected:
-  ControllerDirection update_direction(Core & core);
+  CharacterDirection update_direction(Core & core);
   double animation_ending_delay();
   vector<pair<int, int>> board_position_changes();
 public:
@@ -29,7 +29,7 @@ public:
 //
 
 class WrongwayAnimationComponent
-  : public ControllerAnimationComponent
+  : public CharacterAnimationComponent
 {
 protected:
   vector<Vector2> end_points();
@@ -43,7 +43,7 @@ public:
 //
 
 class WrongwayPhysicsComponent
-  : public ControllerPhysicsComponent
+  : public CharacterPhysicsComponent
 {
 public:
   WrongwayPhysicsComponent();
@@ -55,7 +55,7 @@ public:
 // MARK: - WrongwayGraphicsComponent
 //
 
-typedef ControllerGraphicsComponent WrongwayGraphicsComponent;
+typedef CharacterGraphicsComponent WrongwayGraphicsComponent;
 
 
 //
@@ -63,14 +63,14 @@ typedef ControllerGraphicsComponent WrongwayGraphicsComponent;
 //
 
 class Wrongway
-  : public Controller
+  : public Character
 {
 protected:
   int direction_mask();
   pair<int, int> default_board_position();
   int default_order();
 public:
-  ControllerDirection default_direction();
+  CharacterDirection default_direction();
   
   Wrongway();
   void reset();

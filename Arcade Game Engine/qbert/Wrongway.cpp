@@ -13,7 +13,7 @@
 
 // MARK: Member functions
 
-ControllerDirection WrongwayInputComponent::update_direction(Core & core)
+CharacterDirection WrongwayInputComponent::update_direction(Core & core)
 {
   random_device rd;
   mt19937 gen(rd());
@@ -65,14 +65,14 @@ double WrongwayAnimationComponent::animation_speed()
 // MARK: Member functions
 
 WrongwayPhysicsComponent::WrongwayPhysicsComponent()
-  : ControllerPhysicsComponent()
+  : CharacterPhysicsComponent()
 {
   gravity({1.417, -0.818});
 }
 
 void WrongwayPhysicsComponent::init(Entity * entity)
 {
-  ControllerPhysicsComponent::init(entity);
+  CharacterPhysicsComponent::init(entity);
   
   auto did_move_out_of_view = [entity](Event)
   {
@@ -89,7 +89,7 @@ void WrongwayPhysicsComponent::init(Entity * entity)
 //
 
 Wrongway::Wrongway()
-  : Controller("enemy_wrongway", default_order())
+  : Character("enemy_wrongway", default_order())
 {
   addInput(new WrongwayInputComponent());
   addAnimation(new WrongwayAnimationComponent());
@@ -99,7 +99,7 @@ Wrongway::Wrongway()
 
 void Wrongway::reset()
 {
-  Controller::reset();
+  Character::reset();
   
   enabled(false);
   board_position(default_board_position());
@@ -143,7 +143,7 @@ int Wrongway::default_order()
   return 91;
 }
 
-ControllerDirection Wrongway::default_direction()
+CharacterDirection Wrongway::default_direction()
 {
   return UP;
 }

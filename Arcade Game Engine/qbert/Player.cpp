@@ -16,16 +16,16 @@
 
 void PlayerInputComponent::init(Entity * entity)
 {
-  ControllerInputComponent::init(entity);
+  CharacterInputComponent::init(entity);
   
   auto did_clear_board = [this](Event) { _did_clear_board = true; };
   auto did_collide_with_enemy = [this, entity](Event event)
   {
     if (airborn())
     {
-      auto controller = (Controller*)entity;
-      controller->board_position(controller->previous_board_position());
-      controller->order(controller->previous_order());
+      auto character = (Character*)entity;
+      character->board_position(character->previous_board_position());
+      character->order(character->previous_order());
     }
   };
 
@@ -38,12 +38,12 @@ void PlayerInputComponent::init(Entity * entity)
 
 void PlayerInputComponent::reset()
 {
-  ControllerInputComponent::reset();
+  CharacterInputComponent::reset();
   
   _did_clear_board = false;
 }
 
-ControllerDirection PlayerInputComponent::update_direction(Core & core)
+CharacterDirection PlayerInputComponent::update_direction(Core & core)
 {
   if (!_did_clear_board)
   {
@@ -138,7 +138,7 @@ void PlayerAudioComponent::init(Entity * entity)
 
 void PlayerAudioComponent::reset()
 {
-  ControllerAudioComponent::reset();
+  CharacterAudioComponent::reset();
   
   _did_jump_off = false;
 }
@@ -151,14 +151,14 @@ void PlayerAudioComponent::reset()
 // MARK: Member functions
 
 PlayerPhysicsComponent::PlayerPhysicsComponent()
-  : ControllerPhysicsComponent()
+  : CharacterPhysicsComponent()
 {
   collision_bounds({7, 4, 2, 12});
 }
 
 void PlayerPhysicsComponent::init(Entity * entity)
 {
-  ControllerPhysicsComponent::init(entity);
+  CharacterPhysicsComponent::init(entity);
 
   auto did_move_out_of_view = [entity](Event)
   {
@@ -191,7 +191,7 @@ void PlayerPhysicsComponent::collision_with_entity(Entity * entity)
 //
 
 Player::Player(string id)
-  : Controller(id, 11)
+  : Character(id, 11)
 {
   addInput(new PlayerInputComponent());
   addAnimation(new PlayerAnimationComponent());
@@ -202,7 +202,7 @@ Player::Player(string id)
 
 void Player::init(Core * core)
 {
-  Controller::init(core);
+  Character::init(core);
   
   _should_revert = false;
   
@@ -217,7 +217,7 @@ void Player::init(Core * core)
 
 void Player::reset()
 {
-  Controller::reset();
+  Character::reset();
   
   if (_should_revert)
   {
@@ -239,4 +239,4 @@ string Player::prefix_jumping()                 { return "qbert_jumping";  }
 int Player::direction_mask()                    { return 0b1111;           }
 pair<int, int> Player::default_board_position() { return {0, 0};           }
 int Player::default_order()                     { return 15;               }
-ControllerDirection Player::default_direction() { return DOWN;             }
+CharacterDirection Player::default_direction() { return DOWN;             }

@@ -71,10 +71,12 @@ void AnimationComponent::update(Core & world)
       const double t = fmod(elapsed, dt) / dt;
       const double t2 = t*t;
       const double t3 = t2*t;
-      const double cp0 = 2*t3 - 3*t2 + 1;
+      const double two_t3 = 2*t3;
+      const double three_t2 = 3*t2;
+      const double cp0 = two_t3 - three_t2 + 1;
       const double cm0 = t3 - 2*t2 + t;
       const double cm1 = t3 - t2;
-      const double cp1 = -2*t3 + 3*t2;
+      const double cp1 = three_t2 - two_t3;
       const auto s0 = _current_curve[i];
       const auto s1 = _current_curve[i+1];
       const Vector2 p = s0.first*cp0 + s0.second*cm0 +

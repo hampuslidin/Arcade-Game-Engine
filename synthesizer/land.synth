@@ -1,7 +1,8 @@
 <operator
    frequency="400"
    pitch_glide="200"
-   pitch_glide_type="INV_LOGARITHMIC">
+   pitch_glide_type="INV_LOGARITHMIC"
+   threshold_low="0.0">
   <operator
      frequency="79"
      modulation_index="7.5">
@@ -10,4 +11,7 @@
        modulation_index="2"/>
   </operator>
 </operator>
-      
+<operator
+   frequency="60"
+   pitch_glide="1200"
+   threshold_low="-0.5"/>

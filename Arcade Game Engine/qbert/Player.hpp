@@ -6,7 +6,7 @@
 #pragma once
 
 #include "core.hpp"
-#include "Controller.hpp"
+#include "Character.hpp"
 
 
 //
@@ -14,11 +14,11 @@
 //
 
 class PlayerInputComponent
-  : public ControllerInputComponent
+  : public CharacterInputComponent
 {
   bool _did_clear_board;
 protected:
-  ControllerDirection update_direction(Core & core);
+  CharacterDirection update_direction(Core & core);
   double animation_ending_delay();
   vector<pair<int, int>> board_position_changes();
 public:
@@ -32,7 +32,7 @@ public:
 //
 
 class PlayerAnimationComponent
-  : public ControllerAnimationComponent
+  : public CharacterAnimationComponent
 {
 protected:
   vector<Vector2> end_points();
@@ -45,7 +45,7 @@ protected:
 //
 
 class PlayerPhysicsComponent
-  : public ControllerPhysicsComponent
+  : public CharacterPhysicsComponent
 {
 protected:
   void collision_with_block(Block * block);
@@ -77,7 +77,7 @@ private:
 // MARK: - PlayerGraphicsComponent
 //
 
-typedef ControllerGraphicsComponent PlayerGraphicsComponent;
+typedef CharacterGraphicsComponent PlayerGraphicsComponent;
 
 
 //
@@ -85,14 +85,14 @@ typedef ControllerGraphicsComponent PlayerGraphicsComponent;
 //
 
 class Player
-  : public Controller
+  : public Character
 {
   bool _should_revert;
 protected:
   int direction_mask();
   pair<int, int> default_board_position();
   int default_order();
-  ControllerDirection default_direction();
+  CharacterDirection default_direction();
 public:
   Player(string id);
   void init(Core * core);

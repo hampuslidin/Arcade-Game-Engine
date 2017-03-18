@@ -1,5 +1,5 @@
 //
-//  Controller.hpp
+//  Character.hpp
 //  Game Engine
 //
 
@@ -16,29 +16,29 @@ const Event DidCollideWithEnemy("DidCollideWithEnemy");
 
 
 //
-// MARK: - ControllerDirection
+// MARK: - CharacterDirection
 //
 
-typedef int ControllerDirection;
-const ControllerDirection NONE  = -1;
-const ControllerDirection UP    = 0;
-const ControllerDirection DOWN  = 1;
-const ControllerDirection LEFT  = 2;
-const ControllerDirection RIGHT = 3;
+typedef int CharacterDirection;
+const CharacterDirection NONE  = -1;
+const CharacterDirection UP    = 0;
+const CharacterDirection DOWN  = 1;
+const CharacterDirection LEFT  = 2;
+const CharacterDirection RIGHT = 3;
 
 
 //
-// MARK: - ControllerInputComponent
+// MARK: - CharacterInputComponent
 //
 
-class ControllerInputComponent
+class CharacterInputComponent
   : public InputComponent
 {
   bool _animating;
 protected:
-  prop_r<ControllerInputComponent, bool> airborn;
+  prop_r<CharacterInputComponent, bool> airborn;
   
-  virtual ControllerDirection update_direction(Core & core) = 0;
+  virtual CharacterDirection update_direction(Core & core) = 0;
   virtual double animation_ending_delay() = 0;
   virtual vector<pair<int, int>> board_position_changes() = 0;
 public:
@@ -49,10 +49,10 @@ public:
 
 
 //
-// MARK: - ControllerAnimationComponent
+// MARK: - CharacterAnimationComponent
 //
 
-class ControllerAnimationComponent
+class CharacterAnimationComponent
   : public AnimationComponent
 {
   bool _did_jump_off;
@@ -66,10 +66,10 @@ public:
 
 
 //
-// MARK: - ControllerPhysicsComponent
+// MARK: - CharacterPhysicsComponent
 //
 
-class ControllerPhysicsComponent
+class CharacterPhysicsComponent
   : public PhysicsComponent
 {
   bool _animating;
@@ -85,17 +85,17 @@ public:
 
 
 //
-// MARK: - ControllerAudioComponent
+// MARK: - CharacterAudioComponent
 //
 
-typedef AudioComponent ControllerAudioComponent;
+typedef AudioComponent CharacterAudioComponent;
 
 
 //
-// MARK: - ControllerGraphicsComponent
+// MARK: - CharacterGraphicsComponent
 //
 
-class ControllerGraphicsComponent
+class CharacterGraphicsComponent
   : public GraphicsComponent
 {
   int _current_direction;
@@ -108,23 +108,23 @@ public:
 
 
 //
-// MARK: - Controller
+// MARK: - Character
 //
 
-class Controller : public Entity
+class Character : public Entity
 {
 protected:
   virtual int direction_mask() = 0;
   virtual pair<int, int> default_board_position() = 0;
   virtual int default_order() = 0;
-  virtual ControllerDirection default_direction() = 0;
+  virtual CharacterDirection default_direction() = 0;
 public:
   prop<     pair<int, int>> previous_board_position;
   prop<     pair<int, int>> board_position;
   prop<                int> previous_order;
-  prop<ControllerDirection> direction;
+  prop<CharacterDirection> direction;
   
-  Controller(string id, int order);
+  Character(string id, int order);
   virtual void init(Core * core);
   virtual string prefix_standing() = 0;
   virtual string prefix_jumping()  = 0;

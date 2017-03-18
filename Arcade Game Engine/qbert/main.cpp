@@ -5,7 +5,6 @@
 
 #include "core.hpp"
 #include "Level.hpp"
-#include <stack>
 
 int main(int argc, char * argv[])
 {

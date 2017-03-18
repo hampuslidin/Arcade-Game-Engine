@@ -13,7 +13,7 @@
 
 // MARK: Member functions
 
-ControllerDirection UggInputComponent::update_direction(Core & core)
+CharacterDirection UggInputComponent::update_direction(Core & core)
 {
   random_device rd;
   mt19937 gen(rd());
@@ -62,14 +62,14 @@ double UggAnimationComponent::animation_speed() { return 0.7; };
 // MARK: Member functions
 
 UggPhysicsComponent::UggPhysicsComponent()
-  : ControllerPhysicsComponent()
+  : CharacterPhysicsComponent()
 {
   gravity({-1.417, -0.818});
 }
 
 void UggPhysicsComponent::init(Entity * entity)
 {
-  ControllerPhysicsComponent::init(entity);
+  CharacterPhysicsComponent::init(entity);
   
   auto did_move_out_of_view = [entity](Event)
   {
@@ -86,7 +86,7 @@ void UggPhysicsComponent::init(Entity * entity)
 //
 
 Ugg::Ugg()
-  : Controller("enemy_ugg", default_order())
+  : Character("enemy_ugg", default_order())
 {
   addInput(new UggInputComponent());
   addAnimation(new UggAnimationComponent());
@@ -96,7 +96,7 @@ Ugg::Ugg()
 
 void Ugg::reset()
 {
-  Controller::reset();
+  Character::reset();
   
   enabled(false);
   board_position(default_board_position());
@@ -139,7 +139,7 @@ int Ugg::default_order()
   return 91;
 }
 
-ControllerDirection Ugg::default_direction()
+CharacterDirection Ugg::default_direction()
 {
   return UP;
 }

@@ -153,8 +153,7 @@ ObserverID NotificationCenter::observe(function<void(Event)> block,
 }
 
 // TODO: fix so that elements are not erased, but the spot it occupied is made
-// available for the next observer. This is so that possible, but unlikely, hash
-// clashes won't happen.
+// available for the next observer. This function is currently not in use.
 void NotificationCenter::unobserve(ObserverID id,
                                    Event event,
                                    GameObject * sender)
@@ -201,7 +200,7 @@ bool Core::init(Entity * root,
                 Dimension2 dimensions,
                 RGBAColor background_color)
 {
-#ifdef __APPLE__
+#if defined(__APPLE__) && !defined(GAME_ENGINE_DEBUG)
   // change directory
   CFBundleRef mainBundle = CFBundleGetMainBundle();
   CFURLRef resourcesURL = CFBundleCopyResourcesDirectoryURL(mainBundle);
@@ -231,43 +230,6 @@ bool Core::init(Entity * root,
     SDL_Log("IMG_Init: %s\n", IMG_GetError());
     return false;
   }
-  
-  // initialize audio
-  auto fill_stream = [](void * userdata, uint8_t * stream, int length)
-  {
-    Core * core          = (Core*)userdata;
-    int16_t * stream_16b = (int16_t*)stream;
-    double max_volume    = core->max_volume();
-    
-    for (int i = 0; i < length/2; i++) stream_16b[i] = 0;
-    
-    function<void(Entity*)> callbacks;
-    callbacks = [max_volume, stream_16b, length, &callbacks](Entity * entity)
-    {
-      AudioComponent * audio = entity->audio();
-      if (audio) audio->audioStreamCallback(max_volume, stream_16b, length/2);
-      
-      for (auto child : entity->children())
-      {
-        callbacks(child);
-      }
-    };
-    
-    callbacks(core->root());
-  };
-  
-  SDL_AudioSpec desired_audio_spec;
-  
-  desired_audio_spec.freq     = sample_rate();
-  desired_audio_spec.format   = AUDIO_S16SYS;
-  desired_audio_spec.channels = 1;
-  desired_audio_spec.samples  = 2048;
-  desired_audio_spec.callback = fill_stream;
-  desired_audio_spec.userdata = this;
-  
-  SDL_OpenAudio(&desired_audio_spec, nullptr);
-  
-  SDL_PauseAudio(0);
   
   // create window
   const int w_pos_x = dimensions.x < 0 ? SDL_WINDOWPOS_UNDEFINED : dimensions.x;
@@ -321,6 +283,43 @@ bool Core::init(Entity * root,
     return false;
   }
   
+  // initialize audio
+  auto fill_stream = [](void * userdata, uint8_t * stream, int length)
+  {
+    Core * core          = (Core*)userdata;
+    int16_t * stream_16b = (int16_t*)stream;
+    double max_volume    = core->max_volume();
+    
+    for (int i = 0; i < length/2; i++) stream_16b[i] = 0;
+    
+    function<void(Entity*)> callbacks;
+    callbacks = [max_volume, stream_16b, length, &callbacks](Entity * entity)
+    {
+      AudioComponent * audio = entity->audio();
+      if (audio) audio->audioStreamCallback(max_volume, stream_16b, length/2);
+      
+      for (auto child : entity->children())
+      {
+        callbacks(child);
+      }
+    };
+    
+    callbacks(core->root());
+  };
+  
+  SDL_AudioSpec desired_audio_spec;
+  
+  desired_audio_spec.freq     = sample_rate();
+  desired_audio_spec.format   = AUDIO_S16SYS;
+  desired_audio_spec.channels = 1;
+  desired_audio_spec.samples  = 2048;
+  desired_audio_spec.callback = fill_stream;
+  desired_audio_spec.userdata = this;
+  
+  SDL_OpenAudio(&desired_audio_spec, nullptr);
+  
+  SDL_PauseAudio(0);
+  
   return true;
 }
 
@@ -337,10 +336,7 @@ void Core::destroy()
 
 void Core::reset(double after_duration)
 {
-  if (after_duration > 0)
-  {
-    createAccumulativeTimer(after_duration, [this] { _reset = true; });
-  }
+  createAccumulativeTimer(after_duration, [this] { _reset = true; });
 }
 
 void Core::pause()
@@ -444,15 +440,6 @@ bool Core::update()
     }
   }
   
-  // possibly do a reset
-  if (_reset)
-  {
-    _timers.clear();
-    root()->reset();
-    _reset = false;
-    resume();
-  }
-  
   // update entities
   auto entities = vector<Entity*>();
   _buildEntityPriorityQueue(*root(), entities);
@@ -511,6 +498,15 @@ bool Core::update()
   // clear screen
   SDL_RenderPresent(renderer());
   SDL_RenderClear(renderer());
+  
+  // possibly do a reset
+  if (_reset)
+  {
+    _timers.clear();
+    root()->reset();
+    _reset = false;
+    resume();
+  }
   
   // go through timers
   int i = 0;
