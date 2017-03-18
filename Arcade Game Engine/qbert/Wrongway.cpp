@@ -140,7 +140,7 @@ pair<int, int> Wrongway::default_board_position()
 
 int Wrongway::default_order()
 {
-  return 91;
+  return 101;
 }
 
 CharacterDirection Wrongway::default_direction()

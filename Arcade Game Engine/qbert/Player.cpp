@@ -238,5 +238,5 @@ string Player::prefix_standing()                { return "qbert_standing"; }
 string Player::prefix_jumping()                 { return "qbert_jumping";  }
 int Player::direction_mask()                    { return 0b1111;           }
 pair<int, int> Player::default_board_position() { return {0, 0};           }
-int Player::default_order()                     { return 15;               }
+int Player::default_order()                     { return 25;               }
 CharacterDirection Player::default_direction() { return DOWN;             }

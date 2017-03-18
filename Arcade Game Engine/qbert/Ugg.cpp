@@ -107,7 +107,7 @@ void Ugg::reset()
   uniform_int_distribution<int> distribution(0, 6);
   core()->createEffectiveTimer(distribution(generator) + 3, [this]
   {
-   enabled(true);
+    enabled(true);
   });
   
   const Dimension2 view_dimensions = core()->view_dimensions();
@@ -136,7 +136,7 @@ pair<int, int> Ugg::default_board_position()
 
 int Ugg::default_order()
 {
-  return 91;
+  return 101;
 }
 
 CharacterDirection Ugg::default_direction()
