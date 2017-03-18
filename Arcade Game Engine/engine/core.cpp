@@ -15,7 +15,7 @@ void _buildEntityPriorityQueue(Entity & root, vector<Entity*> & result)
 {
   int root_order = root.order();
   long low = 0;
-  long high = result.size()-1;
+  long high = (long)(result.size()-1);
   while (low <= high)
   {
     long middle = (high+low+1)/2;
@@ -232,14 +232,18 @@ bool Core::init(Entity * root,
   }
   
   // create window
-  const int w_pos_x = dimensions.x < 0 ? SDL_WINDOWPOS_UNDEFINED : dimensions.x;
-  const int w_pos_y = dimensions.y < 0 ? SDL_WINDOWPOS_UNDEFINED : dimensions.y;
+  const int w_pos_x = (int)(dimensions.x < 0 
+    ? SDL_WINDOWPOS_UNDEFINED 
+    : dimensions.x);
+  const int w_pos_y = (int)(dimensions.y < 0 
+    ? SDL_WINDOWPOS_UNDEFINED 
+    : dimensions.y);
   view_dimensions({dimensions.x, dimensions.y});
   window(SDL_CreateWindow(title,
                           w_pos_x,
                           w_pos_y,
-                          dimensions.x*scale(),
-                          dimensions.y*scale(),
+                          (int)(dimensions.x*scale()),
+                          (int)(dimensions.y*scale()),
                           SDL_WINDOW_SHOWN));
   if (window() == nullptr)
   {
@@ -866,10 +870,10 @@ void GraphicsComponent::update(Core & world)
   {
     Vector2 entity_pos;
     entity()->calculateWorldPosition(entity_pos);
-    current_sprite()->draw(entity_pos.x + bounds().pos.x,
-                           entity_pos.y + bounds().pos.y,
-                           bounds().dim.x,
-                           bounds().dim.y,
+    current_sprite()->draw((int)(entity_pos.x + bounds().pos.x),
+                           (int)(entity_pos.y + bounds().pos.y),
+                           (int)bounds().dim.x,
+                           (int)bounds().dim.y,
                            world.scale());
   }
 }

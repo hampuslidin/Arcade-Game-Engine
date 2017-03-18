@@ -124,11 +124,11 @@ void Synthesizer::load(const char * filename)
   // generate id
   string id = filename;
 #ifdef __APPLE__
-  long begin = id.rfind("/")+1;
+  long begin = (long)(id.rfind("/")+1);
 #elif defined(_WIN32)
-  long begin = id.rfind("\\")+1;
+  long begin = (long)(id.rfind("\\")+1);
 #endif
-  long length = id.rfind(".") - begin;
+  long length = (long)(id.rfind(".") - begin);
   id = id.substr(begin, length);
   
   // reset synthesizer properties
@@ -280,8 +280,8 @@ bool Synthesizer::generate(int16_t * stream,
                            double fade_in,
                            double fade_out)
 {
-  static const int max_amplitude = pow(2, bit_rate()-1)-1;
-  static const int scale         = pow(2, 16-bit_rate());
+  static const int max_amplitude = (int)(pow(2, bit_rate()-1)-1);
+  static const int scale         = (int)pow(2, 16-bit_rate());
   
   if (_current_algorithm)
   {
@@ -305,10 +305,10 @@ bool Synthesizer::generate(int16_t * stream,
                                min((duration-time)/fade_out, 1.0);
         
         // resize waveform to the maximum amplitude for the current bit rate
-        sample = round(max_amplitude * waveform);
+        sample = (int16_t)round(max_amplitude * waveform);
         
         // scale to 16 bit space and apply volumes
-        sample *= scale * fading_volume * max_volume;
+        sample *= (int16_t)(scale * fading_volume * max_volume);
         
         // write to stream
         stream[i] += sample;

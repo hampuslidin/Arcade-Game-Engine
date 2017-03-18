@@ -89,49 +89,49 @@ void _resolveCollisions(Entity & collider,
           
           Line upper_left, upper_right, lower_left, lower_right;
           
-          upper_left.x1  = min_x(collider_before_rect);
-          upper_left.y1  = min_y(collider_before_rect);
-          upper_left.x2  = min_x(collider_after_rect);
-          upper_left.y2  = min_y(collider_after_rect);
+          upper_left.x1  = (int)min_x(collider_before_rect);
+          upper_left.y1  = (int)min_y(collider_before_rect);
+          upper_left.x2  = (int)min_x(collider_after_rect);
+          upper_left.y2  = (int)min_y(collider_after_rect);
           
-          upper_right.x1 = max_x(collider_before_rect);
-          upper_right.y1 = min_y(collider_before_rect);
-          upper_right.x2 = max_x(collider_after_rect);
-          upper_right.y2 = min_y(collider_after_rect);
+          upper_right.x1 = (int)max_x(collider_before_rect);
+          upper_right.y1 = (int)min_y(collider_before_rect);
+          upper_right.x2 = (int)max_x(collider_after_rect);
+          upper_right.y2 = (int)min_y(collider_after_rect);
           
-          lower_left.x1  = min_x(collider_before_rect);
-          lower_left.y1  = max_y(collider_before_rect);
-          lower_left.x2  = min_x(collider_after_rect);
-          lower_left.y2  = max_y(collider_after_rect);
+          lower_left.x1  = (int)min_x(collider_before_rect);
+          lower_left.y1  = (int)max_y(collider_before_rect);
+          lower_left.x2  = (int)min_x(collider_after_rect);
+          lower_left.y2  = (int)max_y(collider_after_rect);
           
-          lower_right.x1 = max_x(collider_before_rect);
-          lower_right.y1 = max_y(collider_before_rect);
-          lower_right.x2 = max_x(collider_after_rect);
-          lower_right.y2 = max_y(collider_after_rect);
+          lower_right.x1 = (int)max_x(collider_before_rect);
+          lower_right.y1 = (int)max_y(collider_before_rect);
+          lower_right.x2 = (int)max_x(collider_after_rect);
+          lower_right.y2 = (int)max_y(collider_after_rect);
           
-          bool is_intersecting = false;
-          is_intersecting |= SDL_IntersectRectAndLine(&obsticle_rect,
-                                                      &upper_left.x1,
-                                                      &upper_left.y1,
-                                                      &upper_left.x2,
-                                                      &upper_left.y2);
-          is_intersecting |= SDL_IntersectRectAndLine(&obsticle_rect,
-                                                      &upper_right.x1,
-                                                      &upper_right.y1,
-                                                      &upper_right.x2,
-                                                      &upper_right.y2);
-          is_intersecting |= SDL_IntersectRectAndLine(&obsticle_rect,
-                                                      &lower_left.x1,
-                                                      &lower_left.y1,
-                                                      &lower_left.x2,
-                                                      &lower_left.y2);
-          is_intersecting |= SDL_IntersectRectAndLine(&obsticle_rect,
-                                                      &lower_right.x1,
-                                                      &lower_right.y1,
-                                                      &lower_right.x2,
-                                                      &lower_right.y2);
+          int intersections = 0;
+          intersections += SDL_IntersectRectAndLine(&obsticle_rect,
+                                                        &upper_left.x1,
+                                                        &upper_left.y1,
+                                                        &upper_left.x2,
+                                                        &upper_left.y2);
+          intersections += SDL_IntersectRectAndLine(&obsticle_rect,
+                                                        &upper_right.x1,
+                                                        &upper_right.y1,
+                                                        &upper_right.x2,
+                                                        &upper_right.y2);
+          intersections += SDL_IntersectRectAndLine(&obsticle_rect,
+                                                        &lower_left.x1,
+                                                        &lower_left.y1,
+                                                        &lower_left.x2,
+                                                        &lower_left.y2);
+          intersections += SDL_IntersectRectAndLine(&obsticle_rect,
+                                                        &lower_right.x1,
+                                                        &lower_right.y1,
+                                                        &lower_right.x2,
+                                                        &lower_right.y2);
           
-          if (is_intersecting)
+          if (intersections > 0)
           {
             //// find the line with the shortest distance to its originating
             //// corner
@@ -139,16 +139,16 @@ void _resolveCollisions(Entity & collider,
             
             // upper left corner
             int index = 0;
-            int shortest_distance = distance(min_x(collider_before_rect),
-                                             min_y(collider_before_rect),
-                                             upper_left.x1,
-                                             upper_left.y1);
+            int shortest_distance = (int)distance((int)min_x(collider_before_rect),
+                                                   (int)min_y(collider_before_rect),
+                                                   upper_left.x1,
+                                                   upper_left.y1);
             
             // upper right corner
-            current_distance = distance(max_x(collider_before_rect),
-                                        min_y(collider_before_rect),
-                                        upper_right.x1,
-                                        upper_right.y1);
+            current_distance = (int)distance((int)max_x(collider_before_rect),
+                                             (int)min_y(collider_before_rect),
+                                             upper_right.x1,
+                                             upper_right.y1);
             if (current_distance < shortest_distance)
             {
               index = 1;
@@ -156,10 +156,10 @@ void _resolveCollisions(Entity & collider,
             }
             
             // lower left corner
-            current_distance = distance(min_x(collider_before_rect),
-                                        max_y(collider_before_rect),
-                                        lower_left.x1,
-                                        lower_left.y1);
+            current_distance = (int)distance((int)min_x(collider_before_rect),
+                                             (int)max_y(collider_before_rect),
+                                             lower_left.x1,
+                                             lower_left.y1);
             if (current_distance < shortest_distance)
             {
               index = 2;
@@ -167,10 +167,10 @@ void _resolveCollisions(Entity & collider,
             }
             
             // lower right corner
-            current_distance = distance(max_x(collider_before_rect),
-                                        max_y(collider_before_rect),
-                                        lower_right.x1,
-                                        lower_right.y1);
+            current_distance = (int)distance((int)max_x(collider_before_rect),
+                                             (int)max_y(collider_before_rect),
+                                             lower_right.x1,
+                                             lower_right.y1);
             if (current_distance < shortest_distance)
             {
               index = 3;
@@ -216,10 +216,11 @@ void _resolveCollisions(Entity & collider,
         
         // distance to upper edge
         int index = 0;
-        int shortest_distance = min_y(obsticle_rect)-min_y(collider_before_rect);
+        int shortest_distance = 
+          (int)min_y(obsticle_rect) - (int)min_y(collider_before_rect);
         
         // distance to lower edge
-        current_distance = max_y(obsticle_rect) - max_y(collider_before_rect);
+        current_distance = (int)max_y(obsticle_rect) - (int)max_y(collider_before_rect);
         if (current_distance < shortest_distance)
         {
           index = 1;
@@ -227,7 +228,7 @@ void _resolveCollisions(Entity & collider,
         }
         
         // distance to left edge
-        current_distance = min_x(obsticle_rect) - min_x(collider_before_rect);
+        current_distance = (int)min_x(obsticle_rect) - (int)min_x(collider_before_rect);
         if (current_distance < shortest_distance)
         {
           index = 2;
@@ -235,7 +236,7 @@ void _resolveCollisions(Entity & collider,
         }
         
         // distance to right edge
-        current_distance = max_x(obsticle_rect) - max_x(collider_before_rect);
+        current_distance = (int)max_x(obsticle_rect) - (int)max_x(collider_before_rect);
         if (current_distance < shortest_distance)
         {
           index = 3;

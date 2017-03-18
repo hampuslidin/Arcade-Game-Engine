@@ -67,7 +67,7 @@ void AnimationComponent::update(Core & world)
     const double elapsed  = world.effectiveElapsedTime() - _start_time;
     if (elapsed < _duration)
     {
-      const int i = floor(elapsed / dt);
+      const int i = (int)floor(elapsed / dt);
       const double t = fmod(elapsed, dt) / dt;
       const double t2 = t*t;
       const double t3 = t2*t;

@@ -51,7 +51,7 @@ void PlayerTextGraphicsComponent::update(Core & core)
   double cycles;
   modf(elapsed/_duration, &cycles);
   _start_time = _start_time + cycles * _duration;
-  _current_sprite_index = floor(fmod(elapsed, _duration) / _duration * 6);
+  _current_sprite_index = (int)floor(fmod(elapsed, _duration) / _duration * 6);
   string id = "player_1_text_" + to_string(_current_sprite_index);
   current_sprite(SpriteCollection::main().retrieve(id));
   
