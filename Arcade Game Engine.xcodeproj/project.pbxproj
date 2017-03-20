@@ -9,24 +9,15 @@
 /* Begin PBXBuildFile section */
 		D215B0B21E59951C00846D94 /* animation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D215B0B11E59951C00846D94 /* animation.cpp */; };
 		D23716CE1E6C9EAB00C9D798 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D23716CD1E6C9EAB00C9D798 /* CoreFoundation.framework */; };
-		D23716CF1E6CA0E000C9D798 /* qbert in CopyFiles */ = {isa = PBXBuildFile; fileRef = D29DC52B1E509D120005EC95 /* qbert */; };
+		D23716CF1E6CA0E000C9D798 /* demo in CopyFiles */ = {isa = PBXBuildFile; fileRef = D29DC52B1E509D120005EC95 /* demo */; };
 		D2569F8C1E6AE1D100637699 /* tinyxml2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D2569F8B1E6AE1D100637699 /* tinyxml2.cpp */; };
+		D29D66701E80175100CA60AC /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D29D666F1E80175100CA60AC /* main.cpp */; };
+		D29D66721E8018A900CA60AC /* SDL2_image.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D29D66711E8018A900CA60AC /* SDL2_image.framework */; };
 		D29DC53D1E509D780005EC95 /* core.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D29DC53B1E509D780005EC95 /* core.cpp */; };
 		D29DC53E1E509D780005EC95 /* physics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D29DC53C1E509D780005EC95 /* physics.cpp */; };
-		D2A7A08E1E6DDF8600177DB9 /* audio.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D2F99C281E66DA1200820400 /* audio.cpp */; };
-		D2A7A0931E6DDF8600177DB9 /* tinyxml2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D2569F8B1E6AE1D100637699 /* tinyxml2.cpp */; };
-		D2A7A0941E6DDF8600177DB9 /* animation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D215B0B11E59951C00846D94 /* animation.cpp */; };
-		D2A7A0971E6DDF8600177DB9 /* core.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D29DC53B1E509D780005EC95 /* core.cpp */; };
-		D2A7A0981E6DDF8600177DB9 /* physics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D29DC53C1E509D780005EC95 /* physics.cpp */; };
-		D2A7A09B1E6DDF8600177DB9 /* types.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D2F614D41E53183C00B33DAB /* types.cpp */; };
-		D2A7A09D1E6DDF8600177DB9 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D23716CD1E6C9EAB00C9D798 /* CoreFoundation.framework */; };
-		D2A7A09E1E6DDF8600177DB9 /* SDL2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D29DC5491E509F5E0005EC95 /* SDL2.framework */; };
-		D2A7A09F1E6DDF8600177DB9 /* SDL2_image.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D29DC54A1E509F5E0005EC95 /* SDL2_image.framework */; };
-		D2A7A0A11E6DDF8600177DB9 /* qbert in CopyFiles */ = {isa = PBXBuildFile; fileRef = D29DC52B1E509D120005EC95 /* qbert */; };
 		D2F614D51E53183C00B33DAB /* types.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D2F614D41E53183C00B33DAB /* types.cpp */; };
 		D2F99C2A1E66DA1200820400 /* audio.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D2F99C281E66DA1200820400 /* audio.cpp */; };
 		D2F99C2B1E66DCCD00820400 /* SDL2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D29DC5491E509F5E0005EC95 /* SDL2.framework */; };
-		D2F99C2C1E66DCD500820400 /* SDL2_image.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D29DC54A1E509F5E0005EC95 /* SDL2_image.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -36,17 +27,7 @@
 			dstPath = "$(PROJECT_DIR)";
 			dstSubfolderSpec = 0;
 			files = (
-				D23716CF1E6CA0E000C9D798 /* qbert in CopyFiles */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		D2A7A0A01E6DDF8600177DB9 /* CopyFiles */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 12;
-			dstPath = "$(PROJECT_DIR)";
-			dstSubfolderSpec = 0;
-			files = (
-				D2A7A0A11E6DDF8600177DB9 /* qbert in CopyFiles */,
+				D23716CF1E6CA0E000C9D798 /* demo in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -57,14 +38,14 @@
 		D23716CD1E6C9EAB00C9D798 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
 		D2569F8A1E6AE1D100637699 /* tinyxml2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = tinyxml2.h; path = external/tinyxml2/tinyxml2.h; sourceTree = "<group>"; };
 		D2569F8B1E6AE1D100637699 /* tinyxml2.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = tinyxml2.cpp; path = external/tinyxml2/tinyxml2.cpp; sourceTree = "<group>"; };
-		D29DC52B1E509D120005EC95 /* qbert */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = qbert; sourceTree = BUILT_PRODUCTS_DIR; };
+		D29D666F1E80175100CA60AC /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = main.cpp; path = demo/main.cpp; sourceTree = "<group>"; };
+		D29D66711E8018A900CA60AC /* SDL2_image.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SDL2_image.framework; path = "Arcade Game Engine/external/SDL2_image.framework"; sourceTree = "<group>"; };
+		D29DC52B1E509D120005EC95 /* demo */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = demo; sourceTree = BUILT_PRODUCTS_DIR; };
 		D29DC5381E509D780005EC95 /* core.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; lineEnding = 0; name = core.hpp; path = engine/core.hpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		D29DC53A1E509D780005EC95 /* types.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = types.hpp; path = engine/types.hpp; sourceTree = "<group>"; };
 		D29DC53B1E509D780005EC95 /* core.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = core.cpp; path = engine/core.cpp; sourceTree = "<group>"; };
 		D29DC53C1E509D780005EC95 /* physics.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = physics.cpp; path = engine/physics.cpp; sourceTree = "<group>"; };
 		D29DC5491E509F5E0005EC95 /* SDL2.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SDL2.framework; path = "Arcade Game Engine/external/SDL2.framework"; sourceTree = "<group>"; };
-		D29DC54A1E509F5E0005EC95 /* SDL2_image.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SDL2_image.framework; path = "Arcade Game Engine/external/SDL2_image.framework"; sourceTree = "<group>"; };
-		D2A7A0A51E6DDF8600177DB9 /* demo */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = demo; sourceTree = BUILT_PRODUCTS_DIR; };
 		D2F614D41E53183C00B33DAB /* types.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = types.cpp; path = engine/types.cpp; sourceTree = "<group>"; };
 		D2F99C281E66DA1200820400 /* audio.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = audio.cpp; path = engine/audio.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 /* End PBXFileReference section */
@@ -76,17 +57,7 @@
 			files = (
 				D23716CE1E6C9EAB00C9D798 /* CoreFoundation.framework in Frameworks */,
 				D2F99C2B1E66DCCD00820400 /* SDL2.framework in Frameworks */,
-				D2F99C2C1E66DCD500820400 /* SDL2_image.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		D2A7A09C1E6DDF8600177DB9 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				D2A7A09D1E6DDF8600177DB9 /* CoreFoundation.framework in Frameworks */,
-				D2A7A09E1E6DDF8600177DB9 /* SDL2.framework in Frameworks */,
-				D2A7A09F1E6DDF8600177DB9 /* SDL2_image.framework in Frameworks */,
+				D29D66721E8018A900CA60AC /* SDL2_image.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -110,6 +81,14 @@
 			name = tinyxml2;
 			sourceTree = "<group>";
 		};
+		D29D666E1E8016E400CA60AC /* demo */ = {
+			isa = PBXGroup;
+			children = (
+				D29D666F1E80175100CA60AC /* main.cpp */,
+			);
+			name = demo;
+			sourceTree = "<group>";
+		};
 		D29DC5221E509D120005EC95 = {
 			isa = PBXGroup;
 			children = (
@@ -122,8 +101,7 @@
 		D29DC52C1E509D120005EC95 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				D29DC52B1E509D120005EC95 /* qbert */,
-				D2A7A0A51E6DDF8600177DB9 /* demo */,
+				D29DC52B1E509D120005EC95 /* demo */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -133,6 +111,7 @@
 			children = (
 				D2569F881E6AE1B900637699 /* external */,
 				D29DC5351E509D2F0005EC95 /* engine */,
+				D29D666E1E8016E400CA60AC /* demo */,
 			);
 			path = "Arcade Game Engine";
 			sourceTree = "<group>";
@@ -162,8 +141,8 @@
 		D29DC5471E509F5E0005EC95 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D29D66711E8018A900CA60AC /* SDL2_image.framework */,
 				D29DC5491E509F5E0005EC95 /* SDL2.framework */,
-				D29DC54A1E509F5E0005EC95 /* SDL2_image.framework */,
 				D23716CD1E6C9EAB00C9D798 /* CoreFoundation.framework */,
 			);
 			name = Frameworks;
@@ -172,9 +151,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		D29DC52A1E509D120005EC95 /* qbert */ = {
+		D29DC52A1E509D120005EC95 /* demo */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = D29DC5321E509D120005EC95 /* Build configuration list for PBXNativeTarget "qbert" */;
+			buildConfigurationList = D29DC5321E509D120005EC95 /* Build configuration list for PBXNativeTarget "demo" */;
 			buildPhases = (
 				D29DC5271E509D120005EC95 /* Sources */,
 				D29DC5281E509D120005EC95 /* Frameworks */,
@@ -184,26 +163,9 @@
 			);
 			dependencies = (
 			);
-			name = qbert;
-			productName = "Arcade Game Engine";
-			productReference = D29DC52B1E509D120005EC95 /* qbert */;
-			productType = "com.apple.product-type.tool";
-		};
-		D2A7A08B1E6DDF8600177DB9 /* demo */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = D2A7A0A21E6DDF8600177DB9 /* Build configuration list for PBXNativeTarget "demo" */;
-			buildPhases = (
-				D2A7A08C1E6DDF8600177DB9 /* Sources */,
-				D2A7A09C1E6DDF8600177DB9 /* Frameworks */,
-				D2A7A0A01E6DDF8600177DB9 /* CopyFiles */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
 			name = demo;
 			productName = "Arcade Game Engine";
-			productReference = D2A7A0A51E6DDF8600177DB9 /* demo */;
+			productReference = D29DC52B1E509D120005EC95 /* demo */;
 			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */
@@ -233,8 +195,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				D29DC52A1E509D120005EC95 /* qbert */,
-				D2A7A08B1E6DDF8600177DB9 /* demo */,
+				D29DC52A1E509D120005EC95 /* demo */,
 			);
 		};
 /* End PBXProject section */
@@ -248,21 +209,9 @@
 				D2569F8C1E6AE1D100637699 /* tinyxml2.cpp in Sources */,
 				D215B0B21E59951C00846D94 /* animation.cpp in Sources */,
 				D29DC53D1E509D780005EC95 /* core.cpp in Sources */,
+				D29D66701E80175100CA60AC /* main.cpp in Sources */,
 				D29DC53E1E509D780005EC95 /* physics.cpp in Sources */,
 				D2F614D51E53183C00B33DAB /* types.cpp in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		D2A7A08C1E6DDF8600177DB9 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				D2A7A08E1E6DDF8600177DB9 /* audio.cpp in Sources */,
-				D2A7A0931E6DDF8600177DB9 /* tinyxml2.cpp in Sources */,
-				D2A7A0941E6DDF8600177DB9 /* animation.cpp in Sources */,
-				D2A7A0971E6DDF8600177DB9 /* core.cpp in Sources */,
-				D2A7A0981E6DDF8600177DB9 /* physics.cpp in Sources */,
-				D2A7A09B1E6DDF8600177DB9 /* types.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -369,7 +318,13 @@
 					"DEBUG=1",
 					GAME_ENGINE_DEBUG,
 				);
+				HEADER_SEARCH_PATHS = /usr/local/Cellar/glew/1.13.0/include;
 				LD_RUNPATH_SEARCH_PATHS = "$(PROJECT_DIR)/Arcade\\ Game\\ Engine/external";
+				OTHER_LDFLAGS = (
+					/usr/local/lib/libGLEW.dylib,
+					"-framework",
+					OpenGL,
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -383,39 +338,13 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/Arcade\\ Game\\ Engine/external",
 				);
+				HEADER_SEARCH_PATHS = /usr/local/Cellar/glew/1.13.0/include;
 				LD_RUNPATH_SEARCH_PATHS = "$(PROJECT_DIR)/Arcade\\ Game\\ Engine/external";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Release;
-		};
-		D2A7A0A31E6DDF8600177DB9 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSET_PACK_MANIFEST_URL_PREFIX = "";
-				CLANG_WARN_DOCUMENTATION_COMMENTS = NO;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/Arcade\\ Game\\ Engine/external",
+				OTHER_LDFLAGS = (
+					/usr/local/lib/libGLEW.dylib,
+					"-framework",
+					OpenGL,
 				);
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					GAME_ENGINE_DEBUG,
-				);
-				LD_RUNPATH_SEARCH_PATHS = "$(PROJECT_DIR)/Arcade\\ Game\\ Engine/external";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Debug;
-		};
-		D2A7A0A41E6DDF8600177DB9 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSET_PACK_MANIFEST_URL_PREFIX = "";
-				CLANG_WARN_DOCUMENTATION_COMMENTS = NO;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/Arcade\\ Game\\ Engine/external",
-				);
-				LD_RUNPATH_SEARCH_PATHS = "$(PROJECT_DIR)/Arcade\\ Game\\ Engine/external";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
@@ -432,20 +361,11 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		D29DC5321E509D120005EC95 /* Build configuration list for PBXNativeTarget "qbert" */ = {
+		D29DC5321E509D120005EC95 /* Build configuration list for PBXNativeTarget "demo" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D29DC5331E509D120005EC95 /* Debug */,
 				D29DC5341E509D120005EC95 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		D2A7A0A21E6DDF8600177DB9 /* Build configuration list for PBXNativeTarget "demo" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				D2A7A0A31E6DDF8600177DB9 /* Debug */,
-				D2A7A0A41E6DDF8600177DB9 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

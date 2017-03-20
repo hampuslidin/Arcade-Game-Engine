@@ -9,6 +9,8 @@
 #ifdef __APPLE__
 # include <CoreFoundation/CoreFoundation.h>
 #endif
+
+
 // MARK: Helper functions
 
 void _buildEntityPriorityQueue(Entity & root, vector<Entity*> & result)
@@ -197,8 +199,8 @@ Core::Core()
 
 bool Core::init(Entity * root,
                 const char * title,
-                Dimension2 dimensions,
-                RGBAColor background_color)
+                int dimensions[2],
+                float background_color[3])
 {
 #if defined(__APPLE__) && !defined(GAME_ENGINE_DEBUG)
   // change directory
@@ -223,27 +225,37 @@ bool Core::init(Entity * root,
     SDL_Log("SDL_Init: %s\n", SDL_GetError());
     return false;
   }
+  SDL_GL_LoadLibrary(nullptr);
   
-  // initialize SDL_image
-  if (IMG_Init(IMG_INIT_PNG) < 0)
-  {
-    SDL_Log("IMG_Init: %s\n", IMG_GetError());
-    return false;
-  }
+  // initialize OpenGL
+  SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
+#ifdef __APPLE__
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
+                      SDL_GL_CONTEXT_PROFILE_CORE);
+#elif defined _WIN32
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
+                      SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+#endif
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
+  SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+  SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
   
   // create window
-  const int w_pos_x = (int)(dimensions.x < 0 
+  const int w_pos_x = (int)(dimensions[0] < 0
     ? SDL_WINDOWPOS_UNDEFINED 
-    : dimensions.x);
-  const int w_pos_y = (int)(dimensions.y < 0 
+    : dimensions[0]);
+  const int w_pos_y = (int)(dimensions[1] < 0
     ? SDL_WINDOWPOS_UNDEFINED 
-    : dimensions.y);
-  view_dimensions({dimensions.x, dimensions.y});
+    : dimensions[1]);
+  view_dimensions()[0] = dimensions[0];
+  view_dimensions()[1] = dimensions[1];
   window(SDL_CreateWindow(title,
                           w_pos_x,
                           w_pos_y,
-                          (int)(dimensions.x*scale()),
-                          (int)(dimensions.y*scale()),
+                          (int)(dimensions[0]*scale()),
+                          (int)(dimensions[1]*scale()),
                           SDL_WINDOW_SHOWN));
   if (window() == nullptr)
   {
@@ -251,28 +263,30 @@ bool Core::init(Entity * root,
     return false;
   }
   
-  // create renderer for window
-  renderer(SDL_CreateRenderer(window(), -1, SDL_RENDERER_ACCELERATED));
-  if (renderer() == nullptr)
-  {
-    SDL_Log("SDL_CreateRenderer: %s\n", SDL_GetError());
+  // create context for window
+  _context = SDL_GL_CreateContext(window());
+  if (_context == nullptr) {
+    SDL_Log("SDL_GL_CreateContext: %s\n", SDL_GetError());
     return false;
   }
   
-  // clear screen
-  SDL_SetRenderDrawColor(renderer(),
-                         background_color.r,
-                         background_color.g,
-                         background_color.b,
-                         background_color.a);
-  SDL_RenderClear(renderer());
+  // initialize glew
+#ifdef __APPLE__
+  glewExperimental = true;
+#endif
+  glewInit();
+  
+  // 1 for v-sync
+  SDL_GL_SetSwapInterval(1);
   
   // initialize member properties
+  _bg_color[0] = background_color[0];
+  _bg_color[1] = background_color[1];
+  _bg_color[2] = background_color[2];
   _key_status.up   = _key_status.down  = false;
   _key_status.left = _key_status.right = false;
   _reset = false;
   _pause = false;
-  SpriteCollection::main().init(renderer());
   
   // initialize entities
   if (root)
@@ -329,11 +343,9 @@ bool Core::init(Entity * root,
 
 void Core::destroy()
 {
-  SpriteCollection::main().destroyAll();
   if (root()) root()->destroy();
   
   SDL_CloseAudio();
-  SDL_DestroyRenderer(renderer());
   SDL_DestroyWindow(window());
   SDL_Quit();
 }
@@ -444,6 +456,10 @@ bool Core::update()
     }
   }
   
+  // clear screen
+  glClearColor(_bg_color[0], _bg_color[1], _bg_color[2], 1.0);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  
   // update entities
   auto entities = vector<Entity*>();
   _buildEntityPriorityQueue(*root(), entities);
@@ -457,51 +473,8 @@ bool Core::update()
     }
   }
   
-#ifdef GAME_ENGINE_DEBUG
-  // draw bounding boxes
-  RGBAColor prev_color;
-  SDL_GetRenderDrawColor(renderer(),
-                         &prev_color.r,
-                         &prev_color.g,
-                         &prev_color.b,
-                         &prev_color.a);
-  SDL_SetRenderDrawColor(renderer(), 0xFF, 0xFF, 0xFF, 0xFF);
-  stack<Entity*> entity_stack;
-  entity_stack.push(root());
-  while (entity_stack.size() > 0)
-  {
-    Entity * current_entity = entity_stack.top();
-    entity_stack.pop();
-    
-    PhysicsComponent * current_physics_component;
-    if ((current_physics_component = current_entity->physics()))
-    {
-      SDL_Rect rect;
-      Rectangle bounds = current_physics_component->collision_bounds();
-      Vector2 world_position;
-      current_entity->calculateWorldPosition(world_position);
-      rect.x = (world_position.x + bounds.pos.x) * scale();
-      rect.y = (world_position.y + bounds.pos.y) * scale();
-      rect.w = bounds.dim.x * scale();
-      rect.h = bounds.dim.y * scale();
-      SDL_RenderDrawRect(renderer(), &rect);
-    }
-    
-    for (auto child : current_entity->children())
-    {
-      entity_stack.push(child);
-    }
-  }
-  SDL_SetRenderDrawColor(renderer(),
-                         prev_color.r,
-                         prev_color.g,
-                         prev_color.b,
-                         prev_color.a);
-#endif
-  
-  // clear screen
-  SDL_RenderPresent(renderer());
-  SDL_RenderClear(renderer());
+  // swap buffers
+  SDL_GL_SwapWindow(window());
   
   // possibly do a reset
   if (_reset)

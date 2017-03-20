@@ -379,8 +379,8 @@ void PhysicsComponent::update(Core & core)
   if (!_out_of_view &&
       (world_position.x + dimensions.x < 0 ||
        world_position.y + dimensions.y < 0 ||
-       world_position.x >= core.view_dimensions().x ||
-       world_position.y >= core.view_dimensions().y))
+       world_position.x >= core.view_dimensions()[0] ||
+       world_position.y >= core.view_dimensions()[1]))
   {
     _out_of_view = true;
     NotificationCenter::notify(DidMoveOutOfView, *this);
@@ -388,8 +388,8 @@ void PhysicsComponent::update(Core & core)
   else if (_out_of_view &&
            world_position.x + dimensions.x >= 0 &&
            world_position.y + dimensions.y >= 0 &&
-           world_position.x < core.view_dimensions().x &&
-           world_position.y < core.view_dimensions().y)
+           world_position.x < core.view_dimensions()[0] &&
+           world_position.y < core.view_dimensions()[1])
   {
     _out_of_view = false;
     NotificationCenter::notify(DidMoveIntoView, *this);

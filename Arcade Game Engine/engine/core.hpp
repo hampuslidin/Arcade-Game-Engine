@@ -21,6 +21,8 @@
 # include "SDL_image.h"
 #endif
 
+#include <GL/glew.h>
+
 using namespace std;
 
 class Sprite;
@@ -219,26 +221,27 @@ private:
   };
   enum _TimerType { _EFFECTIVE, _ACCUMULATIVE };
   
+  SDL_GLContext _context;
+  float _bg_color[3];
   KeyStatus _key_status;
   vector<pair<_Timer, _TimerType>> _timers;
   double _pause_duration;
   bool _reset;
   bool _pause;
 public:
-  prop_r<Core, SDL_Window*>   window;
-  prop_r<Core, SDL_Renderer*> renderer;
-  prop_r<Core, Entity*>       root;
-  prop_r<Core, double>        delta_time;
-  prop_r<Core, Dimension2>    view_dimensions;
-  prop_r<Core, int>           sample_rate;
-  prop_r<Core, double>        max_volume;
-  prop<int>                   scale;
+  prop_r<Core, SDL_Window*> window;
+  prop_r<Core, Entity*>     root;
+  prop_r<Core, double>      delta_time;
+  prop_r<Core, int[2]>      view_dimensions;
+  prop_r<Core, int>         sample_rate;
+  prop_r<Core, double>      max_volume;
+  prop<int>                 scale;
   
   Core();
   bool init(Entity * root,
             const char * title,
-            Dimension2 dimensions,
-            RGBAColor background_color = {0x00, 0x00, 0x00, 0xFF});
+            int dimensions[2],
+            float background_color[3]);
   void destroy();
   void reset(double after_duration = 0);
   void pause();
