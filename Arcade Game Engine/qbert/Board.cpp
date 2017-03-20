@@ -120,7 +120,8 @@ Board::Board(string id)
       string id = "block" + to_string(n+1) + to_string(m+1);
       addChild(new Block(id,
                          order() + 10*n,
-                         BOARD_DIMENSIONS.x/2 - 16*(n+1) + 32*m, 24*n));
+                         (int)BOARD_DIMENSIONS.x/2 - 16*(n+1) + 32*m,
+                         24*n));
     }
   }
 }
