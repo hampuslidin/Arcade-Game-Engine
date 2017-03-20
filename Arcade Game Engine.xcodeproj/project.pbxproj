@@ -8,17 +8,11 @@
 
 /* Begin PBXBuildFile section */
 		D215B0B21E59951C00846D94 /* animation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D215B0B11E59951C00846D94 /* animation.cpp */; };
-		D22E023B1E632AF900453534 /* Wrongway.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D22E02391E632AF900453534 /* Wrongway.cpp */; };
 		D23716CE1E6C9EAB00C9D798 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D23716CD1E6C9EAB00C9D798 /* CoreFoundation.framework */; };
 		D23716CF1E6CA0E000C9D798 /* qbert in CopyFiles */ = {isa = PBXBuildFile; fileRef = D29DC52B1E509D120005EC95 /* qbert */; };
-		D23CC4C11E57514E00B774C9 /* Level.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D23CC4BF1E57514E00B774C9 /* Level.cpp */; };
-		D23CC4C41E57533E00B774C9 /* HUD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D23CC4C21E57533E00B774C9 /* HUD.cpp */; };
-		D2548F7C1E5AF64200777499 /* Character.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D2548F7A1E5AF64200777499 /* Character.cpp */; };
 		D2569F8C1E6AE1D100637699 /* tinyxml2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D2569F8B1E6AE1D100637699 /* tinyxml2.cpp */; };
 		D29DC53D1E509D780005EC95 /* core.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D29DC53B1E509D780005EC95 /* core.cpp */; };
 		D29DC53E1E509D780005EC95 /* physics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D29DC53C1E509D780005EC95 /* physics.cpp */; };
-		D29DC5441E509E250005EC95 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D29DC5421E509E250005EC95 /* main.cpp */; };
-		D29DC5451E509E250005EC95 /* Player.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D29DC5431E509E250005EC95 /* Player.cpp */; };
 		D2A7A08E1E6DDF8600177DB9 /* audio.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D2F99C281E66DA1200820400 /* audio.cpp */; };
 		D2A7A0931E6DDF8600177DB9 /* tinyxml2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D2569F8B1E6AE1D100637699 /* tinyxml2.cpp */; };
 		D2A7A0941E6DDF8600177DB9 /* animation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D215B0B11E59951C00846D94 /* animation.cpp */; };
@@ -29,9 +23,7 @@
 		D2A7A09E1E6DDF8600177DB9 /* SDL2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D29DC5491E509F5E0005EC95 /* SDL2.framework */; };
 		D2A7A09F1E6DDF8600177DB9 /* SDL2_image.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D29DC54A1E509F5E0005EC95 /* SDL2_image.framework */; };
 		D2A7A0A11E6DDF8600177DB9 /* qbert in CopyFiles */ = {isa = PBXBuildFile; fileRef = D29DC52B1E509D120005EC95 /* qbert */; };
-		D2B67DBA1E5DD4AC00AC8922 /* Ugg.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D2B67DB81E5DD4AC00AC8922 /* Ugg.cpp */; };
 		D2F614D51E53183C00B33DAB /* types.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D2F614D41E53183C00B33DAB /* types.cpp */; };
-		D2F614F31E54C7D400B33DAB /* Board.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D2F614F11E54C7D400B33DAB /* Board.cpp */; };
 		D2F99C2A1E66DA1200820400 /* audio.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D2F99C281E66DA1200820400 /* audio.cpp */; };
 		D2F99C2B1E66DCCD00820400 /* SDL2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D29DC5491E509F5E0005EC95 /* SDL2.framework */; };
 		D2F99C2C1E66DCD500820400 /* SDL2_image.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D29DC54A1E509F5E0005EC95 /* SDL2_image.framework */; };
@@ -62,36 +54,18 @@
 
 /* Begin PBXFileReference section */
 		D215B0B11E59951C00846D94 /* animation.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = animation.cpp; path = engine/animation.cpp; sourceTree = "<group>"; };
-		D22E02391E632AF900453534 /* Wrongway.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Wrongway.cpp; path = qbert/Wrongway.cpp; sourceTree = "<group>"; };
-		D22E023A1E632AF900453534 /* Wrongway.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Wrongway.hpp; path = qbert/Wrongway.hpp; sourceTree = "<group>"; };
-		D23716CC1E6C8E5200C9D798 /* land.synth */ = {isa = PBXFileReference; explicitFileType = text.xml; fileEncoding = 4; name = land.synth; path = synthesizer/land.synth; sourceTree = SOURCE_ROOT; };
 		D23716CD1E6C9EAB00C9D798 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
-		D23CC4BF1E57514E00B774C9 /* Level.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Level.cpp; path = qbert/Level.cpp; sourceTree = "<group>"; };
-		D23CC4C01E57514E00B774C9 /* Level.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Level.hpp; path = qbert/Level.hpp; sourceTree = "<group>"; };
-		D23CC4C21E57533E00B774C9 /* HUD.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = HUD.cpp; path = qbert/HUD.cpp; sourceTree = "<group>"; };
-		D23CC4C31E57533E00B774C9 /* HUD.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = HUD.hpp; path = qbert/HUD.hpp; sourceTree = "<group>"; };
-		D2548F7A1E5AF64200777499 /* Character.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = Character.cpp; path = qbert/Character.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
-		D2548F7B1E5AF64200777499 /* Character.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Character.hpp; path = qbert/Character.hpp; sourceTree = "<group>"; };
-		D2569F871E6AD89200637699 /* gibberish.synth */ = {isa = PBXFileReference; explicitFileType = text.xml; name = gibberish.synth; path = synthesizer/gibberish.synth; sourceTree = SOURCE_ROOT; };
 		D2569F8A1E6AE1D100637699 /* tinyxml2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = tinyxml2.h; path = external/tinyxml2/tinyxml2.h; sourceTree = "<group>"; };
 		D2569F8B1E6AE1D100637699 /* tinyxml2.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = tinyxml2.cpp; path = external/tinyxml2/tinyxml2.cpp; sourceTree = "<group>"; };
-		D2569F8D1E6B281100637699 /* fall_off.synth */ = {isa = PBXFileReference; explicitFileType = text.xml; fileEncoding = 4; name = fall_off.synth; path = synthesizer/fall_off.synth; sourceTree = SOURCE_ROOT; };
 		D29DC52B1E509D120005EC95 /* qbert */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = qbert; sourceTree = BUILT_PRODUCTS_DIR; };
 		D29DC5381E509D780005EC95 /* core.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; lineEnding = 0; name = core.hpp; path = engine/core.hpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		D29DC53A1E509D780005EC95 /* types.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = types.hpp; path = engine/types.hpp; sourceTree = "<group>"; };
 		D29DC53B1E509D780005EC95 /* core.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = core.cpp; path = engine/core.cpp; sourceTree = "<group>"; };
 		D29DC53C1E509D780005EC95 /* physics.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = physics.cpp; path = engine/physics.cpp; sourceTree = "<group>"; };
-		D29DC5411E509E250005EC95 /* Player.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Player.hpp; path = qbert/Player.hpp; sourceTree = "<group>"; };
-		D29DC5421E509E250005EC95 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = main.cpp; path = qbert/main.cpp; sourceTree = "<group>"; };
-		D29DC5431E509E250005EC95 /* Player.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = Player.cpp; path = qbert/Player.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		D29DC5491E509F5E0005EC95 /* SDL2.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SDL2.framework; path = "Arcade Game Engine/external/SDL2.framework"; sourceTree = "<group>"; };
 		D29DC54A1E509F5E0005EC95 /* SDL2_image.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SDL2_image.framework; path = "Arcade Game Engine/external/SDL2_image.framework"; sourceTree = "<group>"; };
 		D2A7A0A51E6DDF8600177DB9 /* demo */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = demo; sourceTree = BUILT_PRODUCTS_DIR; };
-		D2B67DB81E5DD4AC00AC8922 /* Ugg.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Ugg.cpp; path = qbert/Ugg.cpp; sourceTree = "<group>"; };
-		D2B67DB91E5DD4AC00AC8922 /* Ugg.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Ugg.hpp; path = qbert/Ugg.hpp; sourceTree = "<group>"; };
 		D2F614D41E53183C00B33DAB /* types.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = types.cpp; path = engine/types.cpp; sourceTree = "<group>"; };
-		D2F614F11E54C7D400B33DAB /* Board.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Board.cpp; path = qbert/Board.cpp; sourceTree = "<group>"; };
-		D2F614F21E54C7D400B33DAB /* Board.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Board.hpp; path = qbert/Board.hpp; sourceTree = "<group>"; };
 		D2F99C281E66DA1200820400 /* audio.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = audio.cpp; path = engine/audio.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 /* End PBXFileReference section */
 
@@ -119,16 +93,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		D2569F861E6AD87200637699 /* resources */ = {
-			isa = PBXGroup;
-			children = (
-				D2569F871E6AD89200637699 /* gibberish.synth */,
-				D23716CC1E6C8E5200C9D798 /* land.synth */,
-				D2569F8D1E6B281100637699 /* fall_off.synth */,
-			);
-			name = resources;
-			sourceTree = "<group>";
-		};
 		D2569F881E6AE1B900637699 /* external */ = {
 			isa = PBXGroup;
 			children = (
@@ -169,7 +133,6 @@
 			children = (
 				D2569F881E6AE1B900637699 /* external */,
 				D29DC5351E509D2F0005EC95 /* engine */,
-				D29DC5401E509DF90005EC95 /* Q*bert */,
 			);
 			path = "Arcade Game Engine";
 			sourceTree = "<group>";
@@ -192,37 +155,6 @@
 			children = (
 				D29DC5381E509D780005EC95 /* core.hpp */,
 				D29DC53A1E509D780005EC95 /* types.hpp */,
-			);
-			name = include;
-			sourceTree = "<group>";
-		};
-		D29DC5401E509DF90005EC95 /* Q*bert */ = {
-			isa = PBXGroup;
-			children = (
-				D2569F861E6AD87200637699 /* resources */,
-				D29DC5461E509E280005EC95 /* include */,
-				D29DC5421E509E250005EC95 /* main.cpp */,
-				D2F614F11E54C7D400B33DAB /* Board.cpp */,
-				D2548F7A1E5AF64200777499 /* Character.cpp */,
-				D23CC4C21E57533E00B774C9 /* HUD.cpp */,
-				D23CC4BF1E57514E00B774C9 /* Level.cpp */,
-				D29DC5431E509E250005EC95 /* Player.cpp */,
-				D2B67DB81E5DD4AC00AC8922 /* Ugg.cpp */,
-				D22E02391E632AF900453534 /* Wrongway.cpp */,
-			);
-			name = "Q*bert";
-			sourceTree = "<group>";
-		};
-		D29DC5461E509E280005EC95 /* include */ = {
-			isa = PBXGroup;
-			children = (
-				D2F614F21E54C7D400B33DAB /* Board.hpp */,
-				D2548F7B1E5AF64200777499 /* Character.hpp */,
-				D23CC4C31E57533E00B774C9 /* HUD.hpp */,
-				D23CC4C01E57514E00B774C9 /* Level.hpp */,
-				D29DC5411E509E250005EC95 /* Player.hpp */,
-				D2B67DB91E5DD4AC00AC8922 /* Ugg.hpp */,
-				D22E023A1E632AF900453534 /* Wrongway.hpp */,
 			);
 			name = include;
 			sourceTree = "<group>";
@@ -312,19 +244,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D23CC4C41E57533E00B774C9 /* HUD.cpp in Sources */,
 				D2F99C2A1E66DA1200820400 /* audio.cpp in Sources */,
-				D2F614F31E54C7D400B33DAB /* Board.cpp in Sources */,
-				D29DC5451E509E250005EC95 /* Player.cpp in Sources */,
-				D22E023B1E632AF900453534 /* Wrongway.cpp in Sources */,
-				D23CC4C11E57514E00B774C9 /* Level.cpp in Sources */,
 				D2569F8C1E6AE1D100637699 /* tinyxml2.cpp in Sources */,
 				D215B0B21E59951C00846D94 /* animation.cpp in Sources */,
-				D2B67DBA1E5DD4AC00AC8922 /* Ugg.cpp in Sources */,
 				D29DC53D1E509D780005EC95 /* core.cpp in Sources */,
 				D29DC53E1E509D780005EC95 /* physics.cpp in Sources */,
-				D2548F7C1E5AF64200777499 /* Character.cpp in Sources */,
-				D29DC5441E509E250005EC95 /* main.cpp in Sources */,
 				D2F614D51E53183C00B33DAB /* types.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
