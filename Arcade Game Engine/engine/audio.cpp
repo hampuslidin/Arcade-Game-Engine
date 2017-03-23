@@ -180,11 +180,11 @@ void Synthesizer::load(const char * filename)
       //// query operator attributes
       // frequency
       element->QueryDoubleAttribute("frequency", &op.frequency);
-      op.frequency = max(op.frequency, 0.0);
+      op.frequency = std::max(op.frequency, 0.0);
       
       // modulation index
       element->QueryDoubleAttribute("modulation_index", &op.modulation_index);
-      op.modulation_index = max(op.modulation_index, 0.0);
+      op.modulation_index = std::max(op.modulation_index, 0.0);
       
       // threshold low
       element->QueryDoubleAttribute("threshold_low", &op.threshold_low);
@@ -217,7 +217,7 @@ void Synthesizer::load(const char * filename)
       if (!element->QueryDoubleAttribute("pitch_glide",
                                          &pitch_glide))
       {
-        pitch_glide = max(pitch_glide, 0.0);
+        pitch_glide = std::max(pitch_glide, 0.0);
         op.pitch_glide = maybe<double>::just(pitch_glide);
       }
       
@@ -301,8 +301,8 @@ bool Synthesizer::generate(int16_t * stream,
         waveform /= algorithm.num_carriers;
         
         // calculate fading volume
-        double fading_volume = min(time/fade_in, 1.0) *
-                               min((duration-time)/fade_out, 1.0);
+        double fading_volume = std::min(time/fade_in, 1.0) *
+                               std::min((duration-time)/fade_out, 1.0);
         
         // resize waveform to the maximum amplitude for the current bit rate
         sample = (int16_t)round(max_amplitude * waveform);
@@ -341,7 +341,7 @@ void AudioComponent::init(Entity * entity)
 {
   Component::init(entity);
   
-  synthesizer().sample_rate = entity->core()->sample_rate();
+  synthesizer().sample_rate = entity->core()->sampleRate();
   _audio_playback = vector<_Audio>();
 }
 

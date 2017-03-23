@@ -62,14 +62,14 @@ void _resolveCollisions(Entity & collider,
       // the bounding box for the colliders before and after traviling the
       // distance
       SDL_Rect large_rect;
-      large_rect.x = (int)min(min_x(collider_before_rect),
-                              min_x(collider_after_rect));
-      large_rect.y = (int)min(min_y(collider_before_rect),
-                              min_y(collider_after_rect));
-      large_rect.w = (int)max(max_x(collider_before_rect),
-                              max_x(collider_after_rect)) - large_rect.x;
-      large_rect.h = (int)max(max_y(collider_before_rect),
-                              max_y(collider_after_rect)) - large_rect.y;
+      large_rect.x = (int)std::min(min_x(collider_before_rect),
+                                   min_x(collider_after_rect));
+      large_rect.y = (int)std::min(min_y(collider_before_rect),
+                                   min_y(collider_after_rect));
+      large_rect.w = (int)std::max(max_x(collider_before_rect),
+                                   max_x(collider_after_rect)) - large_rect.x;
+      large_rect.h = (int)std::max(max_y(collider_before_rect),
+                                   max_y(collider_after_rect)) - large_rect.y;
       
       if (SDL_IntersectRect(&large_rect, &obsticle_rect, &intersection_rect))
       {
@@ -286,7 +286,7 @@ void Core::resolveCollisions(Entity & collider,
                              vector<Entity *> & result)
 {
   _resolveCollisions(collider,
-                     *root(),
+                     root(),
                      travel_distance,
                      collision_response,
                      result);
@@ -339,9 +339,9 @@ void PhysicsComponent::update(Core & core)
   bool should_move = _should_simulate && dynamic();
   if (should_move)
   {
-    const auto velocity = gravity() * core.delta_time() * pixels_per_meter;
+    const auto velocity = gravity() * core.deltaTime() * pixels_per_meter;
     entity()->changeVelocityBy(velocity.x, velocity.y);
-    distance = entity()->velocity() * core.delta_time();
+    distance = entity()->velocity() * core.deltaTime();
   }
   
   // if enabled, perform collision detection and response
@@ -374,13 +374,15 @@ void PhysicsComponent::update(Core & core)
   
   // calculate if the entity has gone out of or into view
   Vector2 world_position;
-  Dimension2 dimensions = entity()->dimensions();
+  int windowWidth, windowHeight;
   entity()->calculateWorldPosition(world_position);
+  core.windowDimensions(windowWidth, windowHeight);
+  Dimension2 dimensions = entity()->dimensions();
   if (!_out_of_view &&
       (world_position.x + dimensions.x < 0 ||
        world_position.y + dimensions.y < 0 ||
-       world_position.x >= core.view_dimensions()[0] ||
-       world_position.y >= core.view_dimensions()[1]))
+       world_position.x >= windowWidth ||
+       world_position.y >= windowHeight))
   {
     _out_of_view = true;
     NotificationCenter::notify(DidMoveOutOfView, *this);
@@ -388,8 +390,8 @@ void PhysicsComponent::update(Core & core)
   else if (_out_of_view &&
            world_position.x + dimensions.x >= 0 &&
            world_position.y + dimensions.y >= 0 &&
-           world_position.x < core.view_dimensions()[0] &&
-           world_position.y < core.view_dimensions()[1])
+           world_position.x < windowWidth &&
+           world_position.y < windowHeight)
   {
     _out_of_view = false;
     NotificationCenter::notify(DidMoveIntoView, *this);

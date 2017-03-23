@@ -36,6 +36,8 @@
 /* Begin PBXFileReference section */
 		D215B0B11E59951C00846D94 /* animation.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = animation.cpp; path = engine/animation.cpp; sourceTree = "<group>"; };
 		D23716CD1E6C9EAB00C9D798 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
+		D2479B5E1E8301F70039DE28 /* simple.frag */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; name = simple.frag; path = ../shaders/simple.frag; sourceTree = "<group>"; };
+		D2479B5F1E8301F70039DE28 /* simple.vert */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; name = simple.vert; path = ../shaders/simple.vert; sourceTree = "<group>"; };
 		D2569F8A1E6AE1D100637699 /* tinyxml2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = tinyxml2.h; path = external/tinyxml2/tinyxml2.h; sourceTree = "<group>"; };
 		D2569F8B1E6AE1D100637699 /* tinyxml2.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = tinyxml2.cpp; path = external/tinyxml2/tinyxml2.cpp; sourceTree = "<group>"; };
 		D29D666F1E80175100CA60AC /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = main.cpp; path = demo/main.cpp; sourceTree = "<group>"; };
@@ -64,6 +66,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		D2479B5D1E8301CF0039DE28 /* shaders */ = {
+			isa = PBXGroup;
+			children = (
+				D2479B5E1E8301F70039DE28 /* simple.frag */,
+				D2479B5F1E8301F70039DE28 /* simple.vert */,
+			);
+			name = shaders;
+			sourceTree = "<group>";
+		};
 		D2569F881E6AE1B900637699 /* external */ = {
 			isa = PBXGroup;
 			children = (
@@ -84,6 +95,7 @@
 		D29D666E1E8016E400CA60AC /* demo */ = {
 			isa = PBXGroup;
 			children = (
+				D2479B5D1E8301CF0039DE28 /* shaders */,
 				D29D666F1E80175100CA60AC /* main.cpp */,
 			);
 			name = demo;
@@ -318,7 +330,10 @@
 					"DEBUG=1",
 					GAME_ENGINE_DEBUG,
 				);
-				HEADER_SEARCH_PATHS = /usr/local/Cellar/glew/1.13.0/include;
+				HEADER_SEARCH_PATHS = (
+					/usr/local/Cellar/glew/1.13.0/include,
+					/usr/local/Cellar/glm/0.9.7.4/include,
+				);
 				LD_RUNPATH_SEARCH_PATHS = "$(PROJECT_DIR)/Arcade\\ Game\\ Engine/external";
 				OTHER_LDFLAGS = (
 					/usr/local/lib/libGLEW.dylib,
@@ -338,7 +353,10 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/Arcade\\ Game\\ Engine/external",
 				);
-				HEADER_SEARCH_PATHS = /usr/local/Cellar/glew/1.13.0/include;
+				HEADER_SEARCH_PATHS = (
+					/usr/local/Cellar/glew/1.13.0/include,
+					/usr/local/Cellar/glm/0.9.7.4/include,
+				);
 				LD_RUNPATH_SEARCH_PATHS = "$(PROJECT_DIR)/Arcade\\ Game\\ Engine/external";
 				OTHER_LDFLAGS = (
 					/usr/local/lib/libGLEW.dylib,

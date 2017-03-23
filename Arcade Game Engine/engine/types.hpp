@@ -30,6 +30,7 @@ public:
   prop()               : _v()  {};
   prop(PropertyType v) : _v(v) {};
   PropertyType & operator()() { return _v; };
+  const PropertyType & operator()() const { return _v; };
   void operator()(const PropertyType & v) { _v = v; };
 
 private:
@@ -48,6 +49,7 @@ public:
   prop_r()               : _v()  {};
   prop_r(PropertyType v) : _v(v) {};
   PropertyType & operator()() { return _v; };
+  const PropertyType & operator()() const { return _v; };
 
 private:
   PropertyType _v;
@@ -81,19 +83,18 @@ private:
  */
 class Event
 {
-  string _id;
+  
 public:
   typedef int Parameter;
+  prop_r<Event, string>    id;
   prop_r<Event, Parameter> parameter;
-  
-  string string_value();
   
   Event(string id);
   Event(Event event, Parameter parameter);
   bool operator==(Event event) const;
   bool operator<(Event event) const;
-  
   void operator=(Event const &) = delete;
+  
 };
 
 

@@ -22,8 +22,10 @@
 #endif
 
 #include <GL/glew.h>
+#include <glm/glm.hpp>
 
 using namespace std;
+using namespace glm;
 
 class Sprite;
 class SpriteCollection;
@@ -196,91 +198,14 @@ private:
 
 
 //
-// MARK: - Core
-//
-
-/**
- *  Defines the core engine and is responsible for reading user input
- *  and updating all entities.
- */
-class Core
-{
-public:
-  /**
-   *  Defines the status of each input type.
-   */
-  struct KeyStatus
-  {
-    bool up, down, left, right;
-  };
-private:
-  struct _Timer
-  {
-    double end_time;
-    function<void(void)> block;
-  };
-  enum _TimerType { _EFFECTIVE, _ACCUMULATIVE };
-  
-  SDL_GLContext _context;
-  float _bg_color[3];
-  KeyStatus _key_status;
-  vector<pair<_Timer, _TimerType>> _timers;
-  double _pause_duration;
-  bool _reset;
-  bool _pause;
-public:
-  prop_r<Core, SDL_Window*> window;
-  prop_r<Core, Entity*>     root;
-  prop_r<Core, double>      delta_time;
-  prop_r<Core, int[2]>      view_dimensions;
-  prop_r<Core, int>         sample_rate;
-  prop_r<Core, double>      max_volume;
-  prop<int>                 scale;
-  
-  Core();
-  bool init(Entity * root,
-            const char * title,
-            int dimensions[2],
-            float background_color[3]);
-  void destroy();
-  void reset(double after_duration = 0);
-  void pause();
-  void resume();
-  void createEffectiveTimer(double duration, function<void()> block);
-  void createAccumulativeTimer(double duration, function<void()> block);
-  bool update();
-  
-  /**
-   *  Collision detection for AABB.
-   *
-   *  Note: obsticles are assumed static in the calculations.
-   *
-   *  @param  collider            The dynamic entity to detect collision for.
-   *  @param  travel_distance     The distance the entity will travel until the
-   *                              next frame.
-   *  @param  collision_response  Specifies whether the collider should respond
-   *                              to the collision or not.
-   *  @param  result              The entities that the collider has collided 
-   *                              with will be stored here.
-   */
-  void resolveCollisions(Entity & collider,
-                         Vector2 & new_position,
-                         bool collision_response,
-                         vector<Entity*> & result);
-  void keyStatus(KeyStatus & keys);
-  double elapsedTime();
-  double effectiveElapsedTime();
-};
-
-
-
-//
 // MARK: - GameObject
 //
 
 class GameObject {
+  
 public:
   virtual string id() = 0;
+  
 };
 
 
@@ -294,26 +219,28 @@ public:
 class Entity
   : public GameObject
 {
-  string _id;
+  
 public:
   prop_r<Entity,               Core*> core;
   prop_r<Entity,             Entity*> parent;
   prop_r<Entity,     vector<Entity*>> children;
+  
   prop_r<Entity,     InputComponent*> input;
   prop_r<Entity, AnimationComponent*> animation;
   prop_r<Entity,   PhysicsComponent*> physics;
   prop_r<Entity,     AudioComponent*> audio;
   prop_r<Entity,  GraphicsComponent*> graphics;
+  
   prop_r<Entity,             Vector2> local_position;
   prop_r<Entity,             Vector2> velocity;
-  prop<int>  order;
+  
   prop<bool> enabled;
   
   string id();
-    
+  
   // MARK: Member functions
   
-  Entity(string id, int order);
+  Entity(string id);
   void addInput(InputComponent * input);
   void addAnimation(AnimationComponent * animation);
   void addPhysics(PhysicsComponent * physics);
@@ -322,7 +249,7 @@ public:
   
   /**
    *  Initializes an entity.
-   *  
+   *
    *  If deriving classes override this method, it must call the base class
    *  method. This method calls itself on the entities children, so make sure
    *  to add all children before calling the base class method.
@@ -346,18 +273,11 @@ public:
   Dimension2 dimensions();
   
   /**
-   *  Adds a child with a given identity string to the entity.
+   *  Adds a child.
    *
-   *  Children must be constructed using the new operator. The children will
-   *  be deleted either by calling *removeChild*, or by calling *destroy* on
-   *  the entity.
-   *
-   *  @param  child   The Entity to be added.
-   *  @param  order   The order in which the entity will be placed. If -1 or a
-   *                  number equal to or larger than the number of children is
-   *                  passed, then the entity will be placed at the back. 
+   *  @param  child   A reference to an existing Entity.
    */
-  void addChild(Entity * child, int order = -1);
+  void addChild(Entity * child);
   
   Entity * findChild(string id);
   void removeChild(string id);
@@ -371,6 +291,10 @@ public:
   void changeVerticalVelocityTo(double vy);
   void changeVelocityBy(double dvs, double dvy);
   void update(uint8_t component_mask);
+  
+private:
+  string _id;
+  
 };
 
 
@@ -409,13 +333,13 @@ class InputComponent
  *  either in local space or in world space.
  */
 class AnimationComponent
-  : public Component
+: public Component
 {
   
 public:
   typedef vector<pair<Vector2, Vector2>> CubicHermiteCurve;
   typedef pair<pair<Vector2, Vector2>, pair<Vector2, Vector2>>
-    CubicHermiteSpline;
+  CubicHermiteSpline;
   
   prop_r<AnimationComponent, bool> animating;
   prop_r<AnimationComponent, Vector2> end_velocity;
@@ -453,7 +377,7 @@ private:
  *  object, w.r.t. the laws of physics.
  */
 class PhysicsComponent
-  : public Component
+: public Component
 {
   bool _should_simulate;
   bool _out_of_view;
@@ -480,7 +404,7 @@ public:
  *  AudioComponent is responsible for generating and playing sounds.
  */
 class AudioComponent
-  : public Component
+: public Component
 {
   
 public:
@@ -520,15 +444,155 @@ private:
 class GraphicsComponent
   : public Component
 {
-  string trait();
-protected:
-  prop<  Sprite*> current_sprite;
-public:
-  prop_r<GraphicsComponent, Rectangle> bounds;
   
+public:
+  prop_r<GraphicsComponent, Rectangle>    bounds;
+  
+  prop_r<GraphicsComponent, vector<vec3>> vertexPositions;
+  prop_r<GraphicsComponent, vector<vec3>> vertexColors;
+  prop_r<GraphicsComponent, vector<int>>  vertexIndices;
+  
+  virtual void init(Entity * entity);
+  virtual void update(Core & core);
+  virtual mat4 modelMatrix() = 0;
+  void attachMesh(vector<vec3> & positions,
+                  vector<vec3> & colors,
+                  vector<int> & indices);
+  void attachShader(string vertexShaderFilename, string fragmentShaderFilename);
   void offsetTo(int x, int y);
   void offsetBy(int dx, int dy);
   void resizeTo(int w, int h);
   void resizeBy(int dw, int dh);
-  virtual void update(Core & core);
+  
+private:
+  string trait();
+  
+  GLuint _vertexArrayObject;
+  GLuint _positionBuffer;
+  GLuint _colorBuffer;
+  GLuint _indexBuffer;
+  
+  GLuint _shaderProgram;
+  string _vertexShaderFilename;
+  string _fragmentShaderFilename;
+
+  GLint _modelViewProjectionMatrixLocation;
+  
+};
+
+
+//
+// MARK: - CoreOptions
+//
+
+struct CoreOptions
+{
+  const char * title;
+  int width;
+  int height;
+};
+
+
+//
+// MARK: - Core
+//
+
+/**
+ *  Defines the core engine and is responsible for reading user input
+ *  and updating all entities.
+ */
+class Core
+{
+  
+public:
+  /**
+   *  Defines the status of each input type.
+   */
+  struct KeyStatus
+  {
+    bool up, down, left, right;
+  };
+  
+  prop_r<Core, Entity> root;
+  
+  prop_r<Core, double> deltaTime;
+  
+  prop_r<Core, int>    sampleRate;
+  prop_r<Core, double> maxVolume;
+  
+  prop_r<Core, mat4>   projectionMatrix;
+  
+  prop<int>            pScale;
+  prop<vec3>           pBackgroundColor;
+  
+  void keyStatus(KeyStatus & keys);
+  double elapsedTime();
+  double effectiveElapsedTime();
+  void windowDimensions(int & w, int & h);
+  
+  Core();
+  bool init(CoreOptions & options);
+  void destroy();
+  
+  /**
+   *  Creates and adds an Entity to the game world.
+   *
+   *  To attach an Entity to the game world, a unique *id* must be provided for
+   *  the Entity to be created. By default, its parent is the **root** Entity.
+   *  An optional *parentId* can be provided if the new Entity should belong to
+   *  another, already existing Entity in the game world.
+   *
+   *  @param  id        The identifier for the Entity to be created.
+   *  @param  parentId  The identifier for the parent Entity.
+   *  @return A pointer to the newly created Entity. If the *id* is already
+   *          associated with an Entity or if there is no Entity associated with
+   *          the *parentId*, then *nullptr* is returned.
+   */
+  Entity * createEntity(string id, string parentId = "root");
+  
+  void reset(double after_duration = 0);
+  void pause();
+  void resume();
+  void createEffectiveTimer(double duration, function<void()> block);
+  void createAccumulativeTimer(double duration, function<void()> block);
+  bool update();
+  
+  /**
+   *  Collision detection for AABB.
+   *
+   *  Note: obsticles are assumed static in the calculations.
+   *
+   *  @param  collider            The dynamic entity to detect collision for.
+   *  @param  travel_distance     The distance the entity will travel until the
+   *                              next frame.
+   *  @param  collision_response  Specifies whether the collider should respond
+   *                              to the collision or not.
+   *  @param  result              The entities that the collider has collided
+   *                              with will be stored here.
+   */
+  void resolveCollisions(Entity & collider,
+                         Vector2 & new_position,
+                         bool collision_response,
+                         vector<Entity*> & result);
+  
+private:
+  struct _Timer
+  {
+    double endTime;
+    function<void(void)> block;
+  };
+  enum _TimerType { _EFFECTIVE, _ACCUMULATIVE };
+  
+  SDL_Window * _window;
+  SDL_GLContext _context;
+  
+  vector<Entity> _entities;
+  
+  KeyStatus _key_status;
+  vector<pair<_Timer, _TimerType>> _timers;
+  
+  double _pauseDuration;
+  bool _reset;
+  bool _pause;
+  
 };
