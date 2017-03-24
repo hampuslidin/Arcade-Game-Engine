@@ -13,70 +13,70 @@
 
 void _resolveCollisions(Entity & collider,
                         Entity & obsticle,
-                        Vector2 & travel_distance,
-                        bool collision_response,
+                        vec3 & travelDistance,
+                        bool collisionResponse,
                         vector<Entity*> & result)
 {
-  if (collider.physics() && obsticle.physics() && &collider != &obsticle)
+  if (collider.pPhysics() && obsticle.pPhysics() && &collider != &obsticle)
   {
-    Rectangle collider_cb = collider.physics()->collision_bounds();
-    Rectangle obsticle_cb = obsticle.physics()->collision_bounds();
-    Vector2 col_pos, obs_pos;
-    collider.calculateWorldPosition(col_pos);
-    obsticle.calculateWorldPosition(obs_pos);
+    Rectangle colliderCB = collider.pPhysics()->collisionBounds();
+    Rectangle obsticleCB = obsticle.pPhysics()->collisionBounds();
+    vec3 colPos, obsPos;
+    collider.worldPosition(colPos);
+    obsticle.worldPosition(obsPos);
     
-    SDL_Rect collider_before_rect
+    SDL_Rect colliderBeforeRect
     {
-      (int)(col_pos.x + collider_cb.pos.x),
-      (int)(col_pos.y + collider_cb.pos.y),
-      (int)collider_cb.dim.x,
-      (int)collider_cb.dim.y
+      (int)(colPos.x + colliderCB.pos.x),
+      (int)(colPos.y + colliderCB.pos.y),
+      (int)colliderCB.dim.x,
+      (int)colliderCB.dim.y
     };
     
-    SDL_Rect obsticle_rect
+    SDL_Rect obsticleRect
     {
-      (int)(obs_pos.x + obsticle_cb.pos.x),
-      (int)(obs_pos.y + obsticle_cb.pos.y),
-      (int)obsticle_cb.dim.x,
-      (int)obsticle_cb.dim.y
+      (int)(obsPos.x + obsticleCB.pos.x),
+      (int)(obsPos.y + obsticleCB.pos.y),
+      (int)obsticleCB.dim.x,
+      (int)obsticleCB.dim.y
     };
     
     // second condition is a hack for enemies not colliding away from each other
-    bool is_responding = collision_response && !obsticle.physics()->dynamic();
+    bool isResponding = collisionResponse && !obsticle.pPhysics()->dynamic();
     
     // check so that the collider is not already colliding with obsticle
-    SDL_Rect intersection_rect;
-    if (!SDL_IntersectRect(&collider_before_rect,
-                           &obsticle_rect,
-                           &intersection_rect))
+    SDL_Rect intersectionRect;
+    if (!SDL_IntersectRect(&colliderBeforeRect,
+                           &obsticleRect,
+                           &intersectionRect))
     {
       // collider is outside of obsticle
-      SDL_Rect collider_after_rect
+      SDL_Rect colliderAfterRect
       {
-        (int)(col_pos.x + collider_cb.pos.x + travel_distance.x),
-        (int)(col_pos.y + collider_cb.pos.y + travel_distance.y),
-        (int)collider_cb.dim.x,
-        (int)collider_cb.dim.y
+        (int)(colPos.x + colliderCB.pos.x + travelDistance.x),
+        (int)(colPos.y + colliderCB.pos.y + travelDistance.y),
+        (int)colliderCB.dim.x,
+        (int)colliderCB.dim.y
       };
       
       // the bounding box for the colliders before and after traviling the
       // distance
-      SDL_Rect large_rect;
-      large_rect.x = (int)std::min(min_x(collider_before_rect),
-                                   min_x(collider_after_rect));
-      large_rect.y = (int)std::min(min_y(collider_before_rect),
-                                   min_y(collider_after_rect));
-      large_rect.w = (int)std::max(max_x(collider_before_rect),
-                                   max_x(collider_after_rect)) - large_rect.x;
-      large_rect.h = (int)std::max(max_y(collider_before_rect),
-                                   max_y(collider_after_rect)) - large_rect.y;
+      SDL_Rect largeRect;
+      largeRect.x = (int)std::min(min_x(colliderBeforeRect),
+                                  min_x(colliderAfterRect));
+      largeRect.y = (int)std::min(min_y(colliderBeforeRect),
+                                  min_y(colliderAfterRect));
+      largeRect.w = (int)std::max(max_x(colliderBeforeRect),
+                                  max_x(colliderAfterRect)) - largeRect.x;
+      largeRect.h = (int)std::max(max_y(colliderBeforeRect),
+                                  max_y(colliderAfterRect)) - largeRect.y;
       
-      if (SDL_IntersectRect(&large_rect, &obsticle_rect, &intersection_rect))
+      if (SDL_IntersectRect(&largeRect, &obsticleRect, &intersectionRect))
       {
         // collider will collide with obsticle between this frame and the next
         result.push_back(&obsticle);
         
-        if (is_responding)
+        if (isResponding)
         {
           typedef struct { int x1, y1, x2, y2; } Line;
           
@@ -87,119 +87,119 @@ void _resolveCollisions(Entity & collider,
             return sqrt(dx*dx+dy*dy);
           };
           
-          Line upper_left, upper_right, lower_left, lower_right;
+          Line upperLeft, upperRight, lowerLeft, lowerRight;
           
-          upper_left.x1  = (int)min_x(collider_before_rect);
-          upper_left.y1  = (int)min_y(collider_before_rect);
-          upper_left.x2  = (int)min_x(collider_after_rect);
-          upper_left.y2  = (int)min_y(collider_after_rect);
+          upperLeft.x1  = (int)min_x(colliderBeforeRect);
+          upperLeft.y1  = (int)min_y(colliderBeforeRect);
+          upperLeft.x2  = (int)min_x(colliderAfterRect);
+          upperLeft.y2  = (int)min_y(colliderAfterRect);
           
-          upper_right.x1 = (int)max_x(collider_before_rect);
-          upper_right.y1 = (int)min_y(collider_before_rect);
-          upper_right.x2 = (int)max_x(collider_after_rect);
-          upper_right.y2 = (int)min_y(collider_after_rect);
+          upperRight.x1 = (int)max_x(colliderBeforeRect);
+          upperRight.y1 = (int)min_y(colliderBeforeRect);
+          upperRight.x2 = (int)max_x(colliderAfterRect);
+          upperRight.y2 = (int)min_y(colliderAfterRect);
           
-          lower_left.x1  = (int)min_x(collider_before_rect);
-          lower_left.y1  = (int)max_y(collider_before_rect);
-          lower_left.x2  = (int)min_x(collider_after_rect);
-          lower_left.y2  = (int)max_y(collider_after_rect);
+          lowerLeft.x1  = (int)min_x(colliderBeforeRect);
+          lowerLeft.y1  = (int)max_y(colliderBeforeRect);
+          lowerLeft.x2  = (int)min_x(colliderAfterRect);
+          lowerLeft.y2  = (int)max_y(colliderAfterRect);
           
-          lower_right.x1 = (int)max_x(collider_before_rect);
-          lower_right.y1 = (int)max_y(collider_before_rect);
-          lower_right.x2 = (int)max_x(collider_after_rect);
-          lower_right.y2 = (int)max_y(collider_after_rect);
+          lowerRight.x1 = (int)max_x(colliderBeforeRect);
+          lowerRight.y1 = (int)max_y(colliderBeforeRect);
+          lowerRight.x2 = (int)max_x(colliderAfterRect);
+          lowerRight.y2 = (int)max_y(colliderAfterRect);
           
           int intersections = 0;
-          intersections += SDL_IntersectRectAndLine(&obsticle_rect,
-                                                        &upper_left.x1,
-                                                        &upper_left.y1,
-                                                        &upper_left.x2,
-                                                        &upper_left.y2);
-          intersections += SDL_IntersectRectAndLine(&obsticle_rect,
-                                                        &upper_right.x1,
-                                                        &upper_right.y1,
-                                                        &upper_right.x2,
-                                                        &upper_right.y2);
-          intersections += SDL_IntersectRectAndLine(&obsticle_rect,
-                                                        &lower_left.x1,
-                                                        &lower_left.y1,
-                                                        &lower_left.x2,
-                                                        &lower_left.y2);
-          intersections += SDL_IntersectRectAndLine(&obsticle_rect,
-                                                        &lower_right.x1,
-                                                        &lower_right.y1,
-                                                        &lower_right.x2,
-                                                        &lower_right.y2);
+          intersections += SDL_IntersectRectAndLine(&obsticleRect,
+                                                    &upperLeft.x1,
+                                                    &upperLeft.y1,
+                                                    &upperLeft.x2,
+                                                    &upperLeft.y2);
+          intersections += SDL_IntersectRectAndLine(&obsticleRect,
+                                                    &upperRight.x1,
+                                                    &upperRight.y1,
+                                                    &upperRight.x2,
+                                                    &upperRight.y2);
+          intersections += SDL_IntersectRectAndLine(&obsticleRect,
+                                                    &lowerLeft.x1,
+                                                    &lowerLeft.y1,
+                                                    &lowerLeft.x2,
+                                                    &lowerLeft.y2);
+          intersections += SDL_IntersectRectAndLine(&obsticleRect,
+                                                    &lowerRight.x1,
+                                                    &lowerRight.y1,
+                                                    &lowerRight.x2,
+                                                    &lowerRight.y2);
           
           if (intersections > 0)
           {
             //// find the line with the shortest distance to its originating
             //// corner
-            int current_distance;
+            int currentDistance;
             
             // upper left corner
             int index = 0;
-            int shortest_distance = (int)distance((int)min_x(collider_before_rect),
-                                                   (int)min_y(collider_before_rect),
-                                                   upper_left.x1,
-                                                   upper_left.y1);
+            int shortestDistance = (int)distance((int)min_x(colliderBeforeRect),
+                                                 (int)min_y(colliderBeforeRect),
+                                                 upperLeft.x1,
+                                                 upperLeft.y1);
             
             // upper right corner
-            current_distance = (int)distance((int)max_x(collider_before_rect),
-                                             (int)min_y(collider_before_rect),
-                                             upper_right.x1,
-                                             upper_right.y1);
-            if (current_distance < shortest_distance)
+            currentDistance = (int)distance((int)max_x(colliderBeforeRect),
+                                            (int)min_y(colliderBeforeRect),
+                                            upperRight.x1,
+                                            upperRight.y1);
+            if (currentDistance < shortestDistance)
             {
               index = 1;
-              shortest_distance = current_distance;
+              shortestDistance = currentDistance;
             }
             
             // lower left corner
-            current_distance = (int)distance((int)min_x(collider_before_rect),
-                                             (int)max_y(collider_before_rect),
-                                             lower_left.x1,
-                                             lower_left.y1);
-            if (current_distance < shortest_distance)
+            currentDistance = (int)distance((int)min_x(colliderBeforeRect),
+                                            (int)max_y(colliderBeforeRect),
+                                            lowerLeft.x1,
+                                            lowerLeft.y1);
+            if (currentDistance < shortestDistance)
             {
               index = 2;
-              shortest_distance = current_distance;
+              shortestDistance = currentDistance;
             }
             
             // lower right corner
-            current_distance = (int)distance((int)max_x(collider_before_rect),
-                                             (int)max_y(collider_before_rect),
-                                             lower_right.x1,
-                                             lower_right.y1);
-            if (current_distance < shortest_distance)
+            currentDistance = (int)distance((int)max_x(colliderBeforeRect),
+                                            (int)max_y(colliderBeforeRect),
+                                            lowerRight.x1,
+                                            lowerRight.y1);
+            if (currentDistance < shortestDistance)
             {
               index = 3;
-              shortest_distance = current_distance;
+              shortestDistance = currentDistance;
             }
             
             // update travel distance
             switch (index)
             {
               case 0:
-                travel_distance.x = min_x(collider_before_rect)-upper_left.x1;
-                travel_distance.y = min_y(collider_before_rect)-upper_left.y1;
+                travelDistance.x = min_x(colliderBeforeRect)-upperLeft.x1;
+                travelDistance.y = min_y(colliderBeforeRect)-upperLeft.y1;
                 break;
               case 1:
-                travel_distance.x = max_x(collider_before_rect)-upper_right.x1;
-                travel_distance.y = min_y(collider_before_rect)-upper_right.y1;
+                travelDistance.x = max_x(colliderBeforeRect)-upperRight.x1;
+                travelDistance.y = min_y(colliderBeforeRect)-upperRight.y1;
                 break;
               case 2:
-                travel_distance.x = min_x(collider_before_rect)-lower_left.x1;
-                travel_distance.y = max_y(collider_before_rect)-lower_left.y1;
+                travelDistance.x = min_x(colliderBeforeRect)-lowerLeft.x1;
+                travelDistance.y = max_y(colliderBeforeRect)-lowerLeft.y1;
                 break;
               case 3:
-                travel_distance.x = max_x(collider_before_rect)-lower_right.x1;
-                travel_distance.y = max_y(collider_before_rect)-lower_right.y1;
+                travelDistance.x = max_x(colliderBeforeRect)-lowerRight.x1;
+                travelDistance.y = max_y(colliderBeforeRect)-lowerRight.y1;
                 break;
             }
             
             // update velocity
-            collider.changeVelocityTo(0, 0);
+            collider.pVelocity() = vec3(0.0f);
           }
         }
       }
@@ -209,7 +209,7 @@ void _resolveCollisions(Entity & collider,
       // collider is inside obsticle (rare)
       result.push_back(&obsticle);
       
-      if (is_responding)
+      if (isResponding)
       {
         //// find shortest distance to one of the obsticles edges
         int current_distance;
@@ -217,10 +217,10 @@ void _resolveCollisions(Entity & collider,
         // distance to upper edge
         int index = 0;
         int shortest_distance = 
-          (int)min_y(obsticle_rect) - (int)min_y(collider_before_rect);
+          (int)min_y(obsticleRect) - (int)min_y(colliderBeforeRect);
         
         // distance to lower edge
-        current_distance = (int)max_y(obsticle_rect) - (int)max_y(collider_before_rect);
+        current_distance = (int)max_y(obsticleRect) - (int)max_y(colliderBeforeRect);
         if (current_distance < shortest_distance)
         {
           index = 1;
@@ -228,7 +228,7 @@ void _resolveCollisions(Entity & collider,
         }
         
         // distance to left edge
-        current_distance = (int)min_x(obsticle_rect) - (int)min_x(collider_before_rect);
+        current_distance = (int)min_x(obsticleRect) - (int)min_x(colliderBeforeRect);
         if (current_distance < shortest_distance)
         {
           index = 2;
@@ -236,7 +236,7 @@ void _resolveCollisions(Entity & collider,
         }
         
         // distance to right edge
-        current_distance = (int)max_x(obsticle_rect) - (int)max_x(collider_before_rect);
+        current_distance = (int)max_x(obsticleRect) - (int)max_x(colliderBeforeRect);
         if (current_distance < shortest_distance)
         {
           index = 3;
@@ -247,25 +247,25 @@ void _resolveCollisions(Entity & collider,
         switch (index)
         {
           case 0:
-            travel_distance.x = 0;
-            travel_distance.y = -(shortest_distance + collider_before_rect.h);
+            travelDistance.x = 0;
+            travelDistance.y = -(shortest_distance + colliderBeforeRect.h);
             break;
           case 1:
-            travel_distance.x = 0;
-            travel_distance.y = shortest_distance + collider_before_rect.h;
+            travelDistance.x = 0;
+            travelDistance.y = shortest_distance + colliderBeforeRect.h;
             break;
           case 2:
-            travel_distance.x = -(shortest_distance + collider_before_rect.w);
-            travel_distance.y = 0;
+            travelDistance.x = -(shortest_distance + colliderBeforeRect.w);
+            travelDistance.y = 0;
             break;
           case 3:
-            travel_distance.x = shortest_distance + collider_before_rect.w;
-            travel_distance.y = 0;
+            travelDistance.x = shortest_distance + colliderBeforeRect.w;
+            travelDistance.y = 0;
             break;
         }
         
         // update velocity
-        collider.changeVelocityTo(0, 0);
+        collider.pVelocity = vec3(0.0f);
       }
     }
   }
@@ -274,21 +274,21 @@ void _resolveCollisions(Entity & collider,
   {
     _resolveCollisions(collider,
                        *child,
-                       travel_distance,
-                       collision_response,
+                       travelDistance,
+                       collisionResponse,
                        result);
   }
 }
 
 void Core::resolveCollisions(Entity & collider,
-                             Vector2 & travel_distance,
-                             bool collision_response,
+                             vec3 & travelDistance,
+                             bool collisionResponse,
                              vector<Entity *> & result)
 {
   _resolveCollisions(collider,
                      root(),
-                     travel_distance,
-                     collision_response,
+                     travelDistance,
+                     collisionResponse,
                      result);
 }
 
@@ -304,29 +304,31 @@ string PhysicsComponent::trait() { return "physics"; }
 // MARK: Member functions
 
 PhysicsComponent::PhysicsComponent()
-  : collision_bounds({0, 0, 16, 16})
-  , gravity({0.0, 9.82})
+  : collisionBounds({0, 0, 16, 16})
+  , gravity({0.0f, -9.82f, 0.0f})
   , dynamic(false)
-  , collision_detection(false)
-  , collision_response(false)
+  , collisionDetection(false)
+  , collisionResponse(false)
 {}
 
 void PhysicsComponent::init(Entity * entity)
 {
   Component::init(entity);
   
-  _should_simulate = true;
-  _out_of_view = true;
-  _did_collide = false;
+  _shouldSimulate = true;
+  _outOfView = true;
+  _didCollide = false;
   
-  auto did_start_animating = [this](Event) { _should_simulate = false; };
-  auto did_stop_animating = [this](Event) { _should_simulate = true;  };
+  auto eventHandler = [this](Event event)
+  {
+    _shouldSimulate = event == DidStopAnimating;
+  };
   
-  auto animation = entity->animation();
-  NotificationCenter::observe(did_start_animating,
+  auto animation = entity->pAnimation();
+  NotificationCenter::observe(eventHandler,
                               DidStartAnimating,
                               animation);
-  NotificationCenter::observe(did_stop_animating,
+  NotificationCenter::observe(eventHandler,
                               DidStopAnimating,
                               animation);
 }
@@ -335,65 +337,65 @@ void PhysicsComponent::update(Core & core)
 {
   
   // if simulating a dynamic entity, update its velocity
-  Vector2 distance {};
-  bool should_move = _should_simulate && dynamic();
-  if (should_move)
+  vec3 distance(0.0f);
+  bool shouldMove = _shouldSimulate && dynamic();
+  if (shouldMove)
   {
-    const auto velocity = gravity() * core.deltaTime() * pixels_per_meter;
-    entity()->changeVelocityBy(velocity.x, velocity.y);
-    distance = entity()->velocity() * core.deltaTime();
+    const auto velocity = gravity() * (float)(core.deltaTime()*pixelsPerMeter);
+    entity()->pVelocity() += velocity;
+    distance = entity()->pVelocity() * (float)core.deltaTime();
   }
   
   // if enabled, perform collision detection and response
-  collided_entities().clear();
-  if (collision_detection())
+  collidedEntities().clear();
+  if (collisionDetection())
   {
     core.resolveCollisions(*entity(),
                            distance,
-                           should_move && collision_response(),
-                           collided_entities());
+                           shouldMove && collisionResponse(),
+                           collidedEntities());
     
     // notify observers if at least one collision ocurred
-    if (collided_entities().size() > 0)
+    if (collidedEntities().size() > 0)
     {
-      if (!_did_collide)
+      if (!_didCollide)
       {
         NotificationCenter::notify(DidCollide, *this);
-        _did_collide = true;
+        _didCollide = true;
       }
     }
-    else _did_collide = false;
+    else _didCollide = false;
     
   }
   
   // if simulating a dynamic entity, update its position
-  if (should_move)
+  if (shouldMove)
   {
-    entity()->moveBy(distance.x, distance.y);
+    entity()->translate(distance.x, distance.y, distance.z);
   }
   
   // calculate if the entity has gone out of or into view
-  Vector2 world_position;
+  vec3 worldPosition;
   int windowWidth, windowHeight;
-  entity()->calculateWorldPosition(world_position);
+  entity()->worldPosition(worldPosition);
   core.windowDimensions(windowWidth, windowHeight);
   Dimension2 dimensions = entity()->dimensions();
-  if (!_out_of_view &&
-      (world_position.x + dimensions.x < 0 ||
-       world_position.y + dimensions.y < 0 ||
-       world_position.x >= windowWidth ||
-       world_position.y >= windowHeight))
+  if (!_outOfView &&
+      (worldPosition.x + dimensions.x < 0 ||
+       worldPosition.y + dimensions.y < 0 ||
+       worldPosition.x >= windowWidth ||
+       worldPosition.y >= windowHeight))
   {
-    _out_of_view = true;
+    _outOfView = true;
     NotificationCenter::notify(DidMoveOutOfView, *this);
   }
-  else if (_out_of_view &&
-           world_position.x + dimensions.x >= 0 &&
-           world_position.y + dimensions.y >= 0 &&
-           world_position.x < windowWidth &&
-           world_position.y < windowHeight)
+  else if (_outOfView &&
+           worldPosition.x + dimensions.x >= 0 &&
+           worldPosition.y + dimensions.y >= 0 &&
+           worldPosition.x < windowWidth &&
+           worldPosition.y < windowHeight)
   {
-    _out_of_view = false;
+    _outOfView = false;
     NotificationCenter::notify(DidMoveIntoView, *this);
   }
 }

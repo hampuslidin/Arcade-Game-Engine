@@ -138,7 +138,8 @@ void NotificationCenter::notify(Event event, GameObject & sender)
 {
   for (auto pair : _instance()._blocks[event])
   {
-    if (pair.second == nullptr || pair.second == &sender) pair.first(event);
+    if (pair.second == nullptr || pair.second == &sender)
+      pair.first(event);
   }
 }
 
@@ -146,8 +147,9 @@ ObserverID NotificationCenter::observe(function<void(Event)> block,
                                        Event event,
                                        GameObject * sender)
 {
-  auto size = _instance()._blocks[event].size();
-  _instance()._blocks[event].push_back({block, sender});
+  auto & blocksForEvent = _instance()._blocks[event];
+  auto size = blocksForEvent.size();
+  blocksForEvent.push_back({block, sender});
   return hash<string>{}(event.id() + to_string(size));
 }
 
@@ -347,7 +349,7 @@ bool Core::init(CoreOptions & options)
     function<void(Entity*)> callbacks;
     callbacks = [maxVolume, stream16b, length, &callbacks](Entity * entity)
     {
-      AudioComponent * audio = entity->audio();
+      AudioComponent * audio = entity->pAudio();
       if (audio) audio->audioStreamCallback(maxVolume, stream16b, length/2);
       
       for (auto child : entity->children())
@@ -584,63 +586,54 @@ string Entity::id()
 Entity::Entity(string id)
   : core(nullptr)
   , parent(nullptr)
-  , input(nullptr)
-  , animation(nullptr)
-  , physics(nullptr)
-  , audio(nullptr)
-  , graphics(nullptr)
-  , local_position({0, 0})
+  , pInput(nullptr)
+  , pAnimation(nullptr)
+  , pPhysics(nullptr)
+  , pAudio(nullptr)
+  , pGraphics(nullptr)
+  , pVelocity(vec3(0.0f))
+  , pOrigin(vec3(0.0f))
+  , _translation(mat4(1.0f))
+  , _rotation(mat4(1.0f))
   , _id(id)
+  , _worldTransformNeedsUpdating(true)
 {}
-
-void Entity::addInput(InputComponent * input)
-{
-  this->input(input);
-}
-
-void Entity::addAnimation(AnimationComponent * animation)
-{
-  this->animation(animation);
-}
-
-void Entity::addPhysics(PhysicsComponent * physics)
-{
-  this->physics(physics);
-}
-
-void Entity::addAudio(AudioComponent * audio)
-{
-  this->audio(audio);
-}
-
-void Entity::addGraphics(GraphicsComponent * graphics)
-{
-  this->graphics(graphics);
-}
 
 void Entity::init(Core * core)
 {
   this->core(core);
-  this->enabled(true);
+  pEnabled(true);
   
-  if (input())     input()->init(this);
-  if (animation()) animation()->init(this);
-  if (physics())   physics()->init(this);
-  if (audio())     audio()->init(this);
-  if (graphics())  graphics()->init(this);
+  _worldTransformNeedsUpdating = true;
+  
+  if (pInput())     pInput()->init(this);
+  if (pAnimation()) pAnimation()->init(this);
+  if (pPhysics())   pPhysics()->init(this);
+  if (pAudio())     pAudio()->init(this);
+  if (pGraphics())  pGraphics()->init(this);
+  
+  if (parent() != nullptr)
+  {
+    auto eventHandler = [this](Event)
+    {
+      _worldTransformNeedsUpdating = true;
+      NotificationCenter::notify(DidUpdateTransform, *this);
+    };
+    NotificationCenter::observe(eventHandler, DidUpdateTransform, parent());
+  }
   
   for (auto child : children()) child->init(core);
 }
 
 void Entity::reset()
 {
-  velocity({0, 0});
+  pVelocity() = vec3(0.0f);
   
-  if (input())     input()->reset();
-  if (animation()) animation()->reset();
-  if (physics())   physics()->reset();
-  if (audio())     audio()->reset();
-  if (graphics())  graphics()->reset();
+  if (pInput())     pInput()->reset();
+  if (pAnimation()) pAnimation()->reset();
+  if (pPhysics())   pPhysics()->reset();
+  if (pAudio())     pAudio()->reset();
+  if (pGraphics())  pGraphics()->reset();
   
   for (auto child : children()) child->reset();
 }
@@ -653,16 +646,16 @@ void Entity::destroy()
   }
   children().clear();
   
-  if (input())     delete input();
-  if (animation()) delete animation();
-  if (physics())   delete physics();
-  if (audio())     delete audio();
-  if (graphics())  delete graphics();
+  if (pInput())     delete pInput();
+  if (pAnimation()) delete pAnimation();
+  if (pPhysics())   delete pPhysics();
+  if (pAudio())     delete pAudio();
+  if (pGraphics())  delete pGraphics();
 }
 
 Dimension2 Entity::dimensions()
 {
-  return graphics() ? graphics()->bounds().dim : Dimension2 {};
+  return pGraphics() ? pGraphics()->bounds().dim : Dimension2 {};
 }
 
 void Entity::addChild(Entity * child)
@@ -695,71 +688,91 @@ void Entity::removeChild(string id)
   }
 }
 
-void Entity::calculateWorldPosition(Vector2 & result)
+void Entity::localPosition(vec3 & result)
 {
-  Vector2 world_position = local_position();
-  Entity * current_entity = this;
-  while ((current_entity = current_entity->parent()))
+  mat4 localTransform;
+  this->localTransform(localTransform);
+  result = vec3(localTransform * vec4(pOrigin(), 1.0f));
+}
+
+void Entity::localTransform(mat4 & result)
+{
+  result = _translation * _rotation;
+}
+
+void Entity::worldPosition(vec3 &result)
+{
+  mat4 worldTransform;
+  this->worldTransform(worldTransform);
+  result = vec3(worldTransform * vec4(pOrigin(), 1.0f));
+}
+
+void Entity::worldTransform(mat4 & result)
+{
+  if (_worldTransformNeedsUpdating)
   {
-    world_position += current_entity->local_position();
+    localTransform(_worldTransform);
+    Entity * currentEntity = this;
+    while ((currentEntity = currentEntity->parent()))
+    {
+      // TODO: verify right order
+      _worldTransform = currentEntity->_translation * _worldTransform *
+                        currentEntity->_rotation;
+    }
+    _worldTransformNeedsUpdating = false;
   }
-  result.x = world_position.x;
-  result.y = world_position.y;
+  result = _worldTransform;
 }
 
-void Entity::moveTo(double x, double y)
+void Entity::translate(float dx, float dy, float dz)
 {
-  local_position().x = x;
-  local_position().y = y;
+  _translation = glm::translate(_translation, vec3(dx, dy, dz));
+  _worldTransformNeedsUpdating = true;
+  NotificationCenter::notify(DidUpdateTransform, *this);
 }
 
-void Entity::moveHorizontallyTo(double x)
+void Entity::rotate(float angle, vec3 axis)
 {
-  local_position().x = x;
+  _rotation = glm::rotate(_rotation, angle, axis);
+  _worldTransformNeedsUpdating = true;
+  NotificationCenter::notify(DidUpdateTransform, *this);
 }
 
-void Entity::moveVerticallyTo(double y)
+void Entity::setPosition(float x, float y, float z)
 {
-  local_position().y = y;
+  _translation = mat4(1.0f);
+  translate(x, y, z);
+}
+void Entity::setPositionX(float x)
+{
+  float y = _translation[3].y;
+  float z = _translation[3].z;
+  setPosition(x, y, z);
 }
 
-void Entity::moveBy(double dx, double dy)
+void Entity::setPositionY(float y)
 {
-  local_position().x += dx;
-  local_position().y += dy;
+  float x = _translation[3].x;
+  float z = _translation[3].z;
+  setPosition(x, y, z);
 }
 
-void Entity::changeVelocityTo(double vx, double vy)
+void Entity::setPositionZ(float z)
 {
-  velocity().x = vx;
-  velocity().y = vy;
-}
-
-void Entity::changeHorizontalVelocityTo(double vx)
-{
-  velocity().x = vx;
-}
-
-void Entity::changeVerticalVelocityTo(double vy)
-{
-  velocity().y = vy;
-}
-
-void Entity::changeVelocityBy(double dvx, double dvy)
-{
-  velocity().x += dvx;
-  velocity().y += dvy;
+  float x = _translation[3].x;
+  float y = _translation[3].y;
+  setPosition(x, y, z);
 }
 
 void Entity::update(uint8_t component_mask)
 {
-  if (enabled())
+  if (pEnabled())
   {
-    if (component_mask & 0b10000 && input())     input()->update(*core());
-    if (component_mask & 0b01000 && animation()) animation()->update(*core());
-    if (component_mask & 0b00100 && physics())   physics()->update(*core());
-    if (component_mask & 0b00010 && audio())     audio()->update(*core());
-    if (component_mask & 0b00001 && graphics())  graphics()->update(*core());
+    if (component_mask & 0b10000 && pInput())     pInput()->update(*core());
+    if (component_mask & 0b01000 && pAnimation()) pAnimation()->update(*core());
+    if (component_mask & 0b00100 && pPhysics())   pPhysics()->update(*core());
+    if (component_mask & 0b00010 && pAudio())     pAudio()->update(*core());
+    if (component_mask & 0b00001 && pGraphics())  pGraphics()->update(*core());
   }
 }
 
@@ -874,12 +887,10 @@ void GraphicsComponent::init(Entity * entity)
 
 void GraphicsComponent::update(Core & core)
 {
-  // calculate world position
-  Vector2 entity_pos;
-  entity()->calculateWorldPosition(entity_pos);
-  
   // set up shader
-  mat4 modelViewProjectionMatrix = core.projectionMatrix() * modelMatrix();
+  mat4 modelMatrix;
+  entity()->worldTransform(modelMatrix);
+  mat4 modelViewProjectionMatrix = core.projectionMatrix() * modelMatrix;
   glUseProgram(_shaderProgram);
   glUniformMatrix4fv(_modelViewProjectionMatrixLocation,
                      1,

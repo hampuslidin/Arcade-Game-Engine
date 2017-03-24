@@ -49,6 +49,7 @@ const Event DidStopAnimating("DidStopAnimating");
 const Event DidCollide("DidCollide");
 const Event DidMoveIntoView("DidMoveIntoView");
 const Event DidMoveOutOfView("DidMoveOutOfView");
+const Event DidUpdateTransform("DidUpdateTransform");
 
 
 //
@@ -113,10 +114,10 @@ public:
   static void notify(Event event, GameObject & sender);
   static ObserverID observe(function<void(Event)> block,
                             Event event,
-                            GameObject * sender = nullptr);
+                            GameObject * sender);
   static void unobserve(ObserverID id,
                         Event event,
-                        GameObject * sender = nullptr);
+                        GameObject * sender);
 };
 
 
@@ -221,31 +222,25 @@ class Entity
 {
   
 public:
-  prop_r<Entity,               Core*> core;
-  prop_r<Entity,             Entity*> parent;
-  prop_r<Entity,     vector<Entity*>> children;
+  prop_r<Entity, Core*>           core;
+  prop_r<Entity, Entity*>         parent;
+  prop_r<Entity, vector<Entity*>> children;
   
-  prop_r<Entity,     InputComponent*> input;
-  prop_r<Entity, AnimationComponent*> animation;
-  prop_r<Entity,   PhysicsComponent*> physics;
-  prop_r<Entity,     AudioComponent*> audio;
-  prop_r<Entity,  GraphicsComponent*> graphics;
+  prop<InputComponent*>           pInput;
+  prop<AnimationComponent*>       pAnimation;
+  prop<PhysicsComponent*>         pPhysics;
+  prop<AudioComponent*>           pAudio;
+  prop<GraphicsComponent*>        pGraphics;
   
-  prop_r<Entity,             Vector2> local_position;
-  prop_r<Entity,             Vector2> velocity;
-  
-  prop<bool> enabled;
+  prop<vec3>                      pVelocity;
+  prop<vec3>                      pOrigin;
+  prop<bool>                      pEnabled;
   
   string id();
   
   // MARK: Member functions
   
   Entity(string id);
-  void addInput(InputComponent * input);
-  void addAnimation(AnimationComponent * animation);
-  void addPhysics(PhysicsComponent * physics);
-  void addAudio(AudioComponent * audio);
-  void addGraphics(GraphicsComponent * graphics);
   
   /**
    *  Initializes an entity.
@@ -278,22 +273,32 @@ public:
    *  @param  child   A reference to an existing Entity.
    */
   void addChild(Entity * child);
-  
   Entity * findChild(string id);
   void removeChild(string id);
-  void calculateWorldPosition(Vector2 & result);
-  void moveTo(double x, double y);
-  void moveHorizontallyTo(double x);
-  void moveVerticallyTo(double y);
-  void moveBy(double dx, double dy);
-  void changeVelocityTo(double vx, double vy);
-  void changeHorizontalVelocityTo(double vx);
-  void changeVerticalVelocityTo(double vy);
-  void changeVelocityBy(double dvs, double dvy);
+  
+  void localPosition(vec3 & result);
+  void localTransform(mat4 & result);
+  
+  void worldPosition(vec3 & result);
+  void worldTransform(mat4 & result);
+  
+  void translate(float dx, float dy, float dz);
+  void rotate(float angle, vec3 axis);
+  
+  void setPosition(float x, float y, float z);
+  void setPositionX(float x);
+  void setPositionY(float y);
+  void setPositionZ(float z);
+  
   void update(uint8_t component_mask);
   
 private:
   string _id;
+  
+  mat4 _translation;
+  mat4 _rotation;
+  mat4 _worldTransform;
+  bool _worldTransformNeedsUpdating;
   
 };
 
@@ -337,15 +342,14 @@ class AnimationComponent
 {
   
 public:
-  typedef vector<pair<Vector2, Vector2>> CubicHermiteCurve;
-  typedef pair<pair<Vector2, Vector2>, pair<Vector2, Vector2>>
-  CubicHermiteSpline;
+  typedef vector<pair<vec3, vec3>> CubicHermiteCurve;
+  typedef pair<pair<vec3, vec3>, pair<vec3, vec3>> CubicHermiteSpline;
   
   prop_r<AnimationComponent, bool> animating;
-  prop_r<AnimationComponent, Vector2> end_velocity;
+  prop_r<AnimationComponent, vec3> endVelocity;
   
   virtual void reset();
-  void addSegment(string id, Vector2 point, Vector2 velocity);
+  void addSegment(string id, vec3 position, vec3 velocity);
   void removeCurve(string id);
   
   /**
@@ -356,7 +360,7 @@ public:
    */
   void performAnimation(string id,
                         double duration,
-                        bool update_velocity = false);
+                        bool updateVelocity = false);
   
   virtual void update(Core & core);
   
@@ -364,11 +368,11 @@ private:
   string trait();
   
   map<string, CubicHermiteCurve> _curves;
-  CubicHermiteCurve _current_curve;
-  Vector2 _start_position;
-  double _start_time;
+  CubicHermiteCurve _currentCurve;
+  vec3 _startPosition;
+  double _startTime;
   double _duration;
-  bool _update_velocity;
+  bool _updateVelocity;
 };
 
 
@@ -377,26 +381,30 @@ private:
  *  object, w.r.t. the laws of physics.
  */
 class PhysicsComponent
-: public Component
+  : public Component
 {
-  bool _should_simulate;
-  bool _out_of_view;
-  bool _did_collide;
-  
-  string trait();
-protected:
-  prop_r<PhysicsComponent, vector<Entity*>> collided_entities;
+
 public:
-  static constexpr int pixels_per_meter = 120;
-  prop<   Rectangle> collision_bounds;
-  prop<     Vector2> gravity;
-  prop<        bool> dynamic;
-  prop<        bool> collision_detection;
-  prop<        bool> collision_response;
+  static constexpr int pixelsPerMeter = 120;
+  prop<Rectangle>      collisionBounds;
+  prop<vec3>           gravity;
+  prop<bool>           dynamic;
+  prop<bool>           collisionDetection;
+  prop<bool>           collisionResponse;
   
   PhysicsComponent();
   virtual void init(Entity * entity);
   virtual void update(Core & core);
+  
+protected:
+  prop_r<PhysicsComponent, vector<Entity*>> collidedEntities;
+  
+private:
+  bool _shouldSimulate;
+  bool _outOfView;
+  bool _didCollide;
+  
+  string trait();
 };
 
 
@@ -454,7 +462,6 @@ public:
   
   virtual void init(Entity * entity);
   virtual void update(Core & core);
-  virtual mat4 modelMatrix() = 0;
   void attachMesh(vector<vec3> & positions,
                   vector<vec3> & colors,
                   vector<int> & indices);
@@ -571,7 +578,7 @@ public:
    *                              with will be stored here.
    */
   void resolveCollisions(Entity & collider,
-                         Vector2 & new_position,
+                         vec3 & new_position,
                          bool collision_response,
                          vector<Entity*> & result);
   

@@ -6,16 +6,6 @@
 #include "core.hpp"
 #include <fstream>
 
-// MARK: Helper functions
-inline double transform_from_range(double value,
-                                   double from_low_bound,
-                                   double from_high_bound,
-                                   double to_low_bound,
-                                   double to_high_bound)
-{
-  return value/(from_high_bound-from_low_bound)*(to_high_bound-to_low_bound);
-}
-
 
 //
 // MARK: - AnimationComponent
@@ -30,12 +20,12 @@ string AnimationComponent::trait() { return "animation"; }
 void AnimationComponent::reset()
 {
   animating(false);
-  _update_velocity = false;
+  _updateVelocity = false;
 }
 
-void AnimationComponent::addSegment(string id, Vector2 point, Vector2 velocity)
+void AnimationComponent::addSegment(string id, vec3 position, vec3 velocity)
 {
-  _curves[id].push_back({point, velocity});
+  _curves[id].push_back({position, velocity});
 }
 
 void AnimationComponent::removeCurve(string id)
@@ -45,16 +35,16 @@ void AnimationComponent::removeCurve(string id)
 
 void AnimationComponent::performAnimation(string id,
                                           double duration,
-                                          bool update_velocity)
+                                          bool updateVelocity)
 {
   if (!animating() && _curves.find(id) != _curves.end())
   {
     animating(true);
-    _current_curve = _curves[id];
-    _start_position = entity()->local_position();
-    _start_time = entity()->core()->effectiveElapsedTime();
+    _currentCurve = _curves[id];
+    entity()->localPosition(_startPosition);
+    _startTime = entity()->core()->effectiveElapsedTime();
     _duration = duration;
-    _update_velocity = update_velocity;
+    _updateVelocity = updateVelocity;
     NotificationCenter::notify(DidStartAnimating, *this);
   }
 }
@@ -63,8 +53,8 @@ void AnimationComponent::update(Core & world)
 {
   if (animating())
   {
-    const double dt = _duration / (_current_curve.size() - 1);
-    const double elapsed  = world.effectiveElapsedTime() - _start_time;
+    const double dt = _duration / (_currentCurve.size() - 1);
+    const double elapsed  = world.effectiveElapsedTime() - _startTime;
     if (elapsed < _duration)
     {
       const int i = (int)floor(elapsed / dt);
@@ -73,26 +63,28 @@ void AnimationComponent::update(Core & world)
       const double t3 = t2*t;
       const double two_t3 = 2*t3;
       const double three_t2 = 3*t2;
-      const double cp0 = two_t3 - three_t2 + 1;
-      const double cm0 = t3 - 2*t2 + t;
-      const double cm1 = t3 - t2;
-      const double cp1 = three_t2 - two_t3;
-      const auto s0 = _current_curve[i];
-      const auto s1 = _current_curve[i+1];
-      const Vector2 p = s0.first*cp0 + s0.second*cm0 +
-                        s1.first*cp1 + s1.second*cm1;
+      const float cp0 = two_t3 - three_t2 + 1;
+      const float cm0 = t3 - 2*t2 + t;
+      const float cm1 = t3 - t2;
+      const float cp1 = three_t2 - two_t3;
+      const auto s0 = _currentCurve[i];
+      const auto s1 = _currentCurve[i+1];
+      const vec3 p = s0.first*cp0 + s0.second*cm0 +
+                     s1.first*cp1 + s1.second*cm1;
       
-      entity()->moveTo(_start_position.x + p.x, _start_position.y + p.y);
+      entity()->setPosition(_startPosition.x + p.x,
+                            _startPosition.y + p.y,
+                            _startPosition.z + p.z);
     }
     else
     {
-      auto last_half_spline = _current_curve.back();
-      entity()->moveTo(_start_position.x + last_half_spline.first.x,
-                       _start_position.y + last_half_spline.first.y);
-      if (_update_velocity)
+      auto lastHalfSpline = _currentCurve.back();
+      entity()->setPosition(_startPosition.x + lastHalfSpline.first.x,
+                            _startPosition.y + lastHalfSpline.first.y,
+                            _startPosition.z + lastHalfSpline.first.z);
+      if (_updateVelocity)
       {
-        entity()->changeVelocityTo(last_half_spline.second.x/_duration,
-                                   last_half_spline.second.y/_duration);
+        entity()->pVelocity() = lastHalfSpline.second/(float)_duration;
       }
       animating(false);
       NotificationCenter::notify(DidStopAnimating, *this);
