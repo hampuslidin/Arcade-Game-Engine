@@ -5,7 +5,6 @@
 
 #include "core.hpp"
 #include <fstream>
-#include <glm/gtx/transform.hpp>
 
 // MARK: Helper functions
 
@@ -254,19 +253,23 @@ double Core::effectiveElapsedTime()
   return (!_pause ? elapsed : last_pause_time) - total_pause_duration;
 }
 
-void Core::windowDimensions(int & w, int & h)
+void Core::viewDimensions(int & w, int & h)
 {
-  SDL_GetWindowSize(_window, &w, &h);
+  SDL_GL_GetDrawableSize(_window, &w, &h);
 }
 
 // MARK: Member functions
 
-Core::Core()
-  : root(Entity("root"))
-  , sampleRate(44100)
+Core::Core(int numberOfEntities)
+  : sampleRate(44100)
   , maxVolume(0.05)
   , pScale(1)
+  , _entityCount(0)
+  , _maximumNumberOfEntities(numberOfEntities)
 {
+  _entities.resize(_maximumNumberOfEntities);
+  root().id("root");
+  camera(createEntity("camera"));
   pBackgroundColor().x = 0.0;
   pBackgroundColor().y = 0.0;
   pBackgroundColor().z = 0.0;
@@ -299,12 +302,15 @@ bool Core::init(CoreOptions & options)
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
   
   // create window
+  auto windowOptions = SDL_WINDOW_SHOWN |
+                       SDL_WINDOW_RESIZABLE |
+                       SDL_WINDOW_ALLOW_HIGHDPI;
   _window = SDL_CreateWindow(options.title,
                              SDL_WINDOWPOS_UNDEFINED,
                              SDL_WINDOWPOS_UNDEFINED,
                              options.width,
                              options.height,
-                             SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+                             windowOptions);
   if (_window == nullptr)
   {
     SDL_Log("SDL_CreateWindow: %s\n", SDL_GetError());
@@ -333,14 +339,14 @@ bool Core::init(CoreOptions & options)
   _reset = false;
   _pause = false;
   
-  // initialize root
+  // initialize entities
   root().init(this);
   root().reset();
   
   // initialize audio
   auto fill_stream = [](void * userdata, uint8_t * stream, int length)
   {
-    Core * core          = (Core*)userdata;
+    Core * core         = (Core*)userdata;
     int16_t * stream16b = (int16_t*)stream;
     double maxVolume    = core->maxVolume();
     
@@ -386,24 +392,20 @@ void Core::destroy()
   SDL_Quit();
 }
 
-
 Entity * Core::createEntity(string id, string parentId)
 {
-  if (!root().findChild(id))
+  Entity * entity = nullptr;
+  if (_entityCount < _maximumNumberOfEntities && !root().findChild(id))
   {
     Entity * parent = &root();
-    if (parentId.compare(parent->id()) == 0 ||
-        (parent = root().findChild(parentId)))
+    if (parentId.compare("root") == 0 || (parent = root().findChild(parentId)))
     {
-      _entities.push_back({id});
-      Entity * entity = &_entities.back();
+      entity = &_entities[_entityCount++];
+      entity->id(id);
       parent->addChild(entity);
-      return entity;
     }
-    
   }
-  
-  return nullptr;
+  return entity;
 }
 
 void Core::reset(double after_duration)
@@ -510,7 +512,7 @@ bool Core::update()
   
   // OpenGl set up
   int w, h;
-  windowDimensions(w, h);
+  viewDimensions(w, h);
   glViewport(0, 0, w, h);
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_CULL_FACE);
@@ -574,16 +576,9 @@ bool Core::update()
 // MARK: - Entity
 //
 
-// MARK: Property functions
-
-string Entity::id()
-{
-  return _id;
-}
-
 // MARK: Member functions
 
-Entity::Entity(string id)
+Entity::Entity()
   : core(nullptr)
   , parent(nullptr)
   , pInput(nullptr)
@@ -592,10 +587,8 @@ Entity::Entity(string id)
   , pAudio(nullptr)
   , pGraphics(nullptr)
   , pVelocity(vec3(0.0f))
-  , pOrigin(vec3(0.0f))
-  , _translation(mat4(1.0f))
-  , _rotation(mat4(1.0f))
-  , _id(id)
+  , localPosition(vec3(0.0f))
+  , _orientation(1.0f, 0.0f, 0.0f, 0.0f)
   , _worldTransformNeedsUpdating(true)
 {}
 
@@ -688,80 +681,93 @@ void Entity::removeChild(string id)
   }
 }
 
-void Entity::localPosition(vec3 & result)
+mat4 Entity::localTransform()
 {
-  mat4 localTransform;
-  this->localTransform(localTransform);
-  result = vec3(localTransform * vec4(pOrigin(), 1.0f));
+  return glm::translate(localPosition()) * glm::toMat4(_orientation);
 }
 
-void Entity::localTransform(mat4 & result)
+vec3 Entity::localRight()
 {
-  result = _translation * _rotation;
+  return glm::rotate(_orientation, vec3(1.0f, 0.0f, 0.0f));
 }
 
-void Entity::worldPosition(vec3 &result)
+vec3 Entity::localUp()
 {
-  mat4 worldTransform;
-  this->worldTransform(worldTransform);
-  result = vec3(worldTransform * vec4(pOrigin(), 1.0f));
+  return glm::rotate(_orientation, vec3(0.0f, 1.0f, 0.0f));
 }
 
-void Entity::worldTransform(mat4 & result)
+vec3 Entity::localForward()
+{
+  return glm::rotate(_orientation, vec3(0.0f, 0.0f, -1.0f));
+}
+
+vec3 Entity::worldPosition()
+{
+  if (parent()) return parent()->worldPosition() + localPosition();
+  return localPosition();
+}
+
+mat4 Entity::worldTransform()
 {
   if (_worldTransformNeedsUpdating)
   {
-    localTransform(_worldTransform);
+    _worldTransform = localTransform();
+    vec3 position    = localPosition();
+    quat orientation = _orientation;
+ 
+    vec3 currentPosition;
+    quat currentOrientation;
     Entity * currentEntity = this;
     while ((currentEntity = currentEntity->parent()))
     {
-      // TODO: verify right order
-      _worldTransform = currentEntity->_translation * _worldTransform *
-                        currentEntity->_rotation;
+      currentPosition = currentEntity->localPosition();
+      currentOrientation = currentEntity->_orientation;
+      position = glm::rotate(currentOrientation, position) + currentPosition;
+      orientation = currentEntity->_orientation * orientation;
     }
+    _worldTransform = glm::translate(position) * glm::toMat4(orientation);
     _worldTransformNeedsUpdating = false;
   }
-  result = _worldTransform;
+  return _worldTransform;
 }
 
 void Entity::translate(float dx, float dy, float dz)
 {
-  _translation = glm::translate(_translation, vec3(dx, dy, dz));
+  localPosition().x += dx;
+  localPosition().y += dy;
+  localPosition().z += dz;
   _worldTransformNeedsUpdating = true;
   NotificationCenter::notify(DidUpdateTransform, *this);
 }
 
 void Entity::rotate(float angle, vec3 axis)
 {
-  _rotation = glm::rotate(_rotation, angle, axis);
+  _orientation = glm::angleAxis(angle, axis) * _orientation;
   _worldTransformNeedsUpdating = true;
   NotificationCenter::notify(DidUpdateTransform, *this);
 }
 
 void Entity::setPosition(float x, float y, float z)
 {
-  _translation = mat4(1.0f);
+  localPosition(vec3(0.0f));
   translate(x, y, z);
 }
 void Entity::setPositionX(float x)
 {
-  float y = _translation[3].y;
-  float z = _translation[3].z;
-  setPosition(x, y, z);
+  localPosition(vec3(0.0f));
+  translate(x, 0.0f, 0.0f);
 }
 
 void Entity::setPositionY(float y)
 {
-  float x = _translation[3].x;
-  float z = _translation[3].z;
-  setPosition(x, y, z);
+  localPosition(vec3(0.0f));
+  translate(0.0f, y, 0.0f);
 }
 
 void Entity::setPositionZ(float z)
 {
-  float x = _translation[3].x;
-  float y = _translation[3].y;
-  setPosition(x, y, z);
+  localPosition(vec3(0.0f));
+  translate(0.0f, 0.0f, z);
 }
 
 void Entity::update(uint8_t component_mask)
@@ -888,14 +894,25 @@ void GraphicsComponent::init(Entity * entity)
 void GraphicsComponent::update(Core & core)
 {
   // set up shader
-  mat4 modelMatrix;
-  entity()->worldTransform(modelMatrix);
-  mat4 modelViewProjectionMatrix = core.projectionMatrix() * modelMatrix;
+  const mat4 modelMatrix         = entity()->worldTransform();
+  const mat4 projectionMatrix    = core.projectionMatrix();
+  
+  // TODO: make this nicer, perhaps a dedicated camera entity class
+  Entity * camera = core.camera();
+  const mat3 cameraBase(camera->localRight(),
+                        camera->localUp(),
+                        -camera->localForward());
+  const mat4 cameraRotation = mat4(glm::transpose(cameraBase));
+  const mat4 cameraPosition = glm::translate(-camera->localPosition());
+  const mat4 viewMatrix = cameraPosition * cameraRotation;
+                        
+  mat4 modelViewProjectionMatrix = projectionMatrix * viewMatrix * modelMatrix;
   glUseProgram(_shaderProgram);
   glUniformMatrix4fv(_modelViewProjectionMatrixLocation,
                      1,
                      false,
                      &modelViewProjectionMatrix[0].x);
+  
   // render
   glBindVertexArray(_vertexArrayObject);
   glDrawElements(GL_TRIANGLES,

@@ -9,6 +9,26 @@
 const Event DidPressKey("DidPressKey");
 const Event DidReleaseKey("DidReleaseKey");
 
+class CameraInputComponent
+  : public InputComponent
+{
+  
+public:
+  void update(Core & core)
+  {
+    float distance = 10.0f * core.deltaTime();
+    
+    Core::KeyStatus keys;
+    core.keyStatus(keys);
+    
+    if (keys.left)  entity()->translate(-distance, 0.0f,  0.0f);
+    if (keys.right) entity()->translate( distance, 0.0f,  0.0f);
+    if (keys.up)    entity()->translate(0.0f,      0.0f, -distance);
+    if (keys.down)  entity()->translate(0.0f,      0.0f,  distance);
+  }
+  
+};
+
 class CubeInputComponent
   : public InputComponent
 {
@@ -16,17 +36,17 @@ class CubeInputComponent
 public:
   void update(Core & core)
   {
-    vec3 localRight(1.0f, 0.0f, 0.0f);
-    vec3 localUp(0.0f, 1.0f, 0.0f);
+    vec3 worldRight(1.0f, 0.0f, 0.0f);
+    vec3 worldUp(0.0f, 1.0f, 0.0f);
     float angle = 3.0f * core.deltaTime();
     
     Core::KeyStatus keys;
     core.keyStatus(keys);
     
-    if (keys.up)    entity()->rotate(-angle, localRight);
-    if (keys.down)  entity()->rotate(angle,  localRight);
-    if (keys.left)  entity()->rotate(-angle, localUp);
-    if (keys.right) entity()->rotate(angle,  localUp);
+    if (keys.left)  entity()->rotate(-angle, worldUp);
+    if (keys.right) entity()->rotate(angle,  worldUp);
+    if (keys.up)    entity()->rotate(-angle, worldRight);
+    if (keys.down)  entity()->rotate(angle,  worldRight);
   }
   
 };
@@ -82,16 +102,20 @@ public:
 
 int main(int argc, char *  argv[])
 {
-  Core core;
+  Core core(2);
   CoreOptions options {"Demo", 800, 700};
   core.pBackgroundColor().r = 0.2f;
   core.pBackgroundColor().g = 0.2f;
   core.pBackgroundColor().b = 0.2f;
   
+  // cube
   Entity * cube = core.createEntity("cube");
   cube->translate(0.0f, 0.0f, -2.5f);
   cube->pInput(new CubeInputComponent);
   cube->pGraphics(new CubeGraphicsComponent);
+  
+  // camera
+  core.camera()->pInput(new CameraInputComponent);
   
   if (core.init(options))
   {

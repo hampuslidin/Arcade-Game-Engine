@@ -23,6 +23,8 @@
 
 #include <GL/glew.h>
 #include <glm/glm.hpp>
+#include <glm/gtx/transform.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 using namespace std;
 using namespace glm;
@@ -205,7 +207,7 @@ private:
 class GameObject {
   
 public:
-  virtual string id() = 0;
+  prop<string> id;
   
 };
 
@@ -232,15 +234,14 @@ public:
   prop<AudioComponent*>           pAudio;
   prop<GraphicsComponent*>        pGraphics;
   
-  prop<vec3>                      pVelocity;
-  prop<vec3>                      pOrigin;
-  prop<bool>                      pEnabled;
+  prop_r<Entity, vec3>            localPosition;
   
-  string id();
+  prop<vec3>                      pVelocity;
+  prop<bool>                      pEnabled;
   
   // MARK: Member functions
   
-  Entity(string id);
+  Entity();
   
   /**
    *  Initializes an entity.
@@ -276,11 +277,13 @@ public:
   Entity * findChild(string id);
   void removeChild(string id);
   
-  void localPosition(vec3 & result);
-  void localTransform(mat4 & result);
+  mat4 localTransform();
+  vec3 localRight();
+  vec3 localUp();
+  vec3 localForward();
   
-  void worldPosition(vec3 & result);
-  void worldTransform(mat4 & result);
+  vec3 worldPosition();
+  mat4 worldTransform();
   
   void translate(float dx, float dy, float dz);
   void rotate(float angle, vec3 axis);
@@ -293,10 +296,7 @@ public:
   void update(uint8_t component_mask);
   
 private:
-  string _id;
-  
-  mat4 _translation;
-  mat4 _rotation;
+  quat _orientation;
   mat4 _worldTransform;
   bool _worldTransformNeedsUpdating;
   
@@ -520,24 +520,25 @@ public:
     bool up, down, left, right;
   };
   
-  prop_r<Core, Entity> root;
+  prop_r<Core, Entity>  root;
+  prop_r<Core, Entity*> camera;
   
-  prop_r<Core, double> deltaTime;
+  prop_r<Core, double>  deltaTime;
   
-  prop_r<Core, int>    sampleRate;
-  prop_r<Core, double> maxVolume;
+  prop_r<Core, int>     sampleRate;
+  prop_r<Core, double>  maxVolume;
   
-  prop_r<Core, mat4>   projectionMatrix;
-  
-  prop<int>            pScale;
-  prop<vec3>           pBackgroundColor;
+  prop_r<Core, mat4>    projectionMatrix;
+
+  prop<int>             pScale;
+  prop<vec3>            pBackgroundColor;
   
   void keyStatus(KeyStatus & keys);
   double elapsedTime();
   double effectiveElapsedTime();
-  void windowDimensions(int & w, int & h);
+  void viewDimensions(int & w, int & h);
   
-  Core();
+  Core(int numberOfEntities = 10000);
   bool init(CoreOptions & options);
   void destroy();
   
@@ -593,6 +594,8 @@ private:
   SDL_Window * _window;
   SDL_GLContext _context;
   
+  int _entityCount;
+  int _maximumNumberOfEntities;
   vector<Entity> _entities;
   
   KeyStatus _key_status;

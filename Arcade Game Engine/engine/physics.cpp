@@ -21,9 +21,8 @@ void _resolveCollisions(Entity & collider,
   {
     Rectangle colliderCB = collider.pPhysics()->collisionBounds();
     Rectangle obsticleCB = obsticle.pPhysics()->collisionBounds();
-    vec3 colPos, obsPos;
-    collider.worldPosition(colPos);
-    obsticle.worldPosition(obsPos);
+    vec3 colPos = collider.worldPosition();
+    vec3 obsPos = obsticle.worldPosition();
     
     SDL_Rect colliderBeforeRect
     {
@@ -375,10 +374,9 @@ void PhysicsComponent::update(Core & core)
   }
   
   // calculate if the entity has gone out of or into view
-  vec3 worldPosition;
+  vec3 worldPosition = entity()->worldPosition();
   int windowWidth, windowHeight;
-  entity()->worldPosition(worldPosition);
-  core.windowDimensions(windowWidth, windowHeight);
+  core.viewDimensions(windowWidth, windowHeight);
   Dimension2 dimensions = entity()->dimensions();
   if (!_outOfView &&
       (worldPosition.x + dimensions.x < 0 ||

@@ -41,7 +41,7 @@ void AnimationComponent::performAnimation(string id,
   {
     animating(true);
     _currentCurve = _curves[id];
-    entity()->localPosition(_startPosition);
+    _startPosition = entity()->localPosition();
     _startTime = entity()->core()->effectiveElapsedTime();
     _duration = duration;
     _updateVelocity = updateVelocity;
