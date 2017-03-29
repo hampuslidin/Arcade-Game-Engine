@@ -39,10 +39,10 @@ double Synthesizer::_Operator::calculateSample(double time, double duration)
 {
   static const double two_pi = 2*M_PI;
   double phase;
-  if (pitch_glide() && *pitch_glide() != frequency)
+  if (!pitch_glide.isNothing() && pitch_glide != frequency)
   {
     double f0 = frequency;
-    double f1 = *pitch_glide();
+    double f1 = pitch_glide;
     double k;
     switch (pitch_glide_type)
     {
@@ -59,7 +59,7 @@ double Synthesizer::_Operator::calculateSample(double time, double duration)
       case INV_LOGARITHMIC:
         // inverse logarithmic chirp
         time = duration-time;
-        f0 = *pitch_glide();
+        f0 = pitch_glide;
         f1 = frequency;
       case LOGARITHMIC:
         // logarithmic chirp

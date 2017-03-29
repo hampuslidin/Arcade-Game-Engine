@@ -17,14 +17,20 @@ public:
   void update(Core & core)
   {
     float distance = 10.0f * core.deltaTime();
+    float yaw      = -0.01f * core.mouseMovement().x;
+    float pitch    = -0.01f * core.mouseMovement().y;
     
-    Core::KeyStatus keys;
-    core.keyStatus(keys);
+    if (yaw == 0 && pitch == 0)
+    {
+      printf("Zero rotation, %fs\n", core.elapsedTime());
+    }
     
-    if (keys.left)  entity()->translate(-distance, 0.0f,  0.0f);
-    if (keys.right) entity()->translate( distance, 0.0f,  0.0f);
-    if (keys.up)    entity()->translate(0.0f,      0.0f, -distance);
-    if (keys.down)  entity()->translate(0.0f,      0.0f,  distance);
+    entity()->rotate(yaw,   entity()->localUp());
+    entity()->rotate(pitch, entity()->localRight());
+    if (core.checkKey("up"))    entity()->translate(0.0f,      0.0f, -distance);
+    if (core.checkKey("down"))  entity()->translate(0.0f,      0.0f,  distance);
+    if (core.checkKey("left"))  entity()->translate(-distance, 0.0f,  0.0f);
+    if (core.checkKey("right")) entity()->translate( distance, 0.0f,  0.0f);
   }
   
 };
@@ -40,13 +46,10 @@ public:
     vec3 worldUp(0.0f, 1.0f, 0.0f);
     float angle = 3.0f * core.deltaTime();
     
-    Core::KeyStatus keys;
-    core.keyStatus(keys);
-    
-    if (keys.left)  entity()->rotate(-angle, worldUp);
-    if (keys.right) entity()->rotate(angle,  worldUp);
-    if (keys.up)    entity()->rotate(-angle, worldRight);
-    if (keys.down)  entity()->rotate(angle,  worldRight);
+    if (core.checkKey("up"))    entity()->rotate(-angle, worldRight);
+    if (core.checkKey("down"))  entity()->rotate(angle,  worldRight);
+    if (core.checkKey("left"))  entity()->rotate(-angle, worldUp);
+    if (core.checkKey("right")) entity()->rotate(angle,  worldUp);
   }
   
 };
@@ -107,6 +110,10 @@ int main(int argc, char *  argv[])
   core.pBackgroundColor().r = 0.2f;
   core.pBackgroundColor().g = 0.2f;
   core.pBackgroundColor().b = 0.2f;
+  core.addControl("up",    SDLK_w);
+  core.addControl("down",  SDLK_s);
+  core.addControl("left",  SDLK_a);
+  core.addControl("right", SDLK_d);
   
   // cube
   Entity * cube = core.createEntity("cube");

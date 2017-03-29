@@ -512,58 +512,29 @@ class Core
 {
   
 public:
-  /**
-   *  Defines the status of each input type.
-   */
-  struct KeyStatus
-  {
-    bool up, down, left, right;
-  };
+  prop_r<Core, Entity>   root;
+  prop_r<Core, Entity*>  camera;
   
-  prop_r<Core, Entity>  root;
-  prop_r<Core, Entity*> camera;
+  prop_r<Core, double>   deltaTime;
+  prop_r<Core, ivec2>    mousePosition;
+  prop_r<Core, ivec2>    mouseMovement;
   
-  prop_r<Core, double>  deltaTime;
+  prop_r<Core, int>      sampleRate;
+  prop_r<Core, double>   maxVolume;
   
-  prop_r<Core, int>     sampleRate;
-  prop_r<Core, double>  maxVolume;
-  
-  prop_r<Core, mat4>    projectionMatrix;
+  prop_r<Core, mat4>     projectionMatrix;
 
-  prop<int>             pScale;
-  prop<vec3>            pBackgroundColor;
+  prop<int>              pScale;
+  prop<vec3>             pBackgroundColor;
   
-  void keyStatus(KeyStatus & keys);
   double elapsedTime();
   double effectiveElapsedTime();
-  void viewDimensions(int & w, int & h);
+  ivec2 viewDimensions();
   
   Core(int numberOfEntities = 10000);
   bool init(CoreOptions & options);
-  void destroy();
-  
-  /**
-   *  Creates and adds an Entity to the game world.
-   *
-   *  To attach an Entity to the game world, a unique *id* must be provided for
-   *  the Entity to be created. By default, its parent is the **root** Entity.
-   *  An optional *parentId* can be provided if the new Entity should belong to
-   *  another, already existing Entity in the game world.
-   *
-   *  @param  id        The identifier for the Entity to be created.
-   *  @param  parentId  The identifier for the parent Entity.
-   *  @return A pointer to the newly created Entity. If the *id* is already
-   *          associated with an Entity or if there is no Entity associated with
-   *          the *parentId*, then *nullptr* is returned.
-   */
-  Entity * createEntity(string id, string parentId = "root");
-  
-  void reset(double after_duration = 0);
-  void pause();
-  void resume();
-  void createEffectiveTimer(double duration, function<void()> block);
-  void createAccumulativeTimer(double duration, function<void()> block);
   bool update();
+  void destroy();
   
   /**
    *  Collision detection for AABB.
@@ -583,12 +554,40 @@ public:
                          bool collision_response,
                          vector<Entity*> & result);
   
+  /**
+   *  Creates and adds an Entity to the game world.
+   *
+   *  To attach an Entity to the game world, a unique *id* must be provided for
+   *  the Entity to be created. By default, its parent is the **root** Entity.
+   *  An optional *parentId* can be provided if the new Entity should belong to
+   *  another, already existing Entity in the game world.
+   *
+   *  @param  id        The identifier for the Entity to be created.
+   *  @param  parentId  The identifier for the parent Entity.
+   *  @return A pointer to the newly created Entity. If the *id* is already
+   *          associated with an Entity or if there is no Entity associated with
+   *          the *parentId*, then *nullptr* is returned.
+   */
+  Entity * createEntity(string id, string parentId = "root");
+  
+  void createEffectiveTimer(double duration, function<void()> block);
+  void createAccumulativeTimer(double duration, function<void()> block);
+  void addControl(string name, SDL_Keycode key);
+  void removeControl(string name);
+  maybe<bool> checkKey(string name);
+  void reset(double after_duration = 0);
+  void pause();
+  void resume();
+  
 private:
+  typedef map<string, pair<SDL_Keycode, bool>> _KeyControls;
+  
   struct _Timer
   {
     double endTime;
     function<void(void)> block;
   };
+  
   enum _TimerType { _EFFECTIVE, _ACCUMULATIVE };
   
   SDL_Window * _window;
@@ -598,7 +597,7 @@ private:
   int _maximumNumberOfEntities;
   vector<Entity> _entities;
   
-  KeyStatus _key_status;
+  _KeyControls _keyControls;
   vector<pair<_Timer, _TimerType>> _timers;
   
   double _pauseDuration;

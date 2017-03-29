@@ -60,6 +60,14 @@ private:
 /**
  *  A wrapper class for when a certain values are optional.
  */
+class unwrap_nothing : public exception
+{
+  const char * what() const throw()
+  {
+    return "Unwrapping nothing";
+  }
+};
+
 template <typename Value>
 class maybe
 {
@@ -67,7 +75,8 @@ class maybe
 public:
   static maybe<Value> just(Value & v) { return maybe(v); }
   static maybe<Value> nothing()       { return maybe();  }
-  const Value * operator()() { return _just ? &_v : nullptr; }
+  bool isNothing() { return !_just; }
+  operator Value() { if (_just) return _v; throw unwrap_nothing(); }
   
 private:
   bool _just;
@@ -75,6 +84,7 @@ private:
   
   maybe()        : _just(false)       {}
   maybe(Value v) : _v(v), _just(true) {}
+  
 };
 
 

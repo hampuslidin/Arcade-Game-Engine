@@ -375,14 +375,13 @@ void PhysicsComponent::update(Core & core)
   
   // calculate if the entity has gone out of or into view
   vec3 worldPosition = entity()->worldPosition();
-  int windowWidth, windowHeight;
-  core.viewDimensions(windowWidth, windowHeight);
+  auto windowDimensions = core.viewDimensions();
   Dimension2 dimensions = entity()->dimensions();
   if (!_outOfView &&
       (worldPosition.x + dimensions.x < 0 ||
        worldPosition.y + dimensions.y < 0 ||
-       worldPosition.x >= windowWidth ||
-       worldPosition.y >= windowHeight))
+       worldPosition.x >= windowDimensions.x ||
+       worldPosition.y >= windowDimensions.y))
   {
     _outOfView = true;
     NotificationCenter::notify(DidMoveOutOfView, *this);
@@ -390,8 +389,8 @@ void PhysicsComponent::update(Core & core)
   else if (_outOfView &&
            worldPosition.x + dimensions.x >= 0 &&
            worldPosition.y + dimensions.y >= 0 &&
-           worldPosition.x < windowWidth &&
-           worldPosition.y < windowHeight)
+           worldPosition.x < windowDimensions.x &&
+           worldPosition.y < windowDimensions.y)
   {
     _outOfView = false;
     NotificationCenter::notify(DidMoveIntoView, *this);

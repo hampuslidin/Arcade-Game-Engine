@@ -5,36 +5,8 @@
 
 #include "core.hpp"
 #include <fstream>
+#include <set>
 
-// MARK: Helper functions
-
-//void _buildEntityPriorityQueue(Entity & root, vector<Entity*> & result)
-//{
-//  int root_order = root.order();
-//  long low = 0;
-//  long high = (long)(result.size()-1);
-//  while (low <= high)
-//  {
-//    long middle = (high+low+1)/2;
-//    Entity * middle_entity = result.at(middle);
-//    int order = middle_entity->order();
-//    
-//    if (root_order < order)
-//    {
-//      high = middle - 1;
-//    }
-//    else if (root_order >= order)
-//    {
-//      low = middle + 1;
-//    }
-//  }
-//  result.insert(result.begin()+low, &root);
-//  
-//  for (auto child : root.children())
-//  {
-//    if (child) _buildEntityPriorityQueue(*child, result);
-//  }
-//}
 
 //
 // MARK: - Sprite
@@ -73,6 +45,7 @@ void Sprite::draw(int x, int y, int w, int h, int scale)
   SDL_Rect rect {x*scale, y*scale, w*scale, h*scale};
   SDL_RenderCopy(_renderer, _texture, nullptr, &rect);
 }
+
 
 //
 // MARK: - SpriteCollection
@@ -189,14 +162,6 @@ NotificationCenter & NotificationCenter::_instance()
 
 // MARK: Member property functions
 
-void Core::keyStatus(Core::KeyStatus & key_status)
-{
-  key_status.up    = _key_status.up;
-  key_status.down  = _key_status.down;
-  key_status.left  = _key_status.left;
-  key_status.right = _key_status.right;
-}
-
 double Core::elapsedTime()
 {
   return SDL_GetTicks() / 1000.f;
@@ -253,19 +218,25 @@ double Core::effectiveElapsedTime()
   return (!_pause ? elapsed : last_pause_time) - total_pause_duration;
 }
 
-void Core::viewDimensions(int & w, int & h)
+ivec2 Core::viewDimensions()
 {
-  SDL_GL_GetDrawableSize(_window, &w, &h);
+  ivec2 v;
+  SDL_GL_GetDrawableSize(_window, &v.x, &v.y);
+  return v;
 }
 
 // MARK: Member functions
 
 Core::Core(int numberOfEntities)
-  : sampleRate(44100)
+  : mousePosition(ivec2(0, 0))
+  , mouseMovement(ivec2(0, 0))
+  , sampleRate(44100)
   , maxVolume(0.05)
   , pScale(1)
   , _entityCount(0)
   , _maximumNumberOfEntities(numberOfEntities)
+  , _reset(false)
+  , _pause(false)
 {
   _entities.resize(_maximumNumberOfEntities);
   root().id("root");
@@ -304,6 +275,7 @@ bool Core::init(CoreOptions & options)
   // create window
   auto windowOptions = SDL_WINDOW_SHOWN |
                        SDL_WINDOW_RESIZABLE |
+                       SDL_WINDOW_FULLSCREEN_DESKTOP |
                        SDL_WINDOW_ALLOW_HIGHDPI;
   _window = SDL_CreateWindow(options.title,
                              SDL_WINDOWPOS_UNDEFINED,
@@ -316,6 +288,7 @@ bool Core::init(CoreOptions & options)
     SDL_Log("SDL_CreateWindow: %s\n", SDL_GetError());
     return false;
   }
+  SDL_SetRelativeMouseMode(SDL_TRUE);
   
   // create context for window
   _context = SDL_GL_CreateContext(_window);
@@ -332,12 +305,6 @@ bool Core::init(CoreOptions & options)
   
   // 1 for v-sync
   SDL_GL_SetSwapInterval(1);
-  
-  // initialize member properties
-  _key_status.up   = _key_status.down  = false;
-  _key_status.left = _key_status.right = false;
-  _reset = false;
-  _pause = false;
   
   // initialize entities
   root().init(this);
@@ -383,143 +350,70 @@ bool Core::init(CoreOptions & options)
   return true;
 }
 
-void Core::destroy()
-{
-  root().destroy();
-  
-  SDL_CloseAudio();
-  SDL_DestroyWindow(_window);
-  SDL_Quit();
-}
-
-Entity * Core::createEntity(string id, string parentId)
-{
-  Entity * entity = nullptr;
-  if (_entityCount < _maximumNumberOfEntities && !root().findChild(id))
-  {
-    Entity * parent = &root();
-    if (parentId.compare("root") == 0 || (parent = root().findChild(parentId)))
-    {
-      entity = &_entities[_entityCount++];
-      entity->id(id);
-      parent->addChild(entity);
-    }
-  }
-  return entity;
-}
-
-void Core::reset(double after_duration)
-{
-  createAccumulativeTimer(after_duration, [this] { _reset = true; });
-}
-
-void Core::pause()
-{
-  _pause = true;
-  effectiveElapsedTime();
-}
-
-void Core::resume()
-{
-  _pause = false;
-  effectiveElapsedTime();
-}
-
-void Core::createEffectiveTimer(double duration, function<void()> block)
-{
-  _timers.push_back
-  ({
-    {effectiveElapsedTime() + duration, block},
-    _EFFECTIVE
-  });
-}
-
-void Core::createAccumulativeTimer(double duration, function<void()> block)
-{
-  _timers.push_back
-  ({
-    {elapsedTime() + duration, block},
-    _ACCUMULATIVE
-  });
-}
-
 bool Core::update()
 {
-  static double prev_time;
+  bool should_continue = true;
   
   // record time
+  static double prev_time;
   double start_time = elapsedTime();
   deltaTime(start_time - prev_time);
   prev_time = start_time;
   
   // check user input
+  mouseMovement().x = 0;
+  mouseMovement().y = 0;
   SDL_Event event;
-  bool should_continue = true;
+  set<SDL_Keycode> keysToPress, keysToRelease;
   while (SDL_PollEvent(&event))
   {
-    if (event.type == SDL_QUIT)
+    switch (event.type)
     {
-      should_continue = false;
-      break;
-    }
-    if (event.type == SDL_KEYDOWN)
-    {
-      switch (event.key.keysym.sym)
-      {
-        case SDLK_UP:
-          _key_status.up = true;
-          break;
-        case SDLK_DOWN:
-          _key_status.down = true;
-          break;
-        case SDLK_LEFT:
-          _key_status.left = true;
-          break;
-        case SDLK_RIGHT:
-          _key_status.right = true;
-          break;
-      }
-    }
-    if (event.type == SDL_KEYUP)
-    {
-      switch (event.key.keysym.sym)
-      {
-        case SDLK_UP:
-          _key_status.up = false;
-          break;
-        case SDLK_DOWN:
-          _key_status.down = false;
-          break;
-        case SDLK_LEFT:
-          _key_status.left = false;
-          break;
-        case SDLK_RIGHT:
-          _key_status.right = false;
-          break;
-#ifdef GAME_ENGINE_DEBUG
-        case SDLK_p:
-          if (!_pause) pause();
-          else         resume();
-          break;
-#endif
-        case SDLK_ESCAPE:
-        case SDLK_q:
-          should_continue = false;
-          break;
-      }
+      case SDL_QUIT:
+        should_continue = false;
+        break;
+      case SDL_KEYDOWN:
+        keysToPress.insert(event.key.keysym.sym);
+        break;
+      case SDL_KEYUP:
+        keysToRelease.insert(event.key.keysym.sym);
+        break;
+      case SDL_MOUSEMOTION:
+        mousePosition().x = event.motion.x;
+        mousePosition().y = event.motion.y;
+        mouseMovement().x = event.motion.xrel;
+        mouseMovement().y = event.motion.yrel;
+        break;
     }
   }
   
-  // OpenGl set up
-  int w, h;
-  viewDimensions(w, h);
-  glViewport(0, 0, w, h);
+  // update controls
+  for (auto key : keysToPress)
+  {
+    for (auto & entry : _keyControls)
+    {
+      auto & control = entry.second;
+      if (control.first == key) control.second = true;
+    }
+  }
+  for (auto key : keysToRelease)
+  {
+    for (auto & entry : _keyControls)
+    {
+      auto & control = entry.second;
+      if (control.first == key) control.second = false;
+    }
+  }
+  
+  // set up OpenGl
+  auto d = viewDimensions();
+  glViewport(0, 0, d.x, d.y);
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_CULL_FACE);
   
   // update projection matrix
   projectionMatrix(perspective(radians(45.0f),
-                               (float)w / (float)h,
+                               float(d.x) / float(d.y),
                                0.01f,
                                300.0f));
   
@@ -558,8 +452,8 @@ bool Core::update()
   {
     auto pair = _timers[i];
     const double current_time = pair.second == _EFFECTIVE
-      ? effectiveElapsedTime()
-      : elapsedTime();
+    ? effectiveElapsedTime()
+    : elapsedTime();
     if (current_time >= pair.first.endTime)
     {
       pair.first.block();
@@ -567,8 +461,88 @@ bool Core::update()
     }
     else i++;
   }
-
+  
   return should_continue;
+}
+
+void Core::destroy()
+{
+  root().destroy();
+  
+  SDL_CloseAudio();
+  SDL_DestroyWindow(_window);
+  SDL_Quit();
+}
+
+Entity * Core::createEntity(string id, string parentId)
+{
+  Entity * entity = nullptr;
+  if (_entityCount < _maximumNumberOfEntities && !root().findChild(id))
+  {
+    Entity * parent = &root();
+    if (parentId.compare("root") == 0 || (parent = root().findChild(parentId)))
+    {
+      entity = &_entities[_entityCount++];
+      entity->id(id);
+      parent->addChild(entity);
+    }
+  }
+  return entity;
+}
+
+void Core::createEffectiveTimer(double duration, function<void()> block)
+{
+  _timers.push_back
+  ({
+    {effectiveElapsedTime() + duration, block},
+    _EFFECTIVE
+  });
+}
+
+void Core::createAccumulativeTimer(double duration, function<void()> block)
+{
+  _timers.push_back
+  ({
+    {elapsedTime() + duration, block},
+    _ACCUMULATIVE
+  });
+}
+
+void Core::addControl(string name, SDL_Keycode key)
+{
+  _keyControls[name] = {key, false};
+}
+
+void Core::removeControl(string name)
+{
+  _keyControls.erase(name);
+}
+
+maybe<bool> Core::checkKey(string name)
+{
+  if (_keyControls.find(name) != _keyControls.end())
+  {
+    return maybe<bool>::just(_keyControls[name].second);
+  }
+  return maybe<bool>::nothing();
+  
+}
+
+void Core::reset(double after_duration)
+{
+  createAccumulativeTimer(after_duration, [this] { _reset = true; });
+}
+
+void Core::pause()
+{
+  _pause = true;
+  effectiveElapsedTime();
+}
+
+void Core::resume()
+{
+  _pause = false;
+  effectiveElapsedTime();
 }
 
 
@@ -894,8 +868,8 @@ void GraphicsComponent::init(Entity * entity)
 void GraphicsComponent::update(Core & core)
 {
   // set up shader
-  const mat4 modelMatrix         = entity()->worldTransform();
-  const mat4 projectionMatrix    = core.projectionMatrix();
+  const mat4 modelMatrix      = entity()->worldTransform();
+  const mat4 projectionMatrix = core.projectionMatrix();
   
   // TODO: make this nicer, perhaps a dedicated camera entity class
   Entity * camera = core.camera();
@@ -904,7 +878,7 @@ void GraphicsComponent::update(Core & core)
                         -camera->localForward());
   const mat4 cameraRotation = mat4(glm::transpose(cameraBase));
   const mat4 cameraPosition = glm::translate(-camera->localPosition());
-  const mat4 viewMatrix = cameraPosition * cameraRotation;
+  const mat4 viewMatrix = cameraRotation * cameraPosition;
                         
   mat4 modelViewProjectionMatrix = projectionMatrix * viewMatrix * modelMatrix;
   glUseProgram(_shaderProgram);
