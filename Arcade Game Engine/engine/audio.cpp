@@ -334,7 +334,7 @@ bool Synthesizer::generate(int16_t * stream,
 
 string AudioComponent::trait()
 {
-  return "audio";
+  return "Audio";
 }
 
 void AudioComponent::init(Entity * entity)

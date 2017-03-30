@@ -40,9 +40,10 @@ class Entity;
 class Component;
 class InputComponent;
 class AnimationComponent;
-class PhysicsComponent;
+class ColliderComponent;
+class RigidBodyComponent;
 class AudioComponent;
-class GraphicsComponent;
+class MeshComponent;
 
 // MARK: Events
 
@@ -230,9 +231,10 @@ public:
   
   prop<InputComponent*>           pInput;
   prop<AnimationComponent*>       pAnimation;
-  prop<PhysicsComponent*>         pPhysics;
+  prop<ColliderComponent*>        pCollider;
+  prop<RigidBodyComponent*>       pRigidBody;
   prop<AudioComponent*>           pAudio;
-  prop<GraphicsComponent*>        pGraphics;
+  prop<MeshComponent*>            pMesh;
   
   prop_r<Entity, vec3>            localPosition;
   prop_r<Entity, quat>            localOrientation;
@@ -383,32 +385,59 @@ private:
 
 
 /**
- *  PhysicsComponent is responsible for updating the position of an Entity
+ *  ColliderComponent is responsible for setting the bounds for collision 
+ *  detection between two colliders.
+ */
+class ColliderComponent
+  : public Component
+{
+  
+public:
+  void collide(ColliderComponent & obsticle);
+  virtual void update(Core & core) {};
+  
+private:
+  bool _didCollide;
+  
+};
+
+
+/**
+ *  AABBColliderComponent does collision detection for axis-aligned bounding 
+ *  boxes.
+ */
+class AABBColliderComponent
+  : public ColliderComponent
+{
+  
+public:
+  prop<vec3> pMin;
+  prop<vec3> pMax;
+  
+private:
+  string trait();
+  
+};
+
+
+/**
+ *  RigidBodyComponent is responsible for updating the position of an Entity
  *  object, w.r.t. the laws of physics.
  */
-class PhysicsComponent
+class RigidBodyComponent
   : public Component
 {
 
 public:
-  static constexpr int unitsPerMeter = 1;
-  prop<Rectangle>      collisionBounds;
-  prop<vec3>           gravity;
-  prop<bool>           dynamic;
-  prop<bool>           collisionDetection;
-  prop<bool>           collisionResponse;
+  prop<vec3> pGravity;
+  prop<bool> pIsKinematic;
   
-  PhysicsComponent();
+  RigidBodyComponent();
   virtual void init(Entity * entity);
   virtual void update(Core & core);
   
-protected:
-  prop_r<PhysicsComponent, vector<Entity*>> collidedEntities;
-  
 private:
   bool _shouldSimulate;
-  bool _outOfView;
-  bool _didCollide;
   
   string trait();
 };
@@ -452,19 +481,19 @@ private:
 };
 
 /**
- *  GraphicsComponent is responsible for drawing an Entity to a SDL rendering
+ *  MeshComponent is responsible for drawing an Entity to a SDL rendering
  *  context.
  */
-class GraphicsComponent
+class MeshComponent
   : public Component
 {
   
 public:
-  prop_r<GraphicsComponent, Rectangle>    bounds;
+  prop_r<MeshComponent, Rectangle>    bounds;
   
-  prop_r<GraphicsComponent, vector<vec3>> vertexPositions;
-  prop_r<GraphicsComponent, vector<vec3>> vertexColors;
-  prop_r<GraphicsComponent, vector<int>>  vertexIndices;
+  prop_r<MeshComponent, vector<vec3>> vertexPositions;
+  prop_r<MeshComponent, vector<vec3>> vertexColors;
+  prop_r<MeshComponent, vector<int>>  vertexIndices;
   
   virtual void init(Entity * entity);
   virtual void update(Core & core);
@@ -533,6 +562,8 @@ public:
   prop<int>              pScale;
   prop<vec3>             pBackgroundColor;
   
+  static constexpr float unitsPerMeter = 1;
+  
   double elapsedTime();
   double effectiveElapsedTime();
   ivec2 viewDimensions();
@@ -541,24 +572,13 @@ public:
   bool init(CoreOptions & options);
   bool update();
   void destroy();
+
+  void resolveCollisions(Entity & collider);
   
-  /**
-   *  Collision detection for AABB.
-   *
-   *  Note: obsticles are assumed static in the calculations.
-   *
-   *  @param  collider            The dynamic entity to detect collision for.
-   *  @param  travel_distance     The distance the entity will travel until the
-   *                              next frame.
-   *  @param  collision_response  Specifies whether the collider should respond
-   *                              to the collision or not.
-   *  @param  result              The entities that the collider has collided
-   *                              with will be stored here.
-   */
-  void resolveCollisions(Entity & collider,
-                         vec3 & new_position,
-                         bool collision_response,
-                         vector<Entity*> & result);
+  static bool AABBCollision(vec3 colliderMin,
+                            vec3 colliderMax,
+                            vec3 obsticleMin,
+                            vec3 obsticleMax);
   
   /**
    *  Creates and adds an Entity to the game world.

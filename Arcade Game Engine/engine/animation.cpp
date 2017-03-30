@@ -13,7 +13,7 @@
 
 // MARK: Property functions
 
-string AnimationComponent::trait() { return "animation"; }
+string AnimationComponent::trait() { return "Animation"; }
 
 // MARK: Member functions
 

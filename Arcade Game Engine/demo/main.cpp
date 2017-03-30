@@ -54,13 +54,26 @@ public:
   
 };
 
-class CubeGraphicsComponent
-  : public GraphicsComponent
+class CubeRigidBodyComponent
+  : public RigidBodyComponent
+{
+
+public:
+  CubeRigidBodyComponent()
+    : RigidBodyComponent()
+  {
+    pIsKinematic(true);
+  }
+  
+};
+
+class CubeMeshComponent
+  : public MeshComponent
 {
   
 public:
-  CubeGraphicsComponent()
-    : GraphicsComponent()
+  CubeMeshComponent()
+    : MeshComponent()
   {
     vector<vec3> positions {
       {-0.5f, -0.5f, -0.5f},
@@ -117,9 +130,10 @@ int main(int argc, char *  argv[])
   
   // cube
   Entity * cube = core.createEntity("cube");
-  cube->translate(0.0f, 0.0f, -2.5f);
+  cube->translate(0.0f, 50.0f, -10.0f);
   cube->pInput(new CubeInputComponent);
-  cube->pGraphics(new CubeGraphicsComponent);
+  cube->pRigidBody(new CubeRigidBodyComponent);
+  cube->pMesh(new CubeMeshComponent);
   
   // camera
   core.camera()->pInput(new CameraInputComponent);

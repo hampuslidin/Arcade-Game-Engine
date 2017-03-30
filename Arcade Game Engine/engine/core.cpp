@@ -425,8 +425,8 @@ bool Core::update()
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   
   // update entities
-  uint8_t mask = !_pause ? 0b11111 : 0b00001;
-  for (uint8_t i = 0b10000; i > 0; i = i >>= 1)
+  uint8_t mask = !_pause ? 0b111111 : 0b000001;
+  for (uint8_t i = 0b100000; i > 0; i = i >>= 1)
   {
     for (auto entity : _entities)
     {
@@ -557,9 +557,9 @@ Entity::Entity()
   , parent(nullptr)
   , pInput(nullptr)
   , pAnimation(nullptr)
-  , pPhysics(nullptr)
+  , pRigidBody(nullptr)
   , pAudio(nullptr)
-  , pGraphics(nullptr)
+  , pMesh(nullptr)
   , pVelocity(vec3(0.0f))
   , localPosition(vec3(0.0f))
   , localOrientation(quat(1.0f, 0.0f, 0.0f, 0.0f))
@@ -573,9 +573,9 @@ void Entity::init(Core * core)
   
   if (pInput())     pInput()->init(this);
   if (pAnimation()) pAnimation()->init(this);
-  if (pPhysics())   pPhysics()->init(this);
+  if (pRigidBody()) pRigidBody()->init(this);
   if (pAudio())     pAudio()->init(this);
-  if (pGraphics())  pGraphics()->init(this);
+  if (pMesh())      pMesh()->init(this);
   
   if (parent() != nullptr)
   {
@@ -596,9 +596,9 @@ void Entity::reset()
   
   if (pInput())     pInput()->reset();
   if (pAnimation()) pAnimation()->reset();
-  if (pPhysics())   pPhysics()->reset();
+  if (pRigidBody()) pRigidBody()->reset();
   if (pAudio())     pAudio()->reset();
-  if (pGraphics())  pGraphics()->reset();
+  if (pMesh())      pMesh()->reset();
   
   for (auto child : children()) child->reset();
 }
@@ -613,14 +613,14 @@ void Entity::destroy()
   
   if (pInput())     delete pInput();
   if (pAnimation()) delete pAnimation();
-  if (pPhysics())   delete pPhysics();
+  if (pRigidBody()) delete pRigidBody();
   if (pAudio())     delete pAudio();
-  if (pGraphics())  delete pGraphics();
+  if (pMesh())      delete pMesh();
 }
 
 Dimension2 Entity::dimensions()
 {
-  return pGraphics() ? pGraphics()->bounds().dim : Dimension2 {};
+  return pMesh() ? pMesh()->bounds().dim : Dimension2 {};
 }
 
 void Entity::addChild(Entity * child)
@@ -743,11 +743,30 @@ void Entity::update(uint8_t component_mask)
 {
   if (pEnabled())
   {
-    if (component_mask & 0b10000 && pInput())     pInput()->update(*core());
-    if (component_mask & 0b01000 && pAnimation()) pAnimation()->update(*core());
-    if (component_mask & 0b00100 && pPhysics())   pPhysics()->update(*core());
-    if (component_mask & 0b00010 && pAudio())     pAudio()->update(*core());
-    if (component_mask & 0b00001 && pGraphics())  pGraphics()->update(*core());
+    if (component_mask & 0b100000 && pInput())
+    {
+      pInput()->update(*core());
+    }
+    if (component_mask & 0b010000 && pAnimation())
+    {
+      pAnimation()->update(*core());
+    }
+    if (component_mask & 0b001000 && pCollider())
+    {
+      pCollider()->update(*core());
+    }
+    if (component_mask & 0b000100 && pRigidBody())
+    {
+      pRigidBody()->update(*core());
+    }
+    if (component_mask & 0b000010 && pAudio())
+    {
+      pAudio()->update(*core());
+    }
+    if (component_mask & 0b000001 && pMesh())
+    {
+      pMesh()->update(*core());
+    }
   }
 }
 
@@ -768,8 +787,8 @@ void Entity::_updateTransform()
 
 string Component::id()
 {
-  string id = trait() + "_component";
-  if (entity()) id = entity()->id() + "_" + id;
+  string id = trait() + "Component";
+  if (entity()) id = entity()->id() + id;
   return id;
 }
 
@@ -786,20 +805,20 @@ void Component::init(Entity * entity)
 
 // MARK: Property functions
 
-string InputComponent::trait() { return "input"; }
+string InputComponent::trait() { return "Input"; }
 
 
 //
-// MARK: - GraphicsComponent
+// MARK: - MeshComponent
 //
 
 // MARK: Property functions
 
-string GraphicsComponent::trait() { return "graphics"; }
+string MeshComponent::trait() { return "Mesh"; }
 
 // MARK: Member functions
 
-void GraphicsComponent::init(Entity * entity)
+void MeshComponent::init(Entity * entity)
 {
   Component::init(entity);
   
@@ -868,7 +887,7 @@ void GraphicsComponent::init(Entity * entity)
     glGetUniformLocation(_shaderProgram, "modelViewProjectionMatrix");
 }
 
-void GraphicsComponent::update(Core & core)
+void MeshComponent::update(Core & core)
 {
   // set up shader
   const mat4 modelTranslation = entity()->worldTranslation();
@@ -896,7 +915,7 @@ void GraphicsComponent::update(Core & core)
                  0);
 }
 
-void GraphicsComponent::attachMesh(vector<vec3> & positions,
+void MeshComponent::attachMesh(vector<vec3> & positions,
                                    vector<vec3> & colors,
                                    vector<int> & indices)
 {
@@ -928,32 +947,32 @@ void GraphicsComponent::attachMesh(vector<vec3> & positions,
   }
 }
 
-void GraphicsComponent::attachShader(string vertexShaderFilename,
+void MeshComponent::attachShader(string vertexShaderFilename,
                                      string fragmentShaderFilename)
 {
   _vertexShaderFilename   = vertexShaderFilename;
   _fragmentShaderFilename = fragmentShaderFilename;
 }
 
-void GraphicsComponent::offsetTo(int x, int y)
+void MeshComponent::offsetTo(int x, int y)
 {
   bounds().pos.x = x;
   bounds().pos.y = y;
 }
 
-void GraphicsComponent::offsetBy(int dx, int dy)
+void MeshComponent::offsetBy(int dx, int dy)
 {
   bounds().pos.x += dx;
   bounds().pos.y += dy;
 }
 
-void GraphicsComponent::resizeTo(int w, int h)
+void MeshComponent::resizeTo(int w, int h)
 {
   bounds().dim.x = w;
   bounds().dim.y = h;
 }
 
-void GraphicsComponent::resizeBy(int dw, int dh)
+void MeshComponent::resizeBy(int dw, int dh)
 {
   bounds().dim.x += dw;
   bounds().dim.y += dh;
