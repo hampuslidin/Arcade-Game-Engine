@@ -562,16 +562,14 @@ Entity::Entity()
   , pGraphics(nullptr)
   , pVelocity(vec3(0.0f))
   , localPosition(vec3(0.0f))
-  , _orientation(1.0f, 0.0f, 0.0f, 0.0f)
-  , _worldTransformNeedsUpdating(true)
+  , localOrientation(quat(1.0f, 0.0f, 0.0f, 0.0f))
+  , _transformNeedsUpdating(true)
 {}
 
 void Entity::init(Core * core)
 {
   this->core(core);
   pEnabled(true);
-  
-  _worldTransformNeedsUpdating = true;
   
   if (pInput())     pInput()->init(this);
   if (pAnimation()) pAnimation()->init(this);
@@ -583,7 +581,7 @@ void Entity::init(Core * core)
   {
     auto eventHandler = [this](Event)
     {
-      _worldTransformNeedsUpdating = true;
+      _transformNeedsUpdating = true;
       NotificationCenter::notify(DidUpdateTransform, *this);
     };
     NotificationCenter::observe(eventHandler, DidUpdateTransform, parent());
@@ -655,54 +653,51 @@ void Entity::removeChild(string id)
   }
 }
 
-mat4 Entity::localTransform()
+mat4 Entity::localTranslation()
 {
-  return glm::translate(localPosition()) * glm::toMat4(_orientation);
+  return glm::translate(localPosition());
+}
+
+mat4 Entity::localRotation()
+{
+  return glm::toMat4(localOrientation());
 }
 
 vec3 Entity::localRight()
 {
-  return glm::rotate(_orientation, vec3(1.0f, 0.0f, 0.0f));
+  return glm::rotate(localOrientation(), vec3(1.0f, 0.0f, 0.0f));
 }
 
 vec3 Entity::localUp()
 {
-  return glm::rotate(_orientation, vec3(0.0f, 1.0f, 0.0f));
+  return glm::rotate(localOrientation(), vec3(0.0f, 1.0f, 0.0f));
 }
 
 vec3 Entity::localForward()
 {
-  return glm::rotate(_orientation, vec3(0.0f, 0.0f, -1.0f));
+  return glm::rotate(localOrientation(), vec3(0.0f, 0.0f, -1.0f));
 }
 
 vec3 Entity::worldPosition()
 {
-  if (parent()) return parent()->worldPosition() + localPosition();
-  return localPosition();
+  if (_transformNeedsUpdating) _updateTransform();
+  return _worldPosition;
 }
 
-mat4 Entity::worldTransform()
+quat Entity::worldOrientation()
 {
-  if (_worldTransformNeedsUpdating)
-  {
-    _worldTransform = localTransform();
-    vec3 position    = localPosition();
-    quat orientation = _orientation;
- 
-    vec3 currentPosition;
-    quat currentOrientation;
-    Entity * currentEntity = this;
-    while ((currentEntity = currentEntity->parent()))
-    {
-      currentPosition = currentEntity->localPosition();
-      currentOrientation = currentEntity->_orientation;
-      position = glm::rotate(currentOrientation, position) + currentPosition;
-      orientation = currentEntity->_orientation * orientation;
-    }
-    _worldTransform = glm::translate(position) * glm::toMat4(orientation);
-    _worldTransformNeedsUpdating = false;
-  }
-  return _worldTransform;
+  if (_transformNeedsUpdating) _updateTransform();
+  return _worldOrientation;
+}
+
+mat4 Entity::worldTranslation()
+{
+  return glm::translate(worldPosition());
+}
+
+mat4 Entity::worldRotation()
+{
+  return glm::toMat4(worldOrientation());
 }
 
 void Entity::translate(float dx, float dy, float dz)
@@ -710,14 +705,14 @@ void Entity::translate(float dx, float dy, float dz)
   localPosition().x += dx;
   localPosition().y += dy;
   localPosition().z += dz;
-  _worldTransformNeedsUpdating = true;
+  _transformNeedsUpdating = true;
   NotificationCenter::notify(DidUpdateTransform, *this);
 }
 
 void Entity::rotate(float angle, vec3 axis)
 {
-  _orientation = glm::angleAxis(angle, axis) * _orientation;
-  _worldTransformNeedsUpdating = true;
+  localOrientation() = glm::angleAxis(angle, axis) * localOrientation();
+  _transformNeedsUpdating = true;
   NotificationCenter::notify(DidUpdateTransform, *this);
 }
 
@@ -756,6 +751,14 @@ void Entity::update(uint8_t component_mask)
   }
 }
 
+void Entity::_updateTransform()
+{
+  if (parent())
+  {
+    _worldPosition = parent()->worldPosition() + localPosition();
+    _worldOrientation = parent()->worldOrientation() * localOrientation();
+  }
+}
 
 //
 // MARK: - Component
@@ -868,18 +871,16 @@ void GraphicsComponent::init(Entity * entity)
 void GraphicsComponent::update(Core & core)
 {
   // set up shader
-  const mat4 modelMatrix      = entity()->worldTransform();
+  const mat4 modelTranslation = entity()->worldTranslation();
+  const mat4 modelRotation    = entity()->worldRotation();
+  const mat4 modelMatrix      = modelTranslation * modelRotation;
+  
+  const mat4 cameraTranslation = core.camera()->worldTranslation();
+  const mat4 cameraRotation    = core.camera()->worldRotation();
+  const mat4 viewMatrix = glm::inverse(cameraTranslation * cameraRotation);
+  
   const mat4 projectionMatrix = core.projectionMatrix();
   
-  // TODO: make this nicer, perhaps a dedicated camera entity class
-  Entity * camera = core.camera();
-  const mat3 cameraBase(camera->localRight(),
-                        camera->localUp(),
-                        -camera->localForward());
-  const mat4 cameraRotation = mat4(glm::transpose(cameraBase));
-  const mat4 cameraPosition = glm::translate(-camera->localPosition());
-  const mat4 viewMatrix = cameraRotation * cameraPosition;
-                        
   mat4 modelViewProjectionMatrix = projectionMatrix * viewMatrix * modelMatrix;
   glUseProgram(_shaderProgram);
   glUniformMatrix4fv(_modelViewProjectionMatrixLocation,

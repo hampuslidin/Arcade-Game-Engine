@@ -340,9 +340,9 @@ void PhysicsComponent::update(Core & core)
   bool shouldMove = _shouldSimulate && dynamic();
   if (shouldMove)
   {
-    const auto velocity = gravity() * (float)(core.deltaTime()*pixelsPerMeter);
+    const auto velocity = gravity() * float(core.deltaTime()*unitsPerMeter);
     entity()->pVelocity() += velocity;
-    distance = entity()->pVelocity() * (float)core.deltaTime();
+    distance = entity()->pVelocity() * float(core.deltaTime());
   }
   
   // if enabled, perform collision detection and response

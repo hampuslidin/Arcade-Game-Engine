@@ -235,6 +235,7 @@ public:
   prop<GraphicsComponent*>        pGraphics;
   
   prop_r<Entity, vec3>            localPosition;
+  prop_r<Entity, quat>            localOrientation;
   
   prop<vec3>                      pVelocity;
   prop<bool>                      pEnabled;
@@ -277,13 +278,16 @@ public:
   Entity * findChild(string id);
   void removeChild(string id);
   
-  mat4 localTransform();
+  mat4 localTranslation();
+  mat4 localRotation();
   vec3 localRight();
   vec3 localUp();
   vec3 localForward();
   
   vec3 worldPosition();
-  mat4 worldTransform();
+  quat worldOrientation();
+  mat4 worldTranslation();
+  mat4 worldRotation();
   
   void translate(float dx, float dy, float dz);
   void rotate(float angle, vec3 axis);
@@ -296,9 +300,11 @@ public:
   void update(uint8_t component_mask);
   
 private:
-  quat _orientation;
-  mat4 _worldTransform;
-  bool _worldTransformNeedsUpdating;
+  bool _transformNeedsUpdating;
+  vec3 _worldPosition;
+  quat _worldOrientation;
+  
+  void _updateTransform();
   
 };
 
@@ -385,7 +391,7 @@ class PhysicsComponent
 {
 
 public:
-  static constexpr int pixelsPerMeter = 120;
+  static constexpr int unitsPerMeter = 1;
   prop<Rectangle>      collisionBounds;
   prop<vec3>           gravity;
   prop<bool>           dynamic;

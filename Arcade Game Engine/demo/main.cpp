@@ -25,7 +25,7 @@ public:
       printf("Zero rotation, %fs\n", core.elapsedTime());
     }
     
-    entity()->rotate(yaw,   entity()->localUp());
+    entity()->rotate(yaw,   vec3(0.0f, 1.0f, 0.0f));
     entity()->rotate(pitch, entity()->localRight());
     if (core.checkKey("up"))    entity()->translate(0.0f,      0.0f, -distance);
     if (core.checkKey("down"))  entity()->translate(0.0f,      0.0f,  distance);
