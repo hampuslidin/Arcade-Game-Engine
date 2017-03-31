@@ -311,6 +311,9 @@ public:
   
   void update(uint8_t component_mask);
   
+  bool operator ==(Entity & entity);
+  bool operator !=(Entity & entity);
+  
 private:
   bool _transformNeedsUpdating;
   vec3 _worldPosition;
@@ -327,17 +330,20 @@ private:
 class Component
   : public GameObject
 {
+  
 protected:
   prop_r<Component, Entity*> entity;
   
-  virtual string trait() = 0;
 public:
   string id();
+  
+  virtual string trait() = 0;
   
   virtual ~Component() {};
   virtual void init(Entity * entity);
   virtual void reset() {};
   virtual void update(Core & core) = 0;
+  
 };
 
 
@@ -347,7 +353,10 @@ public:
 class InputComponent
   : public Component
 {
+  
+public:
   string trait();
+  
 };
 
 
@@ -366,6 +375,8 @@ public:
   prop_r<AnimationComponent, bool> animating;
   prop_r<AnimationComponent, vec3> endVelocity;
   
+  string trait();
+  
   virtual void reset();
   void addSegment(string id, vec3 position, vec3 velocity);
   void removeCurve(string id);
@@ -383,8 +394,6 @@ public:
   virtual void update(Core & core);
   
 private:
-  string trait();
-  
   map<string, CubicHermiteCurve> _curves;
   CubicHermiteCurve _currentCurve;
   vec3 _startPosition;
@@ -403,8 +412,10 @@ class ColliderComponent
 {
   
 public:
-  void collide(ColliderComponent & obsticle);
-  virtual void update(Core & core) {};
+  virtual void collide(ColliderComponent & obsticle,
+                       vec3 & colliderPosition,
+                       vec3 & obsticlePosition) = 0;
+  virtual void update(Core & core);
   
 private:
   bool _didCollide;
@@ -421,11 +432,13 @@ class AABBColliderComponent
 {
   
 public:
-  prop<vec3> pMin;
-  prop<vec3> pMax;
-  
-private:
+  prop<box> pCollisionBox;
+
   string trait();
+  
+  void collide(ColliderComponent & obsticle,
+               vec3 & colliderPosition,
+               vec3 & obsticlePosition);
   
 };
 
@@ -442,6 +455,8 @@ public:
   prop<vec3> pGravity;
   prop<bool> pIsKinematic;
   
+  string trait();
+  
   RigidBodyComponent();
   virtual void init(Entity * entity);
   virtual void update(Core & core);
@@ -449,7 +464,6 @@ public:
 private:
   bool _shouldSimulate;
   
-  string trait();
 };
 
 
@@ -457,11 +471,11 @@ private:
  *  AudioComponent is responsible for generating and playing sounds.
  */
 class AudioComponent
-: public Component
+  : public Component
 {
   
 public:
-  friend Core;
+  string trait();
   
   virtual void init(Entity * entity);
   virtual void update(Core & core) {};
@@ -473,9 +487,10 @@ protected:
                  double duration,
                  double fade_in = 0.01,
                  double fade_out = 0.01);
-  void audioStreamCallback(double max_volume, int16_t * stream, int length);
   
 private:
+  friend Core;
+  
   struct _Audio
   {
     string id;
@@ -486,7 +501,7 @@ private:
   };
   vector<_Audio> _audio_playback;
   
-  string trait();
+  void _audioStreamCallback(double max_volume, int16_t * stream, int length);
   
 };
 
@@ -573,7 +588,7 @@ public:
   prop<int>              pScale;
   prop<vec3>             pBackgroundColor;
   
-  static constexpr float UNITS_PER_METER = 1;
+  static constexpr float UNITS_PER_METER = 0.01f;
   static const vec3 WORLD_UP;
   static const vec3 WORLD_DOWN;
   static const vec3 WORLD_LEFT;
@@ -592,10 +607,7 @@ public:
 
   void resolveCollisions(Entity & collider);
   
-  static bool AABBCollision(vec3 colliderMin,
-                            vec3 colliderMax,
-                            vec3 obsticleMin,
-                            vec3 obsticleMax);
+  static bool AABBIntersect(box & a, box & b, box & intersection);
   
   /**
    *  Creates and adds an Entity to the game world.

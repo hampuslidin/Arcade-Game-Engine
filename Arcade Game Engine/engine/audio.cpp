@@ -353,9 +353,9 @@ void AudioComponent::playSound(string id,
   _audio_playback.push_back({id, duration, fade_in, fade_out, 0});
 }
 
-void AudioComponent::audioStreamCallback(double max_volume,
-                                         int16_t * stream,
-                                         int length)
+void AudioComponent::_audioStreamCallback(double max_volume,
+                                          int16_t * stream,
+                                          int length)
 {
   for (auto i = (int)_audio_playback.size() - 1; i >= 0; i--)
   {

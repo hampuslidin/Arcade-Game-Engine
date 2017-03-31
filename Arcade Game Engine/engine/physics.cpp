@@ -13,25 +13,39 @@
 
 void Core::resolveCollisions(Entity & collider)
 {
+  vec3 colliderPosition = collider.worldPosition();
   for (auto obsticle : _entities)
   {
-    if (collider.pCollider() && obsticle.pCollider())
+    if (collider.pCollider() && obsticle.pCollider() && collider != obsticle)
     {
-      collider.pCollider()->collide(*obsticle.pCollider());
+      vec3 obsticlePosition = obsticle.worldPosition();
+      collider.pCollider()->collide(*obsticle.pCollider(),
+                                    colliderPosition,
+                                    obsticlePosition);
     }
   }
 }
 
-bool Core::AABBCollision(vec3 colliderMin,
-                         vec3 colliderMax,
-                         vec3 obsticleMin,
-                         vec3 obsticleMax)
+bool Core::AABBIntersect(box & a, box & b, box & intersection)
 {
-//  Rectangle colliderCB = collider.pRigidBody()->collisionBounds();
-//  Rectangle obsticleCB = obsticle.pRigidBody()->collisionBounds();
-//  vec3 colPos = collider.worldPosition();
-//  vec3 obsPos = obsticle.worldPosition();
-//  
+  intersection = {{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}};
+  
+  for (int i = 0; i < 3; i++)
+  {
+    const float aMin_i = a.min[i];
+    const float aMax_i = a.max[i];
+    const float bMin_i = b.min[i];
+    const float bMax_i = b.max[i];
+    
+    if (aMin_i > bMax_i || bMin_i > aMax_i) return false;
+    
+    intersection.min[i] = std::max(aMin_i, bMin_i);
+    intersection.max[i] = std::min(aMax_i, bMax_i);
+  }
+  
+  return true;
+  
+//
 //  SDL_Rect colliderBeforeRect
 //  {
 //    (int)(colPos.x + colliderCB.pos.x),
@@ -275,33 +289,18 @@ bool Core::AABBCollision(vec3 colliderMin,
 //      collider.pVelocity = vec3(0.0f);
 //    }
 //  }
-  return false;
 }
 
 //
 // MARK: - ColliderComponent
 //
 
-// MARK: Member functions
+// MARK: Property functions
 
-void ColliderComponent::collide(ColliderComponent & obsticle)
+void ColliderComponent::update(Core & core)
 {
-  string colliderTrait = trait();
-  string obsticleTrait = obsticle.trait();
-  if (colliderTrait.compare("AABBCollider") == 0)
-  {
-    AABBColliderComponent * AABBCollider = (AABBColliderComponent*)this;
-    if (obsticleTrait.compare("AABBCollider") == 0)
-    {
-      AABBColliderComponent & AABBObsticle = (AABBColliderComponent&)obsticle;
-      Core::AABBCollision(AABBCollider->pMin(),
-                          AABBCollider->pMax(),
-                          AABBObsticle.pMin(),
-                          AABBObsticle.pMax());
-    }
-  }
+  core.resolveCollisions(*entity());
 }
-
 
 //
 // MARK: - AABBColliderComponent
@@ -310,6 +309,34 @@ void ColliderComponent::collide(ColliderComponent & obsticle)
 // MARK: Property functions
 
 string AABBColliderComponent::trait() { return "AABBCollider"; }
+
+// MARK: Member functions
+void AABBColliderComponent::collide(ColliderComponent & obsticle,
+                                    vec3 & colliderPosition,
+                                    vec3 & obsticlePosition)
+{
+  string obsticleTrait = obsticle.trait();
+  
+  if (obsticleTrait.compare("AABBCollider") == 0)
+  {
+    auto obsticleAABB = (AABBColliderComponent&)obsticle;
+    box colliderBox
+    {
+      colliderPosition + pCollisionBox().min,
+      colliderPosition + pCollisionBox().max
+    };
+    box obsticleBox
+    {
+      obsticlePosition + obsticleAABB.pCollisionBox().min,
+      obsticlePosition + obsticleAABB.pCollisionBox().max
+    };
+    box intersection;
+    if (Core::AABBIntersect(colliderBox, obsticleBox, intersection))
+    {
+      printf("Collided!\n");
+    }
+  }
+}
 
 
 //

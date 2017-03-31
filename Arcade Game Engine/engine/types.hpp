@@ -14,7 +14,10 @@
 # include "SDL.h"
 #endif
 
+#include <glm/glm.hpp>
+
 using namespace std;
+using namespace glm;
 
 /**
  *  Defines a functor that enables classes to have class properties accessible
@@ -173,6 +176,11 @@ struct Rectangle
 {
   Vector2 pos;
   Dimension2 dim;
+};
+
+struct box
+{
+  vec3 min, max;
 };
 
 inline double min_x(Rectangle r) { return r.pos.x; }

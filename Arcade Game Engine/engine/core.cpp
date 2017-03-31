@@ -320,7 +320,7 @@ bool Core::init(CoreOptions & options)
   root().reset();
   
   // initialize audio
-  auto fill_stream = [](void * userdata, uint8_t * stream, int length)
+  auto fillStream = [](void * userdata, uint8_t * stream, int length)
   {
     Core * core         = (Core*)userdata;
     int16_t * stream16b = (int16_t*)stream;
@@ -332,7 +332,7 @@ bool Core::init(CoreOptions & options)
     callbacks = [maxVolume, stream16b, length, &callbacks](Entity * entity)
     {
       AudioComponent * audio = entity->pAudio();
-      if (audio) audio->audioStreamCallback(maxVolume, stream16b, length/2);
+      if (audio) audio->_audioStreamCallback(maxVolume, stream16b, length/2);
       
       for (auto child : entity->children())
       {
@@ -349,7 +349,7 @@ bool Core::init(CoreOptions & options)
   desired_audio_spec.format   = AUDIO_S16SYS;
   desired_audio_spec.channels = 1;
   desired_audio_spec.samples  = 2048;
-  desired_audio_spec.callback = fill_stream;
+  desired_audio_spec.callback = fillStream;
   desired_audio_spec.userdata = this;
   
   SDL_OpenAudio(&desired_audio_spec, nullptr);
@@ -595,6 +595,7 @@ void Entity::init(Core * core)
   
   if (pInput())     pInput()->init(this);
   if (pAnimation()) pAnimation()->init(this);
+  if (pCollider())  pCollider()->init(this);
   if (pRigidBody()) pRigidBody()->init(this);
   if (pAudio())     pAudio()->init(this);
   if (pGraphics())  pGraphics()->init(this);
@@ -618,6 +619,7 @@ void Entity::reset()
   
   if (pInput())     pInput()->reset();
   if (pAnimation()) pAnimation()->reset();
+  if (pCollider())  pCollider()->init(this);
   if (pRigidBody()) pRigidBody()->reset();
   if (pAudio())     pAudio()->reset();
   if (pGraphics())  pGraphics()->reset();
@@ -635,6 +637,7 @@ void Entity::destroy()
   
   if (pInput())     delete pInput();
   if (pAnimation()) delete pAnimation();
+  if (pCollider())  delete pCollider();
   if (pRigidBody()) delete pRigidBody();
   if (pAudio())     delete pAudio();
   if (pGraphics())  delete pGraphics();
@@ -845,12 +848,27 @@ void Entity::update(uint8_t component_mask)
   }
 }
 
+bool Entity::operator ==(Entity & entity)
+{
+  return id().compare(entity.id()) == 0;
+}
+
+bool Entity::operator !=(Entity & entity)
+{
+  return id().compare(entity.id()) != 0;
+}
+
 void Entity::_updateTransform()
 {
   if (parent())
   {
-    _worldPosition = parent()->worldPosition() + localPosition();
+    _worldPosition    = parent()->worldPosition() + localPosition();
     _worldOrientation = parent()->worldOrientation() * localOrientation();
+  }
+  else
+  {
+    _worldPosition    = localPosition();
+    _worldOrientation = localOrientation();
   }
 }
 

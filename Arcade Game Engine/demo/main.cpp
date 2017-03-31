@@ -117,7 +117,8 @@ public:
 
 int main(int argc, char *  argv[])
 {
-  Core core(2);
+  // core settings
+  Core core(3);
   CoreOptions options {"Demo", 800, 700};
   core.pBackgroundColor().r = 0.2f;
   core.pBackgroundColor().g = 0.2f;
@@ -127,12 +128,26 @@ int main(int argc, char *  argv[])
   core.addControl("left",  SDLK_a);
   core.addControl("right", SDLK_d);
   
-  // cube
-  Entity * cube = core.createEntity("cube");
-  cube->translate(0.0f, 0.0f, -5.0f);
-  cube->pInput(new CubeInputComponent);
-//  cube->pRigidBody(new CubeRigidBodyComponent);
-  cube->pGraphics(new CubeGraphicsComponent);
+  // static cube
+  Entity * staticCube = core.createEntity("staticCube");
+  staticCube->translate(0.0f, 0.0f, -5.0f);
+  staticCube->pInput(new CubeInputComponent);
+  AABBColliderComponent * colliderAABB = new AABBColliderComponent;
+  colliderAABB->pCollisionBox().min = {-0.5f, -0.5f, -0.5f};
+  colliderAABB->pCollisionBox().max = { 0.5f,  0.5f,  0.5f};
+  staticCube->pCollider(colliderAABB);
+  staticCube->pRigidBody(new RigidBodyComponent);
+  staticCube->pGraphics(new CubeGraphicsComponent);
+  
+  // kinematic cube
+  Entity * kinematicCube = core.createEntity("kinematicCube");
+  kinematicCube->translate(0.0f, 2.0f, -5.0f);
+  colliderAABB = new AABBColliderComponent;
+  colliderAABB->pCollisionBox().min = {-0.5f, -0.5f, -0.5f};
+  colliderAABB->pCollisionBox().max = { 0.5f,  0.5f,  0.5f};
+  kinematicCube->pCollider(colliderAABB);
+  kinematicCube->pRigidBody(new CubeRigidBodyComponent);
+  kinematicCube->pGraphics(new CubeGraphicsComponent);
   
   // camera
   core.camera()->pInput(new CameraInputComponent);
