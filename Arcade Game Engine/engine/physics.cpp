@@ -351,7 +351,7 @@ void RigidBodyComponent::update(Core & core)
 {
   if (_shouldSimulate && pIsKinematic())
   {
-    vec3 velocity = pGravity()*float(core.deltaTime()*Core::unitsPerMeter);
+    vec3 velocity = pGravity()*float(core.deltaTime()*Core::UNITS_PER_METER);
     entity()->pVelocity() += velocity;
     vec3 distance = entity()->pVelocity() * float(core.deltaTime());
     entity()->translate(distance.x, distance.y, distance.z);

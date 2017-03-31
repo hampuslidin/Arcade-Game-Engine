@@ -16,17 +16,18 @@ class CameraInputComponent
 public:
   void update(Core & core)
   {
+    static float yaw   = 0.0f;
+    static float pitch = 0.0f;
+    yaw   -= 0.01f * core.mouseMovement().x;
+    pitch -= 0.01f * core.mouseMovement().y;
     float distance = 10.0f * core.deltaTime();
-    float yaw      = -0.01f * core.mouseMovement().x;
-    float pitch    = -0.01f * core.mouseMovement().y;
     
-    if (yaw == 0 && pitch == 0)
-    {
-      printf("Zero rotation, %fs\n", core.elapsedTime());
-    }
+    entity()->setOrientation(pitch, yaw, 0.0f);
+
+    // This code behaves weird, especially when moving the mouse really fast.
+//    entity()->rotate(-0.01f * core.mouseMovement().x, Core::WORLD_UP);
+//    entity()->rotate(-0.01f * core.mouseMovement().y, entity()->localRight());
     
-    entity()->rotate(yaw,   vec3(0.0f, 1.0f, 0.0f));
-    entity()->rotate(pitch, entity()->localRight());
     if (core.checkKey("up"))    entity()->translate(0.0f,      0.0f, -distance);
     if (core.checkKey("down"))  entity()->translate(0.0f,      0.0f,  distance);
     if (core.checkKey("left"))  entity()->translate(-distance, 0.0f,  0.0f);
@@ -42,14 +43,12 @@ class CubeInputComponent
 public:
   void update(Core & core)
   {
-    vec3 worldRight(1.0f, 0.0f, 0.0f);
-    vec3 worldUp(0.0f, 1.0f, 0.0f);
-    float angle = 3.0f * core.deltaTime();
+    const float angle = 3.0f * core.deltaTime();
     
-    if (core.checkKey("up"))    entity()->rotate(-angle, worldRight);
-    if (core.checkKey("down"))  entity()->rotate(angle,  worldRight);
-    if (core.checkKey("left"))  entity()->rotate(-angle, worldUp);
-    if (core.checkKey("right")) entity()->rotate(angle,  worldUp);
+    if (core.checkKey("up"))    entity()->rotate( angle, Core::WORLD_RIGHT);
+    if (core.checkKey("down"))  entity()->rotate(-angle, Core::WORLD_RIGHT);
+    if (core.checkKey("left"))  entity()->rotate(-angle, Core::WORLD_BACKWARD);
+    if (core.checkKey("right")) entity()->rotate( angle, Core::WORLD_BACKWARD);
   }
   
 };
@@ -67,13 +66,13 @@ public:
   
 };
 
-class CubeMeshComponent
-  : public MeshComponent
+class CubeGraphicsComponent
+  : public GraphicsComponent
 {
   
 public:
-  CubeMeshComponent()
-    : MeshComponent()
+  CubeGraphicsComponent()
+    : GraphicsComponent()
   {
     vector<vec3> positions {
       {-0.5f, -0.5f, -0.5f},
@@ -130,10 +129,10 @@ int main(int argc, char *  argv[])
   
   // cube
   Entity * cube = core.createEntity("cube");
-  cube->translate(0.0f, 50.0f, -10.0f);
+  cube->translate(0.0f, 0.0f, -5.0f);
   cube->pInput(new CubeInputComponent);
-  cube->pRigidBody(new CubeRigidBodyComponent);
-  cube->pMesh(new CubeMeshComponent);
+//  cube->pRigidBody(new CubeRigidBodyComponent);
+  cube->pGraphics(new CubeGraphicsComponent);
   
   // camera
   core.camera()->pInput(new CameraInputComponent);

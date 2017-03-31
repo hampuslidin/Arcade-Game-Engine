@@ -43,7 +43,7 @@ class AnimationComponent;
 class ColliderComponent;
 class RigidBodyComponent;
 class AudioComponent;
-class MeshComponent;
+class GraphicsComponent;
 
 // MARK: Events
 
@@ -234,7 +234,7 @@ public:
   prop<ColliderComponent*>        pCollider;
   prop<RigidBodyComponent*>       pRigidBody;
   prop<AudioComponent*>           pAudio;
-  prop<MeshComponent*>            pMesh;
+  prop<GraphicsComponent*>        pGraphics;
   
   prop_r<Entity, vec3>            localPosition;
   prop_r<Entity, quat>            localOrientation;
@@ -280,14 +280,19 @@ public:
   Entity * findChild(string id);
   void removeChild(string id);
   
+  mat4 localTransform();
   mat4 localTranslation();
   mat4 localRotation();
-  vec3 localRight();
   vec3 localUp();
+  vec3 localDown();
+  vec3 localLeft();
+  vec3 localRight();
   vec3 localForward();
+  vec3 localBackward();
   
   vec3 worldPosition();
   quat worldOrientation();
+  mat4 worldTransform();
   mat4 worldTranslation();
   mat4 worldRotation();
   
@@ -298,6 +303,11 @@ public:
   void setPositionX(float x);
   void setPositionY(float y);
   void setPositionZ(float z);
+  
+  void setOrientation(float pitch, float yaw, float roll);
+  void setPitch(float pitch);
+  void setYaw(float yaw);
+  void setRoll(float roll);
   
   void update(uint8_t component_mask);
   
@@ -481,19 +491,19 @@ private:
 };
 
 /**
- *  MeshComponent is responsible for drawing an Entity to a SDL rendering
+ *  GraphicsComponent is responsible for drawing an Entity to a SDL rendering
  *  context.
  */
-class MeshComponent
+class GraphicsComponent
   : public Component
 {
   
 public:
-  prop_r<MeshComponent, Rectangle>    bounds;
+  prop_r<GraphicsComponent, Rectangle>    bounds;
   
-  prop_r<MeshComponent, vector<vec3>> vertexPositions;
-  prop_r<MeshComponent, vector<vec3>> vertexColors;
-  prop_r<MeshComponent, vector<int>>  vertexIndices;
+  prop_r<GraphicsComponent, vector<vec3>> vertexPositions;
+  prop_r<GraphicsComponent, vector<vec3>> vertexColors;
+  prop_r<GraphicsComponent, vector<int>>  vertexIndices;
   
   virtual void init(Entity * entity);
   virtual void update(Core & core);
@@ -557,12 +567,19 @@ public:
   prop_r<Core, int>      sampleRate;
   prop_r<Core, double>   maxVolume;
   
+  prop_r<Core, mat4>     viewMatrix;
   prop_r<Core, mat4>     projectionMatrix;
 
   prop<int>              pScale;
   prop<vec3>             pBackgroundColor;
   
-  static constexpr float unitsPerMeter = 1;
+  static constexpr float UNITS_PER_METER = 1;
+  static const vec3 WORLD_UP;
+  static const vec3 WORLD_DOWN;
+  static const vec3 WORLD_LEFT;
+  static const vec3 WORLD_RIGHT;
+  static const vec3 WORLD_FORWARD;
+  static const vec3 WORLD_BACKWARD;
   
   double elapsedTime();
   double effectiveElapsedTime();

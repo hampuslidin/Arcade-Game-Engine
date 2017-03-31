@@ -160,6 +160,15 @@ NotificationCenter & NotificationCenter::_instance()
 // MARK: - Core
 //
 
+// MARK: Static properties
+
+const vec3 Core::WORLD_UP       { 0.0f,  1.0f,  0.0f};
+const vec3 Core::WORLD_DOWN     { 0.0f, -1.0f,  0.0f};
+const vec3 Core::WORLD_LEFT     {-1.0f,  0.0f,  0.0f};
+const vec3 Core::WORLD_RIGHT    { 1.0f,  0.0f,  0.0f};
+const vec3 Core::WORLD_FORWARD  { 0.0f,  0.0f, -1.0f};
+const vec3 Core::WORLD_BACKWARD { 0.0f,  0.0f,  1.0f};
+
 // MARK: Member property functions
 
 double Core::elapsedTime()
@@ -411,12 +420,6 @@ bool Core::update()
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_CULL_FACE);
   
-  // update projection matrix
-  projectionMatrix(perspective(radians(45.0f),
-                               float(d.x) / float(d.y),
-                               0.01f,
-                               300.0f));
-  
   // clear screen
   glClearColor(pBackgroundColor().r,
                pBackgroundColor().g,
@@ -424,14 +427,33 @@ bool Core::update()
                1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   
-  // update entities
+  // update entities (except rendering)
   uint8_t mask = !_pause ? 0b111111 : 0b000001;
-  for (uint8_t i = 0b100000; i > 0; i = i >>= 1)
+  for (uint8_t i = 0b100000; i > 0b000001; i = i >>= 1)
   {
     for (auto entity : _entities)
     {
       entity.update(mask & i);
     }
+  }
+  
+  // update view and projection matrix
+  mat4 cameraTranslation = glm::translate(camera()->worldPosition());
+  cameraTranslation[3].x *= -1;
+  cameraTranslation[3].y *= -1;
+  cameraTranslation[3].z *= -1;
+  quat inverseCameraOrientation = glm::inverse(camera()->worldOrientation());
+  const mat4 cameraRotation = glm::toMat4(inverseCameraOrientation);
+  viewMatrix(cameraRotation * cameraTranslation);
+  projectionMatrix(perspective(radians(45.0f),
+                               float(d.x) / float(d.y),
+                               0.01f,
+                               300.0f));
+  
+  // render entities
+  for (auto entity : _entities)
+  {
+    entity.update(0b000001);
   }
   
   // swap buffers
@@ -559,7 +581,7 @@ Entity::Entity()
   , pAnimation(nullptr)
   , pRigidBody(nullptr)
   , pAudio(nullptr)
-  , pMesh(nullptr)
+  , pGraphics(nullptr)
   , pVelocity(vec3(0.0f))
   , localPosition(vec3(0.0f))
   , localOrientation(quat(1.0f, 0.0f, 0.0f, 0.0f))
@@ -575,7 +597,7 @@ void Entity::init(Core * core)
   if (pAnimation()) pAnimation()->init(this);
   if (pRigidBody()) pRigidBody()->init(this);
   if (pAudio())     pAudio()->init(this);
-  if (pMesh())      pMesh()->init(this);
+  if (pGraphics())  pGraphics()->init(this);
   
   if (parent() != nullptr)
   {
@@ -598,7 +620,7 @@ void Entity::reset()
   if (pAnimation()) pAnimation()->reset();
   if (pRigidBody()) pRigidBody()->reset();
   if (pAudio())     pAudio()->reset();
-  if (pMesh())      pMesh()->reset();
+  if (pGraphics())  pGraphics()->reset();
   
   for (auto child : children()) child->reset();
 }
@@ -615,12 +637,12 @@ void Entity::destroy()
   if (pAnimation()) delete pAnimation();
   if (pRigidBody()) delete pRigidBody();
   if (pAudio())     delete pAudio();
-  if (pMesh())      delete pMesh();
+  if (pGraphics())  delete pGraphics();
 }
 
 Dimension2 Entity::dimensions()
 {
-  return pMesh() ? pMesh()->bounds().dim : Dimension2 {};
+  return pGraphics() ? pGraphics()->bounds().dim : Dimension2 {};
 }
 
 void Entity::addChild(Entity * child)
@@ -653,6 +675,11 @@ void Entity::removeChild(string id)
   }
 }
 
+mat4 Entity::localTransform()
+{
+  return localTranslation() * localRotation();
+}
+
 mat4 Entity::localTranslation()
 {
   return glm::translate(localPosition());
@@ -663,19 +690,34 @@ mat4 Entity::localRotation()
   return glm::toMat4(localOrientation());
 }
 
-vec3 Entity::localRight()
-{
-  return glm::rotate(localOrientation(), vec3(1.0f, 0.0f, 0.0f));
-}
-
 vec3 Entity::localUp()
 {
-  return glm::rotate(localOrientation(), vec3(0.0f, 1.0f, 0.0f));
+  return glm::rotate(localOrientation(), Core::WORLD_UP);
+}
+
+vec3 Entity::localDown()
+{
+  return glm::rotate(localOrientation(), Core::WORLD_DOWN);
+}
+
+vec3 Entity::localLeft()
+{
+  return glm::rotate(localOrientation(), Core::WORLD_LEFT);
+}
+
+vec3 Entity::localRight()
+{
+  return glm::rotate(localOrientation(), Core::WORLD_RIGHT);
 }
 
 vec3 Entity::localForward()
 {
-  return glm::rotate(localOrientation(), vec3(0.0f, 0.0f, -1.0f));
+  return glm::rotate(localOrientation(), Core::WORLD_FORWARD);
+}
+
+vec3 Entity::localBackward()
+{
+  return glm::rotate(localOrientation(), Core::WORLD_BACKWARD);
 }
 
 vec3 Entity::worldPosition()
@@ -688,6 +730,11 @@ quat Entity::worldOrientation()
 {
   if (_transformNeedsUpdating) _updateTransform();
   return _worldOrientation;
+}
+
+mat4 Entity::worldTransform()
+{
+  return worldTranslation() * worldRotation();
 }
 
 mat4 Entity::worldTranslation()
@@ -723,20 +770,48 @@ void Entity::setPosition(float x, float y, float z)
 }
 void Entity::setPositionX(float x)
 {
-  localPosition(vec3(0.0f));
-  translate(x, 0.0f, 0.0f);
+  vec3 previousPosition = localPosition();
+  translate(x, previousPosition.y, previousPosition.z);
 }
 
 void Entity::setPositionY(float y)
 {
-  localPosition(vec3(0.0f));
-  translate(0.0f, y, 0.0f);
+  vec3 previousPosition = localPosition();
+  translate(previousPosition.x, y, previousPosition.z);
 }
 
 void Entity::setPositionZ(float z)
 {
-  localPosition(vec3(0.0f));
-  translate(0.0f, 0.0f, z);
+  vec3 previousPosition = localPosition();
+  translate(previousPosition.x, previousPosition.y, z);
+}
+
+void Entity::setOrientation(float pitch, float yaw, float roll)
+{
+  quat qX = glm::angleAxis(pitch, Core::WORLD_RIGHT);
+  quat qY = glm::angleAxis(yaw,   Core::WORLD_UP);
+  quat qZ = glm::angleAxis(roll,  Core::WORLD_BACKWARD);
+  localOrientation(qZ * qY * qX);
+  _transformNeedsUpdating = true;
+  NotificationCenter::notify(DidUpdateTransform, *this);
+}
+
+void Entity::setPitch(float pitch)
+{
+  vec3 eulerAngles = glm::eulerAngles(localOrientation());
+  setOrientation(pitch, eulerAngles.y, eulerAngles.z);
+}
+
+void Entity::setYaw(float yaw)
+{
+  vec3 eulerAngles = glm::eulerAngles(localOrientation());
+  setOrientation(eulerAngles.x, yaw, eulerAngles.z);
+}
+
+void Entity::setRoll(float roll)
+{
+  vec3 eulerAngles = glm::eulerAngles(localOrientation());
+  setOrientation(eulerAngles.x, eulerAngles.y, roll);
 }
 
 void Entity::update(uint8_t component_mask)
@@ -763,9 +838,9 @@ void Entity::update(uint8_t component_mask)
     {
       pAudio()->update(*core());
     }
-    if (component_mask & 0b000001 && pMesh())
+    if (component_mask & 0b000001 && pGraphics())
     {
-      pMesh()->update(*core());
+      pGraphics()->update(*core());
     }
   }
 }
@@ -809,16 +884,16 @@ string InputComponent::trait() { return "Input"; }
 
 
 //
-// MARK: - MeshComponent
+// MARK: - GraphicsComponent
 //
 
 // MARK: Property functions
 
-string MeshComponent::trait() { return "Mesh"; }
+string GraphicsComponent::trait() { return "Mesh"; }
 
 // MARK: Member functions
 
-void MeshComponent::init(Entity * entity)
+void GraphicsComponent::init(Entity * entity)
 {
   Component::init(entity);
   
@@ -887,20 +962,17 @@ void MeshComponent::init(Entity * entity)
     glGetUniformLocation(_shaderProgram, "modelViewProjectionMatrix");
 }
 
-void MeshComponent::update(Core & core)
+void GraphicsComponent::update(Core & core)
 {
-  // set up shader
-  const mat4 modelTranslation = entity()->worldTranslation();
-  const mat4 modelRotation    = entity()->worldRotation();
-  const mat4 modelMatrix      = modelTranslation * modelRotation;
-  
-  const mat4 cameraTranslation = core.camera()->worldTranslation();
-  const mat4 cameraRotation    = core.camera()->worldRotation();
-  const mat4 viewMatrix = glm::inverse(cameraTranslation * cameraRotation);
-  
-  const mat4 projectionMatrix = core.projectionMatrix();
-  
+  // construct matrices
+  const mat4 modelTranslation    = glm::translate(entity()->worldPosition());
+  const mat4 modelRotation       = glm::toMat4(entity()->worldOrientation());
+  const mat4 modelMatrix         = modelTranslation * modelRotation;
+  const mat4 viewMatrix          = core.viewMatrix();
+  const mat4 projectionMatrix    = core.projectionMatrix();
   mat4 modelViewProjectionMatrix = projectionMatrix * viewMatrix * modelMatrix;
+  
+  // send model-view-projection matrix to shader
   glUseProgram(_shaderProgram);
   glUniformMatrix4fv(_modelViewProjectionMatrixLocation,
                      1,
@@ -915,7 +987,7 @@ void MeshComponent::update(Core & core)
                  0);
 }
 
-void MeshComponent::attachMesh(vector<vec3> & positions,
+void GraphicsComponent::attachMesh(vector<vec3> & positions,
                                    vector<vec3> & colors,
                                    vector<int> & indices)
 {
@@ -947,32 +1019,32 @@ void MeshComponent::attachMesh(vector<vec3> & positions,
   }
 }
 
-void MeshComponent::attachShader(string vertexShaderFilename,
+void GraphicsComponent::attachShader(string vertexShaderFilename,
                                      string fragmentShaderFilename)
 {
   _vertexShaderFilename   = vertexShaderFilename;
   _fragmentShaderFilename = fragmentShaderFilename;
 }
 
-void MeshComponent::offsetTo(int x, int y)
+void GraphicsComponent::offsetTo(int x, int y)
 {
   bounds().pos.x = x;
   bounds().pos.y = y;
 }
 
-void MeshComponent::offsetBy(int dx, int dy)
+void GraphicsComponent::offsetBy(int dx, int dy)
 {
   bounds().pos.x += dx;
   bounds().pos.y += dy;
 }
 
-void MeshComponent::resizeTo(int w, int h)
+void GraphicsComponent::resizeTo(int w, int h)
 {
   bounds().dim.x = w;
   bounds().dim.y = h;
 }
 
-void MeshComponent::resizeBy(int dw, int dh)
+void GraphicsComponent::resizeBy(int dw, int dh)
 {
   bounds().dim.x += dw;
   bounds().dim.y += dh;
