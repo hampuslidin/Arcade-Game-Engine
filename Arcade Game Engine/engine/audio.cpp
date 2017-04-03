@@ -9,113 +9,19 @@
 
 using namespace tinyxml2;
 
-//
-// MARK: - Synthesizer
-//
 
-Synthesizer::_Operator::_Operator(double frequency,
-                                  double modulation_index,
-                                  WaveType wave_type,
-                                  double threshold_low,
-                                  double threshold_high,
-                                  maybe<double> pitch_glide,
-                                  PitchGlideType pitch_glide_type)
-  : frequency(frequency)
-  , modulation_index(modulation_index)
-  , wave_type(wave_type)
-  , threshold_low(threshold_low)
-  , threshold_high(threshold_high)
-  , modulators()
-  , pitch_glide(pitch_glide)
-  , pitch_glide_type(pitch_glide_type)
-{}
+// MARK: Properties
 
-void Synthesizer::_Operator::addModulator(_Operator * modulator)
-{
-  modulators.push_back(modulator);
-}
+int Synthesizer::bitRate() const    { return _bitRate; }
+int Synthesizer::sampleRate() const { return _sampleRate; }
 
-double Synthesizer::_Operator::calculateSample(double time, double duration)
-{
-  static const double two_pi = 2*M_PI;
-  double phase;
-  if (!pitch_glide.isNothing() && pitch_glide != frequency)
-  {
-    double f0 = frequency;
-    double f1 = pitch_glide;
-    double k;
-    switch (pitch_glide_type)
-    {
-      case LINEAR:
-        // linear chirp
-        k = (f1-f0)/duration;
-        phase = two_pi*(f0*time + k/2*pow(time, 2));
-        break;
-      case EXPONENTIAL:
-        // exponential chirp
-        k = pow(f1/f0, 1/duration);
-        phase = two_pi*f0*((pow(k, time)-1)/log(k));
-        break;
-      case INV_LOGARITHMIC:
-        // inverse logarithmic chirp
-        time = duration-time;
-        f0 = pitch_glide;
-        f1 = frequency;
-      case LOGARITHMIC:
-        // logarithmic chirp
-        bool reverse = f1 < f0;
-        k = log(reverse ? (f0-f1) : (f1-f0))/duration;
-        phase = two_pi*(f0*time + (reverse ? -1 : 1)*(exp(k * time)-1)/k);
-        break;
-    }
-  }
-  else
-  {
-    phase = two_pi * frequency * time;
-  }
-  
-  phase += _calculatePhase(time, duration);
-  double sample;
-  
-  switch (wave_type)
-  {
-    case SMOOTH:
-      sample = sin(phase);
-      break;
-    case TRIANGLE:
-      sample = 2*fabs(2*fmod(phase/two_pi+0.75, 1)-1)-1;
-      break;
-    case SAWTOOTH:
-      sample = 2*fmod(phase/two_pi+0.5, 1)-1;
-      break;
-    case SQUARE:
-      sample = 2*((int)(2*phase/two_pi+1) % 2)-1;
-      break;
-  }
-  return sample < threshold_low
-    ? threshold_low
-    : (sample > threshold_high
-       ? threshold_high
-       : sample);
-}
+// MARK: Member functions
 
-double Synthesizer::_Operator::_calculatePhase(double time, double duration)
-{
-  double modulated_phase = 0.0;
-  for (auto modulator : modulators)
-  {
-    double modulator_sample = modulator->calculateSample(time, duration);
-    modulator_sample       *= modulator->modulation_index;
-    modulated_phase        += modulator_sample;
-  }
-  return modulated_phase;
-}
-
-Synthesizer::Synthesizer(int bit_rate, int sample_rate)
-  : bit_rate(bit_rate)
-  , sample_rate(sample_rate)
+Synthesizer::Synthesizer(int bitRate, int sampleRate)
+  : _bitRate(bitRate)
+  , _sampleRate(sampleRate)
   , _algorithms()
-  , _current_algorithm(nullptr)
+  , _currentAlgorithm(nullptr)
 {}
 
 void Synthesizer::load(const char * filename)
@@ -134,7 +40,7 @@ void Synthesizer::load(const char * filename)
   // reset synthesizer properties
   _Algorithm & algorithm = _algorithms[id];
   algorithm.operators.clear();
-  algorithm.num_carriers = 0;
+  algorithm.numCarriers = 0;
   
   // parse xml file
   XMLDocument document;
@@ -144,38 +50,36 @@ void Synthesizer::load(const char * filename)
     return;
   };
   
-  /*---- count_operators ----*/
-  function<int(XMLElement*)> count_operators;
-  count_operators = [&count_operators](XMLElement * element)
+  /*---- countOperators ----*/
+  function<int(XMLElement*)> countOperators;
+  countOperators = [&countOperators](XMLElement * element)
   {
     if (element && strcmp(element->Name(), "operator") == 0)
-    {
       return 1 +
-        count_operators(element->NextSiblingElement()) +
-        count_operators(element->FirstChildElement());
-    }
+        countOperators(element->NextSiblingElement()) +
+        countOperators(element->FirstChildElement());
     return 0;
   };
   
-  /*---- build_algorithm ----*/
-  function<void(XMLElement*, bool, _Operator*, int&)> build_algorithm;
-  build_algorithm = [this, &build_algorithm, &algorithm](XMLElement * element,
-                                                         bool is_carrier,
+  /*---- buildAlgorithm ----*/
+  function<void(XMLElement*, bool, _Operator*, int&)> buildAlgorithm;
+  buildAlgorithm = [this, &buildAlgorithm, &algorithm](XMLElement * element,
+                                                         bool isCarrier,
                                                          _Operator * parent,
                                                          int & index)
   {
     // set reference to current operator to null
-    _Operator * op_ptr = nullptr;
+    _Operator * opPtr = nullptr;
     
     // check if element is an operator
     if (strcmp(element->Name(), "operator") == 0)
     {
-      if (is_carrier) algorithm.num_carriers++;
+      if (isCarrier) algorithm.numCarriers++;
      
       // add current operator as modulator to parent operator
-      op_ptr = &algorithm.operators[index++];
-      _Operator & op = *op_ptr;
-      if (parent) parent->addModulator(op_ptr);
+      opPtr = &algorithm.operators[index++];
+      _Operator & op = *opPtr;
+      if (parent) parent->modulators.push_back(opPtr);
       
       //// query operator attributes
       // frequency
@@ -183,83 +87,74 @@ void Synthesizer::load(const char * filename)
       op.frequency = std::max(op.frequency, 0.0);
       
       // modulation index
-      element->QueryDoubleAttribute("modulation_index", &op.modulation_index);
-      op.modulation_index = std::max(op.modulation_index, 0.0);
+      element->QueryDoubleAttribute("modulation_index", &op.modulationIndex);
+      op.modulationIndex = std::max(op.modulationIndex, 0.0);
       
       // threshold low
-      element->QueryDoubleAttribute("threshold_low", &op.threshold_low);
-      op.threshold_low = op.threshold_low < -1.0
+      element->QueryDoubleAttribute("threshold_low", &op.thresholdLow);
+      op.thresholdLow = op.thresholdLow < -1.0
         ? -1.0
-        : (op.threshold_low > 1.0
+        : (op.thresholdLow > 1.0
           ? 1.0
-          : op.threshold_low);
+          : op.thresholdLow);
       
       // threshold high
-      element->QueryDoubleAttribute("threshold_high", &op.threshold_high);
-      op.threshold_high = op.threshold_high < -1.0
+      element->QueryDoubleAttribute("threshold_high", &op.thresholdHigh);
+      op.thresholdHigh = op.thresholdHigh < -1.0
       ? -1.0
-      : (op.threshold_high > 1.0
+      : (op.thresholdHigh > 1.0
         ? 1.0
-        : op.threshold_high);
+        : op.thresholdHigh);
       
       // wave type
-      const char * wave_type;
-      if ((wave_type = element->Attribute("wave_type")))
+      const char * waveType;
+      if ((waveType = element->Attribute("wave_type")))
       {
-        if      (strcmp(wave_type, "SMOOTH")   == 0) op.wave_type = SMOOTH;
-        else if (strcmp(wave_type, "TRIANGLE") == 0) op.wave_type = TRIANGLE;
-        else if (strcmp(wave_type, "SAWTOOTH") == 0) op.wave_type = SAWTOOTH;
-        else if (strcmp(wave_type, "SQUARE")   == 0) op.wave_type = SQUARE;
+        if      (strcmp(waveType, "SMOOTH")   == 0) op.waveType = SMOOTH;
+        else if (strcmp(waveType, "TRIANGLE") == 0) op.waveType = TRIANGLE;
+        else if (strcmp(waveType, "SAWTOOTH") == 0) op.waveType = SAWTOOTH;
+        else if (strcmp(waveType, "SQUARE")   == 0) op.waveType = SQUARE;
       }
       
       // pitch glide
-      double pitch_glide;
-      if (!element->QueryDoubleAttribute("pitch_glide",
-                                         &pitch_glide))
+      double pitchGlide;
+      if (!element->QueryDoubleAttribute("pitch_glide", &pitchGlide))
       {
-        pitch_glide = std::max(pitch_glide, 0.0);
-        op.pitch_glide = maybe<double>::just(pitch_glide);
+        pitchGlide = std::max(pitchGlide, 0.0);
+        op.pitchGlide = maybe<double>::just(pitchGlide);
       }
       
       // pitch glide type
-      const char * pitch_glide_type;
-      if ((pitch_glide_type = element->Attribute("pitch_glide_type")))
+      const char * pitchGlideType;
+      if ((pitchGlideType = element->Attribute("pitch_glide_type")))
       {
-        if (strcmp(pitch_glide_type, "LINEAR") == 0)
-        {
-          op.pitch_glide_type = LINEAR;
-        }
-        else if (strcmp(pitch_glide_type, "EXPONENTIAL") == 0)
-        {
-          op.pitch_glide_type = EXPONENTIAL;
-        }
-        else if (strcmp(pitch_glide_type, "LOGARITHMIC") == 0)
-        {
-          op.pitch_glide_type = LOGARITHMIC;
-        }
-        else if (strcmp(pitch_glide_type, "INV_LOGARITHMIC") == 0)
-        {
-          op.pitch_glide_type = INV_LOGARITHMIC;
-        }
+        if (strcmp(pitchGlideType, "LINEAR") == 0)
+          op.pitchGlideType = LINEAR;
+        else if (strcmp(pitchGlideType, "EXPONENTIAL") == 0)
+          op.pitchGlideType = EXPONENTIAL;
+        else if (strcmp(pitchGlideType, "LOGARITHMIC") == 0)
+          op.pitchGlideType = LOGARITHMIC;
+        else if (strcmp(pitchGlideType, "INV_LOGARITHMIC") == 0)
+          op.pitchGlideType = INV_LOGARITHMIC;
       }
     }
     
     // recurse on siblings
     auto sibling = element->NextSiblingElement();
-    if (sibling) build_algorithm(sibling, is_carrier, parent, index);
+    if (sibling) buildAlgorithm(sibling, isCarrier, parent, index);
     
     // recurse on children
-    auto first_child = element->FirstChildElement();
-    if (first_child) build_algorithm(first_child, false, op_ptr, index);
+    auto firstChild = element->FirstChildElement();
+    if (firstChild) buildAlgorithm(firstChild, false, opPtr, index);
   };
   
   // build algorithm
   XMLElement * root = document.FirstChildElement();
   if (root)
   {
-    algorithm.operators = vector<_Operator>(count_operators(root));
+    algorithm.operators = vector<_Operator>(countOperators(root));
     int index = 0;
-    build_algorithm(root, true, nullptr, index);
+    buildAlgorithm(root, true, nullptr, index);
   }
 }
 
@@ -267,48 +162,46 @@ void Synthesizer::load(const char * filename)
 void Synthesizer::select(string id)
 {
   if (_algorithms.find(id) != _algorithms.end())
-  {
-    _current_algorithm = &_algorithms[id];
-  }
+    _currentAlgorithm = &_algorithms[id];
 }
 
 bool Synthesizer::generate(int16_t * stream,
                            int length,
                            int & frame,
-                           double max_volume,
+                           double maxVolume,
                            double duration,
-                           double fade_in,
-                           double fade_out)
+                           double fadeIn,
+                           double fadeOut)
 {
-  static const int max_amplitude = (int)(pow(2, bit_rate()-1)-1);
-  static const int scale         = (int)pow(2, 16-bit_rate());
+  static const int maxAmplitude = (int)(pow(2, _bitRate-1)-1);
+  static const int scale         = (int)pow(2, 16-_bitRate);
   
-  if (_current_algorithm)
+  if (_currentAlgorithm)
   {
-    _Algorithm & algorithm = *_current_algorithm;
+    _Algorithm & algorithm = *_currentAlgorithm;
     int16_t sample = 0;
     for (int i = 0; i < length; i++)
     {
-      double time = frame / (double)sample_rate();
+      double time = frame / (double)_sampleRate;
       if (time < duration)
       {
         // calculate waveform
         double waveform = 0;
-        for (auto i = 0; i < algorithm.num_carriers; i++)
+        for (auto i = 0; i < algorithm.numCarriers; i++)
         {
-          waveform += algorithm.operators[i].calculateSample(time, duration);
+          waveform += _calculateSample(algorithm.operators[i], time, duration);
         }
-        waveform /= algorithm.num_carriers;
+        waveform /= algorithm.numCarriers;
         
         // calculate fading volume
-        double fading_volume = std::min(time/fade_in, 1.0) *
-                               std::min((duration-time)/fade_out, 1.0);
+        double fadingVolume = std::min(time/fadeIn, 1.0) *
+                              std::min((duration-time)/fadeOut, 1.0);
         
         // resize waveform to the maximum amplitude for the current bit rate
-        sample = (int16_t)round(max_amplitude * waveform);
+        sample = (int16_t)round(maxAmplitude * waveform);
         
         // scale to 16 bit space and apply volumes
-        sample *= (int16_t)(scale * fading_volume * max_volume);
+        sample *= (int16_t)(scale * fadingVolume * maxVolume);
         
         // write to stream
         stream[i] += sample;
@@ -327,47 +220,122 @@ bool Synthesizer::generate(int16_t * stream,
   return true;
 }
 
-
-//
-// MARK: - AudioComponent
-//
-
-string AudioComponent::trait()
+// MARK: Private
+double Synthesizer::_calculateSample(_Operator op, double time, double duration)
 {
-  return "Audio";
+  static const double twoPi = 2*M_PI;
+  double phase;
+  if (!op.pitchGlide.isNothing() && op.pitchGlide != op.frequency)
+  {
+    double f0 = op.frequency;
+    double f1 = op.pitchGlide;
+    double k;
+    switch (op.pitchGlideType)
+    {
+      case LINEAR:
+        // linear chirp
+        k = (f1-f0)/duration;
+        phase = twoPi*(f0*time + k/2*pow(time, 2));
+        break;
+      case EXPONENTIAL:
+        // exponential chirp
+        k = pow(f1/f0, 1/duration);
+        phase = twoPi*f0*((pow(k, time)-1)/log(k));
+        break;
+      case INV_LOGARITHMIC:
+        // inverse logarithmic chirp
+        time = duration-time;
+        f0 = op.pitchGlide;
+        f1 = op.frequency;
+      case LOGARITHMIC:
+        // logarithmic chirp
+        bool reverse = f1 < f0;
+        k = log(reverse ? (f0-f1) : (f1-f0))/duration;
+        phase = twoPi*(f0*time + (reverse ? -1 : 1)*(exp(k * time)-1)/k);
+        break;
+    }
+  }
+  else
+  {
+    phase = twoPi * op.frequency * time;
+  }
+  
+  phase += _calculatePhase(op, time, duration);
+  double sample;
+  
+  switch (op.waveType)
+  {
+    case SMOOTH:
+      sample = sin(phase);
+      break;
+    case TRIANGLE:
+      sample = 2*fabs(2*fmod(phase/twoPi+0.75, 1)-1)-1;
+      break;
+    case SAWTOOTH:
+      sample = 2*fmod(phase/twoPi+0.5, 1)-1;
+      break;
+    case SQUARE:
+      sample = 2*((int)(2*phase/twoPi+1) % 2)-1;
+      break;
+  }
+  return sample < op.thresholdLow
+    ? op.thresholdLow
+    : (sample > op.thresholdHigh
+      ? op.thresholdHigh
+      : sample);
 }
 
+double Synthesizer::_calculatePhase(_Operator op, double time, double duration)
+{
+  double modulatedPhase = 0.0;
+  for (auto modulator : op.modulators)
+  {
+    double modulatorSample = _calculateSample(*modulator, time, duration);
+    modulatorSample       *= modulator->modulationIndex;
+    modulatedPhase        += modulatorSample;
+  }
+  return modulatedPhase;
+}
+
+
+// MARK: -
+// MARK: Properties
+string AudioComponent::trait() const { return "Audio"; }
+
+// MARK: Member functions
 void AudioComponent::init(Entity * entity)
 {
   Component::init(entity);
   
-  synthesizer().sample_rate = entity->core()->sampleRate();
-  _audio_playback = vector<_Audio>();
+  _synthesizer = Synthesizer(8, entity->core()->sampleRate());
+  _audioPlayback = vector<_Audio>();
 }
 
 void AudioComponent::playSound(string id,
                                double duration,
-                               double fade_in,
-                               double fade_out)
+                               double fadeIn,
+                               double fadeOut)
 {
-  _audio_playback.push_back({id, duration, fade_in, fade_out, 0});
+  _audioPlayback.push_back({id, duration, fadeIn, fadeOut, 0});
 }
 
-void AudioComponent::_audioStreamCallback(double max_volume,
+// MARK: Private
+// TODO: refactor audio to be more consistent with the rest of the engine
+void AudioComponent::_audioStreamCallback(double maxVolume,
                                           int16_t * stream,
                                           int length)
 {
-  for (auto i = (int)_audio_playback.size() - 1; i >= 0; i--)
+  for (auto i = (int)_audioPlayback.size() - 1; i >= 0; i--)
   {
-    _Audio & audio = _audio_playback[i];
-    synthesizer().select(audio.id);
-    bool completed = synthesizer().generate(stream,
-                                            length,
-                                            audio.frame,
-                                            max_volume,
-                                            audio.duration,
-                                            audio.fade_in,
-                                            audio.fade_out);
-    if (completed) _audio_playback.erase(_audio_playback.begin() + i);
+    _Audio & audio = _audioPlayback[i];
+    _synthesizer.select(audio.id);
+    bool completed = _synthesizer.generate(stream,
+                                           length,
+                                           audio.frame,
+                                           maxVolume,
+                                           audio.duration,
+                                           audio.fadeIn,
+                                           audio.fadeOut);
+    if (completed) _audioPlayback.erase(_audioPlayback.begin() + i);
   }
 }

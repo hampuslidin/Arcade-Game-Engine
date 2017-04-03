@@ -7,21 +7,18 @@
 #include "core.hpp"
 
 
-//
-// MARK: - Core
-//
-
-void Core::resolveCollisions(Entity & collider)
+// MARK: Member functions
+void Core::resolveCollisions(Entity & collider) const
 {
   vec3 colliderPosition = collider.worldPosition();
   for (auto obsticle : _entities)
   {
-    if (collider.pCollider() && obsticle.pCollider() && collider != obsticle)
+    if (collider.collider() && obsticle.collider() && collider != obsticle)
     {
       vec3 obsticlePosition = obsticle.worldPosition();
-      collider.pCollider()->collide(*obsticle.pCollider(),
-                                    colliderPosition,
-                                    obsticlePosition);
+      collider.collider()->collide(*obsticle.collider(),
+                                   colliderPosition,
+                                   obsticlePosition);
     }
   }
 }
@@ -37,7 +34,8 @@ bool Core::AABBIntersect(box & a, box & b, box & intersection)
     const float bMin_i = b.min[i];
     const float bMax_i = b.max[i];
     
-    if (aMin_i > bMax_i || bMin_i > aMax_i) return false;
+    if (aMin_i > bMax_i || bMin_i > aMax_i)
+      return false;
     
     intersection.min[i] = std::max(aMin_i, bMin_i);
     intersection.max[i] = std::min(aMax_i, bMax_i);
@@ -291,29 +289,20 @@ bool Core::AABBIntersect(box & a, box & b, box & intersection)
 //  }
 }
 
-//
-// MARK: - ColliderComponent
-//
 
-// MARK: Property functions
-
-void ColliderComponent::update(Core & core)
+// MARK: -
+// MARK: Member functions
+void ColliderComponent::update(const Core & core)
 {
   core.resolveCollisions(*entity());
 }
 
-//
-// MARK: - AABBColliderComponent
-//
 
-// MARK: Property functions
-
-string AABBColliderComponent::trait() { return "AABBCollider"; }
-
+// MARK: -
 // MARK: Member functions
-void AABBColliderComponent::collide(ColliderComponent & obsticle,
-                                    vec3 & colliderPosition,
-                                    vec3 & obsticlePosition)
+void AABBColliderComponent::collide(const ColliderComponent & obsticle,
+                                    const vec3 & colliderPosition,
+                                    const vec3 & obsticlePosition) const
 {
   string obsticleTrait = obsticle.trait();
   
@@ -322,36 +311,38 @@ void AABBColliderComponent::collide(ColliderComponent & obsticle,
     auto obsticleAABB = (AABBColliderComponent&)obsticle;
     box colliderBox
     {
-      colliderPosition + pCollisionBox().min,
-      colliderPosition + pCollisionBox().max
+      colliderPosition + _collisionBox.min,
+      colliderPosition + _collisionBox.max
     };
     box obsticleBox
     {
-      obsticlePosition + obsticleAABB.pCollisionBox().min,
-      obsticlePosition + obsticleAABB.pCollisionBox().max
+      obsticlePosition + obsticleAABB._collisionBox.min,
+      obsticlePosition + obsticleAABB._collisionBox.max
     };
     box intersection;
     if (Core::AABBIntersect(colliderBox, obsticleBox, intersection))
-    {
       printf("Collided!\n");
-    }
   }
 }
 
+void AABBColliderComponent::resizeCollisionBox(const vec3 & min,
+                                               const vec3 & max)
+{
+  _collisionBox.min = min;
+  _collisionBox.min = max;
+}
 
-//
-// MARK: - RigidBodyComponent
-//
+string AABBColliderComponent::trait() const
+{
+  return "AABBCollider";
+}
 
-// MARK: Property functions
 
-string RigidBodyComponent::trait() { return "RigidBody"; }
-
+// MARK: -
 // MARK: Member functions
-
 RigidBodyComponent::RigidBodyComponent()
-  : pGravity({0.0f, -9.82f, 0.0f})
-  , pIsKinematic(false)
+  : _gravity(0.0f, -9.82f, 0.0f)
+  , _kinematic(false)
 {}
 
 void RigidBodyComponent::init(Entity * entity)
@@ -365,7 +356,7 @@ void RigidBodyComponent::init(Entity * entity)
     _shouldSimulate = event == DidStopAnimating;
   };
   
-  auto animation = entity->pAnimation();
+  auto animation = entity->animation();
   NotificationCenter::observe(eventHandler,
                               DidStartAnimating,
                               animation);
@@ -374,13 +365,29 @@ void RigidBodyComponent::init(Entity * entity)
                               animation);
 }
 
-void RigidBodyComponent::update(Core & core)
+void RigidBodyComponent::update(const Core & core)
 {
-  if (_shouldSimulate && pIsKinematic())
+  if (_shouldSimulate && _kinematic)
   {
-    vec3 velocity = pGravity()*float(core.deltaTime()*Core::UNITS_PER_METER);
-    entity()->pVelocity() += velocity;
-    vec3 distance = entity()->pVelocity() * float(core.deltaTime());
-    entity()->translate(distance.x, distance.y, distance.z);
+    // TODO: refactor physics to work with forces
+//    vec3 velocity = _gravity*float(core.deltaTime()*Core::UNITS_PER_METER);
+//    entity()->_velocity += velocity;
+//    vec3 distance = entity()->pVelocity() * float(core.deltaTime());
+//    entity()->translate(distance.x, distance.y, distance.z);
   }
+}
+
+void RigidBodyComponent::setGravity(const vec3 & force)
+{
+  _gravity = force;
+}
+
+void RigidBodyComponent::setKinematic(bool enabled)
+{
+  _kinematic = enabled;
+}
+
+string RigidBodyComponent::trait() const
+{
+  return "RigidBody";
 }

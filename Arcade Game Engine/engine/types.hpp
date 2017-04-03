@@ -7,6 +7,7 @@
 
 #include <stdlib.h>
 #include <string>
+#include <functional>
 
 #ifdef __APPLE__
 # include <SDL2/SDL.h>
@@ -19,46 +20,6 @@
 using namespace std;
 using namespace glm;
 
-/**
- *  Defines a functor that enables classes to have class properties accessible
- *  by other types, while still preserving encapsulation.
- */
-
-/* read and write */
-template <typename PropertyType>
-class prop
-{
-
-public:
-  prop()               : _v()  {};
-  prop(PropertyType v) : _v(v) {};
-  PropertyType & operator()() { return _v; };
-  const PropertyType & operator()() const { return _v; };
-  void operator()(const PropertyType & v) { _v = v; };
-
-private:
-  PropertyType _v;
-  
-};
-
-/* read-only */
-template <class Friend, typename PropertyType>
-class prop_r
-{
-
-public:
-  friend Friend;
-
-  prop_r()               : _v()  {};
-  prop_r(PropertyType v) : _v(v) {};
-  PropertyType & operator()() { return _v; };
-  const PropertyType & operator()() const { return _v; };
-
-private:
-  PropertyType _v;
-  
-  void operator()(const PropertyType & v) { _v = v; };
-};
 
 /**
  *  A wrapper class for when a certain values are optional.
@@ -76,7 +37,7 @@ class maybe
 {
   
 public:
-  static maybe<Value> just(Value & v) { return maybe(v); }
+  static maybe<Value> just(const Value & v) { return maybe(v); }
   static maybe<Value> nothing()       { return maybe();  }
   bool isNothing() { return !_just; }
   operator Value() { if (_just) return _v; throw unwrap_nothing(); }
@@ -98,15 +59,18 @@ class Event
 {
   
 public:
-  typedef int Parameter;
-  prop_r<Event, string>    id;
-  prop_r<Event, Parameter> parameter;
+  const string & id() const;
+  int parameter() const;
   
   Event(string id);
-  Event(Event event, Parameter parameter);
+  Event(Event event, int parameter);
   bool operator==(Event event) const;
   bool operator<(Event event) const;
   void operator=(Event const &) = delete;
+  
+private:
+  string _id;
+  int _parameter;
   
 };
 

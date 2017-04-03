@@ -8,12 +8,7 @@
 #include <set>
 
 
-//
-// MARK: - Sprite
-//
-
 // MARK: Member functions
-
 Sprite::Sprite(SDL_Renderer * renderer, SDL_Texture * texture)
   : _renderer(renderer)
   , _texture(texture)
@@ -21,15 +16,12 @@ Sprite::Sprite(SDL_Renderer * renderer, SDL_Texture * texture)
 
 Sprite * Sprite::createSprite(SDL_Renderer * renderer, const char * filename)
 {
-  SDL_Surface * loaded_surface = IMG_Load(filename);
-  if (!loaded_surface)
-  {
-    SDL_Log("IMG_Load: %s\n", IMG_GetError());
-  }
+  SDL_Surface * loadedSurface = IMG_Load(filename);
+  if (!loadedSurface) SDL_Log("IMG_Load: %s\n", IMG_GetError());
   else
   {
-    auto texture = SDL_CreateTextureFromSurface(renderer, loaded_surface);
-    SDL_FreeSurface(loaded_surface);
+    auto texture = SDL_CreateTextureFromSurface(renderer, loadedSurface);
+    SDL_FreeSurface(loadedSurface);
     return new Sprite(renderer, texture);
   }
   return nullptr;
@@ -47,10 +39,8 @@ void Sprite::draw(int x, int y, int w, int h, int scale)
 }
 
 
-//
-// MARK: - SpriteCollection
-//
-
+// MARK: -
+// MARK: Member functions
 SpriteCollection & SpriteCollection::main()
 {
   static SpriteCollection instance;
@@ -89,9 +79,7 @@ void SpriteCollection::destroyAll()
 Sprite * SpriteCollection::retrieve(string id)
 {
   if (_sprites.find(id) != _sprites.end())
-  {
     return _sprites.at(id);
-  }
   return nullptr;
 }
 
@@ -102,22 +90,19 @@ void SpriteCollection::draw(string id, int x, int y, int w, int h, int scale)
 }
 
 
-//
-// MARK: - NotificationCenter
-//
-
+// MARK: -
+// MARK: Member functions
 void NotificationCenter::notify(Event event, GameObject & sender)
 {
   for (auto pair : _instance()._blocks[event])
   {
-    if (pair.second == nullptr || pair.second == &sender)
-      pair.first(event);
+    if (pair.second == nullptr || pair.second == &sender) pair.first(event);
   }
 }
 
 ObserverID NotificationCenter::observe(function<void(Event)> block,
                                        Event event,
-                                       GameObject * sender)
+                                       const GameObject * sender)
 {
   auto & blocksForEvent = _instance()._blocks[event];
   auto size = blocksForEvent.size();
@@ -127,7 +112,7 @@ ObserverID NotificationCenter::observe(function<void(Event)> block,
 
 void NotificationCenter::unobserve(ObserverID id,
                                    Event event,
-                                   GameObject * sender)
+                                   const GameObject * sender)
 {
   // TODO: fix so that elements are not erased, but the spot it occupied is made
   // available for the next observer. This function is currently not in use.
@@ -148,769 +133,65 @@ void NotificationCenter::unobserve(ObserverID id,
   }
 }
 
-// MARK: Private member functions
-
+// MARK: Private
 NotificationCenter & NotificationCenter::_instance()
 {
   static NotificationCenter instance;
   return instance;
 }
 
-//
-// MARK: - Core
-//
 
-// MARK: Static properties
-
-const vec3 Core::WORLD_UP       { 0.0f,  1.0f,  0.0f};
-const vec3 Core::WORLD_DOWN     { 0.0f, -1.0f,  0.0f};
-const vec3 Core::WORLD_LEFT     {-1.0f,  0.0f,  0.0f};
-const vec3 Core::WORLD_RIGHT    { 1.0f,  0.0f,  0.0f};
-const vec3 Core::WORLD_FORWARD  { 0.0f,  0.0f, -1.0f};
-const vec3 Core::WORLD_BACKWARD { 0.0f,  0.0f,  1.0f};
-
-// MARK: Member property functions
-
-double Core::elapsedTime()
-{
-  return SDL_GetTicks() / 1000.f;
-}
-
-double Core::effectiveElapsedTime()
-{
-  static double last_pause_time;
-  static double total_pause_duration;
-  static bool pause_toggle;
-  
-  const double elapsed = elapsedTime();
-  
-  if (_pause && !pause_toggle)
-  {
-    pause_toggle = true;
-    last_pause_time = elapsed;
-    
-#ifdef GAME_ENGINE_DEBUG
-    printf("/**************** PAUSED ****************/\n");
-#endif
-    
-  }
-  else if (!_pause && pause_toggle)
-  {
-    pause_toggle = false;
-    total_pause_duration += elapsed - last_pause_time;
-    
-#ifdef GAME_ENGINE_DEBUG
-    printf("/**************** RESUMED ***************/\n");
-#endif
-    
-  }
-  
-#ifdef GAME_ENGINE_DEBUG
-  static double last_print_time;
-  
-  if (elapsed - last_print_time >= 0.1)
-  {
-    printf("Elapsed: %f\t\t", elapsed);
-    printf("Effective elapsed: %f\t\t",
-           !_pause
-           ? elapsed - total_pause_duration
-           : last_pause_time - total_pause_duration);
-    printf("Pause time: %f\t\t", last_pause_time);
-    printf("Pause duration: %f\n",
-           !_pause
-           ? total_pause_duration
-           : total_pause_duration + elapsed - last_pause_time);
-    last_print_time = elapsed;
-  }
-#endif
-  
-  return (!_pause ? elapsed : last_pause_time) - total_pause_duration;
-}
-
-ivec2 Core::viewDimensions()
-{
-  ivec2 v;
-  SDL_GL_GetDrawableSize(_window, &v.x, &v.y);
-  return v;
-}
+// MARK: -
+// MARK: Properties
+const string & GameObject::id() const { return _id; }
 
 // MARK: Member functions
-
-Core::Core(int numberOfEntities)
-  : mousePosition(ivec2(0, 0))
-  , mouseMovement(ivec2(0, 0))
-  , sampleRate(44100)
-  , maxVolume(0.05)
-  , pScale(1)
-  , _entityCount(0)
-  , _maximumNumberOfEntities(numberOfEntities)
-  , _reset(false)
-  , _pause(false)
+void GameObject::assignIdentifier(const string & id)
 {
-  _entities.resize(_maximumNumberOfEntities);
-  root().id("root");
-  camera(createEntity("camera"));
-  pBackgroundColor().x = 0.0;
-  pBackgroundColor().y = 0.0;
-  pBackgroundColor().z = 0.0;
-}
-
-bool Core::init(CoreOptions & options)
-{
-  // initialize SDL
-  if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
-  {
-    SDL_Log("SDL_Init: %s\n", SDL_GetError());
-    return false;
-  }
-  SDL_GL_LoadLibrary(nullptr);
-  
-  // initialize OpenGL
-  SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-#ifdef __APPLE__
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
-                      SDL_GL_CONTEXT_PROFILE_CORE);
-#elif defined _WIN32
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
-                      SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
-#endif
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
-  SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-  SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-  
-  // create window
-  auto windowOptions = SDL_WINDOW_SHOWN |
-                       SDL_WINDOW_RESIZABLE |
-                       SDL_WINDOW_FULLSCREEN_DESKTOP |
-                       SDL_WINDOW_ALLOW_HIGHDPI;
-  _window = SDL_CreateWindow(options.title,
-                             SDL_WINDOWPOS_UNDEFINED,
-                             SDL_WINDOWPOS_UNDEFINED,
-                             options.width,
-                             options.height,
-                             windowOptions);
-  if (_window == nullptr)
-  {
-    SDL_Log("SDL_CreateWindow: %s\n", SDL_GetError());
-    return false;
-  }
-  SDL_SetRelativeMouseMode(SDL_TRUE);
-  
-  // create context for window
-  _context = SDL_GL_CreateContext(_window);
-  if (_context == nullptr) {
-    SDL_Log("SDL_GL_CreateContext: %s\n", SDL_GetError());
-    return false;
-  }
-  
-  // initialize glew
-#ifdef __APPLE__
-  glewExperimental = true;
-#endif
-  glewInit();
-  
-  // 1 for v-sync
-  SDL_GL_SetSwapInterval(1);
-  
-  // initialize entities
-  root().init(this);
-  root().reset();
-  
-  // initialize audio
-  auto fillStream = [](void * userdata, uint8_t * stream, int length)
-  {
-    Core * core         = (Core*)userdata;
-    int16_t * stream16b = (int16_t*)stream;
-    double maxVolume    = core->maxVolume();
-    
-    for (int i = 0; i < length/2; i++) stream16b[i] = 0;
-    
-    function<void(Entity*)> callbacks;
-    callbacks = [maxVolume, stream16b, length, &callbacks](Entity * entity)
-    {
-      AudioComponent * audio = entity->pAudio();
-      if (audio) audio->_audioStreamCallback(maxVolume, stream16b, length/2);
-      
-      for (auto child : entity->children())
-      {
-        callbacks(child);
-      }
-    };
-    
-    callbacks(&core->root());
-  };
-  
-  SDL_AudioSpec desired_audio_spec;
-  
-  desired_audio_spec.freq     = sampleRate();
-  desired_audio_spec.format   = AUDIO_S16SYS;
-  desired_audio_spec.channels = 1;
-  desired_audio_spec.samples  = 2048;
-  desired_audio_spec.callback = fillStream;
-  desired_audio_spec.userdata = this;
-  
-  SDL_OpenAudio(&desired_audio_spec, nullptr);
-  
-  SDL_PauseAudio(0);
-  
-  return true;
-}
-
-bool Core::update()
-{
-  bool should_continue = true;
-  
-  // record time
-  static double prev_time;
-  double start_time = elapsedTime();
-  deltaTime(start_time - prev_time);
-  prev_time = start_time;
-  
-  // check user input
-  mouseMovement().x = 0;
-  mouseMovement().y = 0;
-  SDL_Event event;
-  set<SDL_Keycode> keysToPress, keysToRelease;
-  while (SDL_PollEvent(&event))
-  {
-    switch (event.type)
-    {
-      case SDL_QUIT:
-        should_continue = false;
-        break;
-      case SDL_KEYDOWN:
-        keysToPress.insert(event.key.keysym.sym);
-        break;
-      case SDL_KEYUP:
-        keysToRelease.insert(event.key.keysym.sym);
-        break;
-      case SDL_MOUSEMOTION:
-        mousePosition().x = event.motion.x;
-        mousePosition().y = event.motion.y;
-        mouseMovement().x = event.motion.xrel;
-        mouseMovement().y = event.motion.yrel;
-        break;
-    }
-  }
-  
-  // update controls
-  for (auto key : keysToPress)
-  {
-    for (auto & entry : _keyControls)
-    {
-      auto & control = entry.second;
-      if (control.first == key) control.second = true;
-    }
-  }
-  for (auto key : keysToRelease)
-  {
-    for (auto & entry : _keyControls)
-    {
-      auto & control = entry.second;
-      if (control.first == key) control.second = false;
-    }
-  }
-  
-  // set up OpenGl
-  auto d = viewDimensions();
-  glViewport(0, 0, d.x, d.y);
-  glEnable(GL_DEPTH_TEST);
-  glEnable(GL_CULL_FACE);
-  
-  // clear screen
-  glClearColor(pBackgroundColor().r,
-               pBackgroundColor().g,
-               pBackgroundColor().b,
-               1.0);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  
-  // update entities (except rendering)
-  uint8_t mask = !_pause ? 0b111111 : 0b000001;
-  for (uint8_t i = 0b100000; i > 0b000001; i = i >>= 1)
-  {
-    for (auto entity : _entities)
-    {
-      entity.update(mask & i);
-    }
-  }
-  
-  // update view and projection matrix
-  mat4 cameraTranslation = glm::translate(camera()->worldPosition());
-  cameraTranslation[3].x *= -1;
-  cameraTranslation[3].y *= -1;
-  cameraTranslation[3].z *= -1;
-  quat inverseCameraOrientation = glm::inverse(camera()->worldOrientation());
-  const mat4 cameraRotation = glm::toMat4(inverseCameraOrientation);
-  viewMatrix(cameraRotation * cameraTranslation);
-  projectionMatrix(perspective(radians(45.0f),
-                               float(d.x) / float(d.y),
-                               0.01f,
-                               300.0f));
-  
-  // render entities
-  for (auto entity : _entities)
-  {
-    entity.update(0b000001);
-  }
-  
-  // swap buffers
-  SDL_GL_SwapWindow(_window);
-  
-  // possibly do a reset
-  if (_reset)
-  {
-    _timers.clear();
-    root().reset();
-    _reset = false;
-    resume();
-  }
-  
-  // go through timers
-  int i = 0;
-  while (i < _timers.size())
-  {
-    auto pair = _timers[i];
-    const double current_time = pair.second == _EFFECTIVE
-    ? effectiveElapsedTime()
-    : elapsedTime();
-    if (current_time >= pair.first.endTime)
-    {
-      pair.first.block();
-      _timers.erase(_timers.begin() + i);
-    }
-    else i++;
-  }
-  
-  return should_continue;
-}
-
-void Core::destroy()
-{
-  root().destroy();
-  
-  SDL_CloseAudio();
-  SDL_DestroyWindow(_window);
-  SDL_Quit();
-}
-
-Entity * Core::createEntity(string id, string parentId)
-{
-  Entity * entity = nullptr;
-  if (_entityCount < _maximumNumberOfEntities && !root().findChild(id))
-  {
-    Entity * parent = &root();
-    if (parentId.compare("root") == 0 || (parent = root().findChild(parentId)))
-    {
-      entity = &_entities[_entityCount++];
-      entity->id(id);
-      parent->addChild(entity);
-    }
-  }
-  return entity;
-}
-
-void Core::createEffectiveTimer(double duration, function<void()> block)
-{
-  _timers.push_back
-  ({
-    {effectiveElapsedTime() + duration, block},
-    _EFFECTIVE
-  });
-}
-
-void Core::createAccumulativeTimer(double duration, function<void()> block)
-{
-  _timers.push_back
-  ({
-    {elapsedTime() + duration, block},
-    _ACCUMULATIVE
-  });
-}
-
-void Core::addControl(string name, SDL_Keycode key)
-{
-  _keyControls[name] = {key, false};
-}
-
-void Core::removeControl(string name)
-{
-  _keyControls.erase(name);
-}
-
-maybe<bool> Core::checkKey(string name)
-{
-  if (_keyControls.find(name) != _keyControls.end())
-  {
-    return maybe<bool>::just(_keyControls[name].second);
-  }
-  return maybe<bool>::nothing();
-  
-}
-
-void Core::reset(double after_duration)
-{
-  createAccumulativeTimer(after_duration, [this] { _reset = true; });
-}
-
-void Core::pause()
-{
-  _pause = true;
-  effectiveElapsedTime();
-}
-
-void Core::resume()
-{
-  _pause = false;
-  effectiveElapsedTime();
+  _id = id;
 }
 
 
-//
-// MARK: - Entity
-//
-
+// MARK: -
 // MARK: Member functions
-
-Entity::Entity()
-  : core(nullptr)
-  , parent(nullptr)
-  , pInput(nullptr)
-  , pAnimation(nullptr)
-  , pRigidBody(nullptr)
-  , pAudio(nullptr)
-  , pGraphics(nullptr)
-  , pVelocity(vec3(0.0f))
-  , localPosition(vec3(0.0f))
-  , localOrientation(quat(1.0f, 0.0f, 0.0f, 0.0f))
-  , _transformNeedsUpdating(true)
-{}
-
-void Entity::init(Core * core)
+void Component::init(Entity * entity)
 {
-  this->core(core);
-  pEnabled(true);
-  
-  if (pInput())     pInput()->init(this);
-  if (pAnimation()) pAnimation()->init(this);
-  if (pCollider())  pCollider()->init(this);
-  if (pRigidBody()) pRigidBody()->init(this);
-  if (pAudio())     pAudio()->init(this);
-  if (pGraphics())  pGraphics()->init(this);
-  
-  if (parent() != nullptr)
-  {
-    auto eventHandler = [this](Event)
-    {
-      _transformNeedsUpdating = true;
-      NotificationCenter::notify(DidUpdateTransform, *this);
-    };
-    NotificationCenter::observe(eventHandler, DidUpdateTransform, parent());
-  }
-  
-  for (auto child : children()) child->init(core);
+  _entity = entity;
 }
-
-void Entity::reset()
-{
-  pVelocity() = vec3(0.0f);
-  
-  if (pInput())     pInput()->reset();
-  if (pAnimation()) pAnimation()->reset();
-  if (pCollider())  pCollider()->init(this);
-  if (pRigidBody()) pRigidBody()->reset();
-  if (pAudio())     pAudio()->reset();
-  if (pGraphics())  pGraphics()->reset();
-  
-  for (auto child : children()) child->reset();
-}
-
-void Entity::destroy()
-{
-  for (auto child : children())
-  {
-    child->destroy();
-  }
-  children().clear();
-  
-  if (pInput())     delete pInput();
-  if (pAnimation()) delete pAnimation();
-  if (pCollider())  delete pCollider();
-  if (pRigidBody()) delete pRigidBody();
-  if (pAudio())     delete pAudio();
-  if (pGraphics())  delete pGraphics();
-}
-
-Dimension2 Entity::dimensions()
-{
-  return pGraphics() ? pGraphics()->bounds().dim : Dimension2 {};
-}
-
-void Entity::addChild(Entity * child)
-{
-  children().push_back(child);
-  child->parent(this);
-}
-
-Entity * Entity::findChild(string id)
-{
-  for (auto child : children())
-  {
-    if (child->id().compare(id) == 0) return child;
-    auto possible_find = child->findChild(id);
-    if (possible_find) return possible_find;
-  }
-  return nullptr;
-}
-
-void Entity::removeChild(string id)
-{
-  for (int i = 0; i < children().size(); i++)
-  {
-    auto child = children()[i];
-    if (child->id() == id)
-    {
-      child->parent(nullptr);
-      children().erase(children().begin()+i);
-    }
-  }
-}
-
-mat4 Entity::localTransform()
-{
-  return localTranslation() * localRotation();
-}
-
-mat4 Entity::localTranslation()
-{
-  return glm::translate(localPosition());
-}
-
-mat4 Entity::localRotation()
-{
-  return glm::toMat4(localOrientation());
-}
-
-vec3 Entity::localUp()
-{
-  return glm::rotate(localOrientation(), Core::WORLD_UP);
-}
-
-vec3 Entity::localDown()
-{
-  return glm::rotate(localOrientation(), Core::WORLD_DOWN);
-}
-
-vec3 Entity::localLeft()
-{
-  return glm::rotate(localOrientation(), Core::WORLD_LEFT);
-}
-
-vec3 Entity::localRight()
-{
-  return glm::rotate(localOrientation(), Core::WORLD_RIGHT);
-}
-
-vec3 Entity::localForward()
-{
-  return glm::rotate(localOrientation(), Core::WORLD_FORWARD);
-}
-
-vec3 Entity::localBackward()
-{
-  return glm::rotate(localOrientation(), Core::WORLD_BACKWARD);
-}
-
-vec3 Entity::worldPosition()
-{
-  if (_transformNeedsUpdating) _updateTransform();
-  return _worldPosition;
-}
-
-quat Entity::worldOrientation()
-{
-  if (_transformNeedsUpdating) _updateTransform();
-  return _worldOrientation;
-}
-
-mat4 Entity::worldTransform()
-{
-  return worldTranslation() * worldRotation();
-}
-
-mat4 Entity::worldTranslation()
-{
-  return glm::translate(worldPosition());
-}
-
-mat4 Entity::worldRotation()
-{
-  return glm::toMat4(worldOrientation());
-}
-
-void Entity::translate(float dx, float dy, float dz)
-{
-  localPosition().x += dx;
-  localPosition().y += dy;
-  localPosition().z += dz;
-  _transformNeedsUpdating = true;
-  NotificationCenter::notify(DidUpdateTransform, *this);
-}
-
-void Entity::rotate(float angle, vec3 axis)
-{
-  localOrientation() = glm::angleAxis(angle, axis) * localOrientation();
-  _transformNeedsUpdating = true;
-  NotificationCenter::notify(DidUpdateTransform, *this);
-}
-
-void Entity::setPosition(float x, float y, float z)
-{
-  localPosition(vec3(0.0f));
-  translate(x, y, z);
-}
-void Entity::setPositionX(float x)
-{
-  vec3 previousPosition = localPosition();
-  translate(x, previousPosition.y, previousPosition.z);
-}
-
-void Entity::setPositionY(float y)
-{
-  vec3 previousPosition = localPosition();
-  translate(previousPosition.x, y, previousPosition.z);
-}
-
-void Entity::setPositionZ(float z)
-{
-  vec3 previousPosition = localPosition();
-  translate(previousPosition.x, previousPosition.y, z);
-}
-
-void Entity::setOrientation(float pitch, float yaw, float roll)
-{
-  quat qX = glm::angleAxis(pitch, Core::WORLD_RIGHT);
-  quat qY = glm::angleAxis(yaw,   Core::WORLD_UP);
-  quat qZ = glm::angleAxis(roll,  Core::WORLD_BACKWARD);
-  localOrientation(qZ * qY * qX);
-  _transformNeedsUpdating = true;
-  NotificationCenter::notify(DidUpdateTransform, *this);
-}
-
-void Entity::setPitch(float pitch)
-{
-  vec3 eulerAngles = glm::eulerAngles(localOrientation());
-  setOrientation(pitch, eulerAngles.y, eulerAngles.z);
-}
-
-void Entity::setYaw(float yaw)
-{
-  vec3 eulerAngles = glm::eulerAngles(localOrientation());
-  setOrientation(eulerAngles.x, yaw, eulerAngles.z);
-}
-
-void Entity::setRoll(float roll)
-{
-  vec3 eulerAngles = glm::eulerAngles(localOrientation());
-  setOrientation(eulerAngles.x, eulerAngles.y, roll);
-}
-
-void Entity::update(uint8_t component_mask)
-{
-  if (pEnabled())
-  {
-    if (component_mask & 0b100000 && pInput())
-    {
-      pInput()->update(*core());
-    }
-    if (component_mask & 0b010000 && pAnimation())
-    {
-      pAnimation()->update(*core());
-    }
-    if (component_mask & 0b001000 && pCollider())
-    {
-      pCollider()->update(*core());
-    }
-    if (component_mask & 0b000100 && pRigidBody())
-    {
-      pRigidBody()->update(*core());
-    }
-    if (component_mask & 0b000010 && pAudio())
-    {
-      pAudio()->update(*core());
-    }
-    if (component_mask & 0b000001 && pGraphics())
-    {
-      pGraphics()->update(*core());
-    }
-  }
-}
-
-bool Entity::operator ==(Entity & entity)
-{
-  return id().compare(entity.id()) == 0;
-}
-
-bool Entity::operator !=(Entity & entity)
-{
-  return id().compare(entity.id()) != 0;
-}
-
-void Entity::_updateTransform()
-{
-  if (parent())
-  {
-    _worldPosition    = parent()->worldPosition() + localPosition();
-    _worldOrientation = parent()->worldOrientation() * localOrientation();
-  }
-  else
-  {
-    _worldPosition    = localPosition();
-    _worldOrientation = localOrientation();
-  }
-}
-
-//
-// MARK: - Component
-//
-
-// MARK: Property functions
 
 string Component::id()
 {
   string id = trait() + "Component";
-  if (entity()) id = entity()->id() + id;
+  if (_entity)
+    return _entity->id() + id;
   return id;
 }
 
+// MARK: Protected
+Entity * Component::entity() { return _entity; }
+
+
+// MARK: -
 // MARK: Member functions
-void Component::init(Entity * entity)
+string InputComponent::trait() const { return "Input"; }
+
+
+// MARK: -
+// MARK: Properties
+const vector<vec3> & GraphicsComponent::vertexPositions() const
 {
-  this->entity(entity);
+  return _vertexPositions;
+}
+const vector<vec3> & GraphicsComponent::vertexColors() const
+{
+  return _vertexColors;
+}
+const vector<ivec3> & GraphicsComponent::vertexIndices() const
+{
+  return _vertexIndices;
 }
 
-
-//
-// MARK: - InputComponent
-//
-
-// MARK: Property functions
-
-string InputComponent::trait() { return "Input"; }
-
-
-//
-// MARK: - GraphicsComponent
-//
-
-// MARK: Property functions
-
-string GraphicsComponent::trait() { return "Mesh"; }
-
 // MARK: Member functions
-
 void GraphicsComponent::init(Entity * entity)
 {
   Component::init(entity);
@@ -923,8 +204,8 @@ void GraphicsComponent::init(Entity * entity)
   glGenBuffers(1, &_positionBuffer);
   glBindBuffer(GL_ARRAY_BUFFER, _positionBuffer);
   glBufferData(GL_ARRAY_BUFFER,
-               vertexPositions().size()*sizeof(vec3),
-               &vertexPositions()[0].x,
+               _vertexPositions.size()*sizeof(vec3),
+               &_vertexPositions[0].x,
                GL_STATIC_DRAW);
   glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
   glEnableVertexAttribArray(0);
@@ -933,8 +214,8 @@ void GraphicsComponent::init(Entity * entity)
   glGenBuffers(1, &_colorBuffer);
   glBindBuffer(GL_ARRAY_BUFFER, _colorBuffer);
   glBufferData(GL_ARRAY_BUFFER,
-               vertexColors().size()*sizeof(vec3),
-               &vertexColors()[0].x,
+               _vertexColors.size()*sizeof(vec3),
+               &_vertexColors[0].x,
                GL_STATIC_DRAW);
   glVertexAttribPointer(1, 3, GL_FLOAT, false, 0, 0);
   glEnableVertexAttribArray(1);
@@ -943,8 +224,8 @@ void GraphicsComponent::init(Entity * entity)
   glGenBuffers(1, &_indexBuffer);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _indexBuffer);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-               vertexIndices().size()*sizeof(int),
-               &vertexIndices()[0],
+               _vertexIndices.size()*sizeof(ivec3),
+               &_vertexIndices[0].x,
                GL_STATIC_DRAW);
   
   // TODO: handle errors
@@ -980,7 +261,7 @@ void GraphicsComponent::init(Entity * entity)
     glGetUniformLocation(_shaderProgram, "modelViewProjectionMatrix");
 }
 
-void GraphicsComponent::update(Core & core)
+void GraphicsComponent::update(const Core & core)
 {
   // construct matrices
   const mat4 modelTranslation    = glm::translate(entity()->worldPosition());
@@ -1000,22 +281,22 @@ void GraphicsComponent::update(Core & core)
   // render
   glBindVertexArray(_vertexArrayObject);
   glDrawElements(GL_TRIANGLES,
-                 (int)vertexIndices().size(),
+                 (int)_vertexIndices.size()*sizeof(ivec3),
                  GL_UNSIGNED_INT,
                  0);
 }
 
-void GraphicsComponent::attachMesh(vector<vec3> & positions,
-                                   vector<vec3> & colors,
-                                   vector<int> & indices)
+void GraphicsComponent::attachMesh(const vector<vec3> & positions,
+                                   const vector<vec3> & colors,
+                                   const vector<ivec3> & indices)
 {
-  vertexPositions().resize(positions.size());
-  vertexColors().resize(colors.size());
-  vertexIndices().resize(indices.size());
+  _vertexPositions.resize(positions.size());
+  _vertexColors.resize(colors.size());
+  _vertexIndices.resize(indices.size());
   
   for (int i = 0; i < positions.size(); i++)
   {
-    vec3 & vPos = vertexPositions()[i];
+    vec3 & vPos = _vertexPositions[i];
     vec3 pos = positions[i];
     vPos.x = pos.x;
     vPos.y = pos.y;
@@ -1024,7 +305,7 @@ void GraphicsComponent::attachMesh(vector<vec3> & positions,
   
   for (int i = 0; i < colors.size(); i++)
   {
-    vec3 & vCol = vertexColors()[i];
+    vec3 & vCol = _vertexColors[i];
     vec3 col = colors[i];
     vCol.x = col.x;
     vCol.y = col.y;
@@ -1033,7 +314,11 @@ void GraphicsComponent::attachMesh(vector<vec3> & positions,
   
   for (int i = 0; i < indices.size(); i++)
   {
-    vertexIndices()[i] = indices[i];
+    ivec3 & vInd = _vertexIndices[i];
+    vec3 ind = indices[i];
+    vInd.x = ind.x;
+    vInd.y = ind.y;
+    vInd.z = ind.z;
   }
 }
 
@@ -1044,26 +329,762 @@ void GraphicsComponent::attachShader(string vertexShaderFilename,
   _fragmentShaderFilename = fragmentShaderFilename;
 }
 
-void GraphicsComponent::offsetTo(int x, int y)
+string GraphicsComponent::trait() const { return "Mesh"; }
+
+
+// MARK: -
+// MARK: Properties
+const Core * Entity::core() const                { return _core; }
+const Entity * Entity::parent() const            { return _parent; }
+const vector<Entity*> & Entity::children() const { return _children; }
+
+const InputComponent * Entity::input() const         { return _input; }
+const AnimationComponent * Entity::animation() const { return _animation; }
+const ColliderComponent * Entity::collider() const   { return _collider; }
+const RigidBodyComponent * Entity::rigidBody() const { return _rigidBody; }
+const AudioComponent * Entity::audio() const         { return _audio; }
+const GraphicsComponent * Entity::graphics() const   { return _graphics; }
+
+const vec3 & Entity::localPosition() const    { return _localPosition; }
+const quat & Entity::localOrientation() const { return _localOrientation; }
+
+const vec3 & Entity::velocity() const { return _velocity; }
+bool Entity::enabled() const          { return _enabled; }
+
+// MARK: Member functions
+Entity::Entity()
+  : _core(nullptr)
+  , _parent(nullptr)
+  , _children()
+  , _input(nullptr)
+  , _animation(nullptr)
+  , _collider(nullptr)
+  , _rigidBody(nullptr)
+  , _audio(nullptr)
+  , _graphics(nullptr)
+  , _localPosition(0.0f)
+  , _localOrientation(1.0f, 0.0f, 0.0f, 0.0f)
+  , _velocity(0.0f)
+  , _enabled(false)
+  , _transformNeedsUpdating(true)
+{}
+
+void Entity::init(Core * core)
 {
-  bounds().pos.x = x;
-  bounds().pos.y = y;
+  _core = core;
+  _enabled = true;
+  
+  if (_input)     _input->init(this);
+  if (_animation) _animation->init(this);
+  if (_collider)  _collider->init(this);
+  if (_rigidBody) _rigidBody->init(this);
+  if (_audio)     _audio->init(this);
+  if (_graphics)  _graphics->init(this);
+  
+  if (_parent)
+  {
+    auto eventHandler = [this](Event)
+    {
+      _transformNeedsUpdating = true;
+      NotificationCenter::notify(DidUpdateTransform, *this);
+    };
+    NotificationCenter::observe(eventHandler, DidUpdateTransform, _parent);
+  }
+  
+  for (auto child : _children) child->init(core);
 }
 
-void GraphicsComponent::offsetBy(int dx, int dy)
+void Entity::reset()
 {
-  bounds().pos.x += dx;
-  bounds().pos.y += dy;
+  _velocity = vec3(0.0f);
+  
+  if (_input)     _input->reset();
+  if (_animation) _animation->reset();
+  if (_collider)  _collider->reset();
+  if (_rigidBody) _rigidBody->reset();
+  if (_audio)     _audio->reset();
+  if (_graphics)  _graphics->reset();
+  
+  for (auto child : _children) child->reset();
 }
 
-void GraphicsComponent::resizeTo(int w, int h)
+void Entity::destroy()
 {
-  bounds().dim.x = w;
-  bounds().dim.y = h;
+  for (auto child : _children)
+  {
+    child->destroy();
+  }
+  _children.clear();
+  
+  if (_input)     delete _input;
+  if (_animation) delete _animation;
+  if (_collider)  delete _collider;
+  if (_rigidBody) delete _rigidBody;
+  if (_audio)     delete _audio;
+  if (_graphics)  delete _graphics;
 }
 
-void GraphicsComponent::resizeBy(int dw, int dh)
+void Entity::addChild(Entity * child)
 {
-  bounds().dim.x += dw;
-  bounds().dim.y += dh;
+  _children.push_back(child);
+  child->_parent = this;
+}
+
+Entity * Entity::findChild(string id)
+{
+  for (auto child : _children)
+  {
+    if (child->id().compare(id) == 0)
+      return child;
+    auto possible_find = child->findChild(id);
+    if (possible_find)
+      return possible_find;
+  }
+  return nullptr;
+}
+
+void Entity::removeChild(string id)
+{
+  for (int i = 0; i < _children.size(); i++)
+  {
+    auto child = _children[i];
+    if (child->id() == id)
+    {
+      child->_parent = nullptr;
+      _children.erase(_children.begin()+i);
+    }
+  }
+}
+
+void Entity::attachInputComponent(InputComponent * input)
+{
+  _input = input;
+}
+
+void Entity::attachAnimationComponent(AnimationComponent * animation)
+{
+  _animation = animation;
+}
+
+void Entity::attachColliderComponent(ColliderComponent * collider)
+{
+  _collider = collider;
+}
+
+void Entity::attachRigidBodyComponent(RigidBodyComponent * rigidBody)
+{
+  _rigidBody = rigidBody;
+}
+
+void Entity::attachAudioComponent(AudioComponent * audio)
+{
+  _audio = audio;
+}
+
+void Entity::attachGraphicsComponent(GraphicsComponent * graphics)
+{
+  _graphics = graphics;
+}
+
+mat4 Entity::localTransform()
+{
+  return localTranslation() * localRotation();
+}
+
+mat4 Entity::localTranslation()
+{
+  return glm::translate(_localPosition);
+}
+
+mat4 Entity::localRotation()
+{
+  return glm::toMat4(_localOrientation);
+}
+
+vec3 Entity::localUp()
+{
+  return glm::rotate(_localOrientation, Core::WORLD_UP);
+}
+
+vec3 Entity::localDown()
+{
+  return glm::rotate(_localOrientation, Core::WORLD_DOWN);
+}
+
+vec3 Entity::localLeft()
+{
+  return glm::rotate(_localOrientation, Core::WORLD_LEFT);
+}
+
+vec3 Entity::localRight()
+{
+  return glm::rotate(_localOrientation, Core::WORLD_RIGHT);
+}
+
+vec3 Entity::localForward()
+{
+  return glm::rotate(_localOrientation, Core::WORLD_FORWARD);
+}
+
+vec3 Entity::localBackward()
+{
+  return glm::rotate(_localOrientation, Core::WORLD_BACKWARD);
+}
+
+const vec3 & Entity::worldPosition() const
+{
+  if (_transformNeedsUpdating) _updateTransform();
+  return _worldPosition;
+}
+
+const quat & Entity::worldOrientation() const
+{
+  if (_transformNeedsUpdating) _updateTransform();
+  return _worldOrientation;
+}
+
+mat4 Entity::worldTransform()
+{
+  return worldTranslation() * worldRotation();
+}
+
+mat4 Entity::worldTranslation()
+{
+  return glm::translate(_worldPosition);
+}
+
+mat4 Entity::worldRotation()
+{
+  return glm::toMat4(worldOrientation());
+}
+
+void Entity::translate(float dx, float dy, float dz)
+{
+  _localPosition.x += dx;
+  _localPosition.y += dy;
+  _localPosition.z += dz;
+  _transformNeedsUpdating = true;
+  NotificationCenter::notify(DidUpdateTransform, *this);
+}
+
+void Entity::translate(float distance, const vec3 & direction)
+{
+  translate(distance*direction.x, distance*direction.y, distance*direction.z);
+}
+
+void Entity::rotate(float angle, vec3 axis)
+{
+  quat newQuat = glm::angleAxis(angle, axis) * _localOrientation;
+  _localOrientation = glm::normalize(newQuat);
+  _transformNeedsUpdating = true;
+  NotificationCenter::notify(DidUpdateTransform, *this);
+}
+
+void Entity::reposition(float x, float y, float z)
+{
+  _localPosition.x = 0.0f;
+  _localPosition.y = 0.0f;
+  _localPosition.z = 0.0f;
+  translate(x, y, z);
+}
+void Entity::setX(float x)
+{
+  translate(x, _localPosition.y, _localPosition.z);
+}
+
+void Entity::setY(float y)
+{
+  translate(_localPosition.x, y, _localPosition.z);
+}
+
+void Entity::setZ(float z)
+{
+  translate(_localPosition.x, _localPosition.y, z);
+}
+
+void Entity::reorient(float pitch, float yaw, float roll)
+{
+  quat qX = glm::angleAxis(pitch, Core::WORLD_RIGHT);
+  quat qY = glm::angleAxis(yaw,   Core::WORLD_UP);
+  quat qZ = glm::angleAxis(roll,  Core::WORLD_BACKWARD);
+  _localOrientation = qZ * qY * qX;
+  _transformNeedsUpdating = true;
+  NotificationCenter::notify(DidUpdateTransform, *this);
+}
+
+void Entity::setPitch(float pitch)
+{
+  vec3 eulerAngles = glm::eulerAngles(_localOrientation);
+  reorient(pitch, eulerAngles.y, eulerAngles.z);
+}
+
+void Entity::setYaw(float yaw)
+{
+  vec3 eulerAngles = glm::eulerAngles(_localOrientation);
+  reorient(eulerAngles.x, yaw, eulerAngles.z);
+}
+
+void Entity::setRoll(float roll)
+{
+  vec3 eulerAngles = glm::eulerAngles(_localOrientation);
+  reorient(eulerAngles.x, eulerAngles.y, roll);
+}
+
+void Entity::update(unsigned int componentMask)
+{
+  if (_enabled)
+  {
+    if (componentMask & 0b100000 && _input)     _input->update(*_core);
+    if (componentMask & 0b010000 && _animation) _animation->update(*_core);
+    if (componentMask & 0b001000 && _collider)  _collider->update(*_core);
+    if (componentMask & 0b000100 && _rigidBody) _rigidBody->update(*_core);
+    if (componentMask & 0b000010 && _audio)     _audio->update(*_core);
+    if (componentMask & 0b000001 && _graphics)  _graphics->update(*_core);
+  }
+}
+
+bool Entity::operator ==(Entity & entity)
+{
+  return id().compare(entity.id()) == 0;
+}
+
+bool Entity::operator !=(Entity & entity)
+{
+  return id().compare(entity.id()) != 0;
+}
+
+// MARK: Private
+void Entity::_updateTransform() const
+{
+  if (_parent)
+  {
+    _worldPosition    = _parent->worldPosition() + _localPosition;
+    _worldOrientation = _parent->worldOrientation() * _localOrientation;
+  }
+  else
+  {
+    _worldPosition    = _localPosition;
+    _worldOrientation = _localOrientation;
+  }
+}
+
+
+// MARK: -
+// MARK: Properties
+const Entity & Core::root() const { return _root; };
+Entity * Core::camera() const     { return _camera; };
+
+double Core::deltaTime() const            { return _deltaTime; };
+const ivec2 & Core::mousePosition() const { return _mousePosition; };
+const ivec2 & Core::mouseMovement() const { return _mouseMovement; };
+
+int Core::sampleRate() const   { return _sampleRate; };
+double Core::maxVolume() const { return _maxVolume; };
+
+const mat4 & Core::viewMatrix() const       { return _viewMatrix; };
+const mat4 & Core::projectionMatrix() const { return _projectionMatrix; };
+
+int Core::scale() const                    { return _scale; };
+const vec3 & Core::backgroundColor() const { return _backgroundColor; };
+
+const vec3 Core::WORLD_UP       { 0.0f,  1.0f,  0.0f};
+const vec3 Core::WORLD_DOWN     { 0.0f, -1.0f,  0.0f};
+const vec3 Core::WORLD_LEFT     {-1.0f,  0.0f,  0.0f};
+const vec3 Core::WORLD_RIGHT    { 1.0f,  0.0f,  0.0f};
+const vec3 Core::WORLD_FORWARD  { 0.0f,  0.0f, -1.0f};
+const vec3 Core::WORLD_BACKWARD { 0.0f,  0.0f,  1.0f};
+
+// MARK: Member functions
+Core::Core(int numberOfEntities)
+  : _mousePosition(0, 0)
+  , _mouseMovement(0, 0)
+  , _sampleRate(44100)
+  , _maxVolume(0.05)
+  , _scale(1)
+  , _backgroundColor(0.0f, 0.0f, 0.0f)
+  , _entityCount(0)
+  , _maximumNumberOfEntities(numberOfEntities)
+  , _reset(false)
+  , _pause(false)
+{
+  _entities.resize(_maximumNumberOfEntities);
+  _root.assignIdentifier("root");
+  _camera = createEntity("camera");
+}
+
+bool Core::init(CoreOptions & options)
+{
+  // TODO: make more secure, i.e. handle errors better
+  
+  // initialize SDL
+  if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
+  {
+    SDL_Log("SDL_Init: %s\n", SDL_GetError());
+    return false;
+  }
+  SDL_GL_LoadLibrary(nullptr);
+  
+  // initialize OpenGL
+  SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+#ifdef __APPLE__
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
+                      SDL_GL_CONTEXT_PROFILE_CORE);
+#elif defined _WIN32
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
+                      SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+#endif
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
+  SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+  SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+  
+  // create window
+  auto windowOptions = SDL_WINDOW_SHOWN |
+  SDL_WINDOW_RESIZABLE |
+  SDL_WINDOW_FULLSCREEN_DESKTOP |
+  SDL_WINDOW_ALLOW_HIGHDPI;
+  _window = SDL_CreateWindow(options.title,
+                             SDL_WINDOWPOS_UNDEFINED,
+                             SDL_WINDOWPOS_UNDEFINED,
+                             options.width,
+                             options.height,
+                             windowOptions);
+  if (_window == nullptr)
+  {
+    SDL_Log("SDL_CreateWindow: %s\n", SDL_GetError());
+    return false;
+  }
+  SDL_SetRelativeMouseMode(SDL_TRUE);
+  
+  // create context for window
+  _context = SDL_GL_CreateContext(_window);
+  if (_context == nullptr) {
+    SDL_Log("SDL_GL_CreateContext: %s\n", SDL_GetError());
+    return false;
+  }
+  
+  // initialize glew
+#ifdef __APPLE__
+  glewExperimental = true;
+#endif
+  glewInit();
+  
+  // 1 for v-sync
+  SDL_GL_SetSwapInterval(1);
+  
+  // initialize entities
+  _root.init(this);
+  _root.reset();
+  
+  // initialize audio
+  auto fillStream = [](void * userdata, uint8_t * stream, int length)
+  {
+    Core * core         = (Core*)userdata;
+    int16_t * stream16b = (int16_t*)stream;
+    double maxVolume    = core->_maxVolume;
+    
+    for (int i = 0; i < length/2; i++) stream16b[i] = 0;
+    
+    function<void(Entity*)> callbacks;
+    callbacks = [maxVolume, stream16b, length, &callbacks](Entity * entity)
+    {
+      // TODO: refactor audio
+//      const AudioComponent * audio = entity->audio();
+//      if (audio) audio->_audioStreamCallback(maxVolume, stream16b, length/2);
+      
+      for (auto child : entity->children()) callbacks(child);
+    };
+    
+    callbacks(&core->_root);
+  };
+  
+  SDL_AudioSpec desired_audio_spec;
+  
+  desired_audio_spec.freq     = _sampleRate;
+  desired_audio_spec.format   = AUDIO_S16SYS;
+  desired_audio_spec.channels = 1;
+  desired_audio_spec.samples  = 2048;
+  desired_audio_spec.callback = fillStream;
+  desired_audio_spec.userdata = this;
+  
+  SDL_OpenAudio(&desired_audio_spec, nullptr);
+  
+  SDL_PauseAudio(0);
+  
+  return true;
+}
+
+bool Core::update()
+{
+  bool shouldContinue = true;
+  
+  // record time
+  static double prevTime;
+  double startTime = elapsedTime();
+  _deltaTime = startTime - prevTime;
+  prevTime = startTime;
+  
+  // check user input
+  _mouseMovement.x = 0;
+  _mouseMovement.y = 0;
+  SDL_Event event;
+  set<SDL_Keycode> keysToPress, keysToRelease;
+  while (SDL_PollEvent(&event))
+  {
+    switch (event.type)
+    {
+      case SDL_QUIT:
+        shouldContinue = false;
+        break;
+      case SDL_KEYDOWN:
+        keysToPress.insert(event.key.keysym.sym);
+        break;
+      case SDL_KEYUP:
+        keysToRelease.insert(event.key.keysym.sym);
+        break;
+      case SDL_MOUSEMOTION:
+        _mousePosition.x = event.motion.x;
+        _mousePosition.y = event.motion.y;
+        _mouseMovement.x = event.motion.xrel;
+        _mouseMovement.y = event.motion.yrel;
+        break;
+    }
+  }
+  
+  // update controls
+  for (auto key : keysToPress)
+  {
+    for (auto & entry : _keyControls)
+    {
+      auto & control = entry.second;
+      if (control.first == key) control.second = true;
+    }
+  }
+  for (auto key : keysToRelease)
+  {
+    for (auto & entry : _keyControls)
+    {
+      auto & control = entry.second;
+      if (control.first == key) control.second = false;
+    }
+  }
+  
+  // set up OpenGl
+  ivec2 d = viewDimensions();
+  glViewport(0, 0, d.x, d.y);
+  glEnable(GL_DEPTH_TEST);
+  glEnable(GL_CULL_FACE);
+  
+  // clear screen
+  glClearColor(_backgroundColor.r, _backgroundColor.g, _backgroundColor.b, 1.0);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  
+  // update entities (except rendering)
+  uint8_t mask = !_pause ? 0b111111 : 0b000001;
+  for (uint8_t i = 0b100000; i > 0b000001; i = i >>= 1)
+  {
+    for (auto entity : _entities)
+    {
+      entity.update(mask & i);
+    }
+  }
+  
+  // update view and projection matrix
+  mat4 cameraTranslation = glm::translate(_camera->worldPosition());
+  cameraTranslation[3].x *= -1;
+  cameraTranslation[3].y *= -1;
+  cameraTranslation[3].z *= -1;
+  quat inverseCameraOrientation = glm::inverse(_camera->worldOrientation());
+  const mat4 cameraRotation = glm::toMat4(inverseCameraOrientation);
+  _viewMatrix = cameraRotation * cameraTranslation;
+  _projectionMatrix = perspective(radians(45.0f),
+                                  float(d.x) / float(d.y),
+                                  0.01f,
+                                  300.0f);
+  
+  // render entities
+  for (auto entity : _entities)
+  {
+    entity.update(0b000001);
+  }
+  
+  // swap buffers
+  SDL_GL_SwapWindow(_window);
+  
+  // possibly do a reset
+  if (_reset)
+  {
+    _timers.clear();
+    _root.reset();
+    _reset = false;
+    resume();
+  }
+  
+  // go through timers
+  int i = 0;
+  while (i < _timers.size())
+  {
+    auto pair = _timers[i];
+    const double currentTime = pair.second == _EFFECTIVE
+      ? effectiveElapsedTime()
+      : elapsedTime();
+    if (currentTime >= pair.first.endTime)
+    {
+      pair.first.block();
+      _timers.erase(_timers.begin() + i);
+    }
+    else i++;
+  }
+  
+  return shouldContinue;
+}
+
+void Core::destroy()
+{
+  _root.destroy();
+  
+  SDL_CloseAudio();
+  SDL_DestroyWindow(_window);
+  SDL_Quit();
+}
+
+Entity * Core::createEntity(string id, string parentId)
+{
+  Entity * entity = nullptr;
+  if (_entityCount < _maximumNumberOfEntities && !_root.findChild(id))
+  {
+    Entity * parent = &_root;
+    if (parentId.compare("root") == 0 || (parent = _root.findChild(parentId)))
+    {
+      entity = &_entities[_entityCount++];
+      entity->assignIdentifier(id);
+      parent->addChild(entity);
+    }
+  }
+  return entity;
+}
+
+void Core::createEffectiveTimer(double duration, function<void()> block)
+{
+  _timers.push_back
+  ({
+    {effectiveElapsedTime() + duration, block},
+    _EFFECTIVE
+  });
+}
+
+void Core::createAccumulativeTimer(double duration, function<void()> block)
+{
+  _timers.push_back
+  ({
+    {elapsedTime() + duration, block},
+    _ACCUMULATIVE
+  });
+}
+
+void Core::addControl(string name, SDL_Keycode key)
+{
+  _keyControls[name] = {key, false};
+}
+
+void Core::removeControl(string name)
+{
+  _keyControls.erase(name);
+}
+
+maybe<bool> Core::checkKey(string name) const
+{
+  if (_keyControls.find(name) != _keyControls.end())
+    return maybe<bool>::just(_keyControls.at(name).second);
+  return maybe<bool>::nothing();
+  
+}
+
+void Core::reset(double after_duration)
+{
+  createAccumulativeTimer(after_duration, [this] { _reset = true; });
+}
+
+void Core::pause()
+{
+  _pause = true;
+  effectiveElapsedTime();
+}
+
+void Core::resume()
+{
+  _pause = false;
+  effectiveElapsedTime();
+}
+
+void Core::changeBackgroundColor(float r, float g, float b)
+{
+  _backgroundColor.r = r;
+  _backgroundColor.g = g;
+  _backgroundColor.b = b;
+}
+
+double Core::elapsedTime() const
+{
+  return SDL_GetTicks() / 1000.f;
+}
+
+double Core::effectiveElapsedTime() const
+{
+  static double lastPauseTime;
+  static double totalPauseDuration;
+  static bool pauseToggle;
+  
+  const double elapsed = elapsedTime();
+  
+  if (_pause && !pauseToggle)
+  {
+    pauseToggle = true;
+    lastPauseTime = elapsed;
+    
+#ifdef GAME_ENGINE_DEBUG
+    printf("/**************** PAUSED ****************/\n");
+#endif
+    
+  }
+  else if (!_pause && pauseToggle)
+  {
+    pauseToggle = false;
+    totalPauseDuration += elapsed - lastPauseTime;
+    
+#ifdef GAME_ENGINE_DEBUG
+    printf("/**************** RESUMED ***************/\n");
+#endif
+    
+  }
+  
+#ifdef GAME_ENGINE_DEBUG
+  static double last_print_time;
+  
+  if (elapsed - last_print_time >= 0.1)
+  {
+    printf("Elapsed: %f\t\t", elapsed);
+    printf("Effective elapsed: %f\t\t",
+           !_pause
+           ? elapsed - totalPauseDuration
+           : lastPauseTime - totalPauseDuration);
+    printf("Pause time: %f\t\t", lastPauseTime);
+    printf("Pause duration: %f\n",
+           !_pause
+           ? totalPauseDuration
+           : totalPauseDuration + elapsed - lastPauseTime);
+    last_print_time = elapsed;
+  }
+#endif
+  
+  return (!_pause ? elapsed : lastPauseTime) - totalPauseDuration;
+}
+
+ivec2 Core::viewDimensions() const 
+{
+  ivec2 v;
+  SDL_GL_GetDrawableSize(_window, &v.x, &v.y);
+  return v;
 }

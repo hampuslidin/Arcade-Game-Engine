@@ -55,39 +55,38 @@ const Event DidMoveOutOfView("DidMoveOutOfView");
 const Event DidUpdateTransform("DidUpdateTransform");
 
 
-//
-// MARK: - Sprite
-//
+// MARK: -
 
 /**
  *  Defines a sprite and methods for drawing it to a SDL rendering context.
  */
 class Sprite
 {
-  SDL_Renderer * _renderer;
-  SDL_Texture * _texture;
+
 public:
+  
+  // MARK: Member functions
+  
   Sprite(SDL_Renderer * renderer, SDL_Texture * texture);
   static Sprite * createSprite(SDL_Renderer * renderer, const char * filename);
   void destroy();
   void draw(int x, int y, int w, int h, int scale = 1);
+  
+private:
+  SDL_Renderer * _renderer;
+  SDL_Texture * _texture;
 };
 
 
-//
-// MARK: - SpriteCollection
-//
-
+// MARK: -
 /**
  *  Defines a collection of sprites.
  */
 class SpriteCollection
 {
-  SDL_Renderer * _renderer;
-  map<string, Sprite*> _sprites;
-  
-  SpriteCollection() {};
+
 public:
+  // MARK: Member functions
   SpriteCollection(SpriteCollection const &) = delete;
   static SpriteCollection & main();
   void init(SDL_Renderer * renderer);
@@ -96,127 +95,386 @@ public:
   void destroyAll();
   Sprite * retrieve(string id);
   void draw(string id, int x, int y, int w, int h, int scale = 1);
-  
   void operator=(SpriteCollection const &) = delete;
+  
+private:
+  // MARK: Private
+  SDL_Renderer * _renderer;
+  map<string, Sprite*> _sprites;
+  
+  SpriteCollection() {};
+  
 };
 
 
-//
-// MARK: - NotificationCenter
-//
-
+// MARK: -
 typedef size_t ObserverID;
-
 class NotificationCenter
 {
-  map<Event, vector<pair<function<void(Event)>, GameObject*>>> _blocks;
-  
-  NotificationCenter() {};
-  static NotificationCenter & _instance();
+
 public:
+  // MARK: Types
+  typedef size_t ObserverID;
+  
+  // MARK: Member functions
   static void notify(Event event, GameObject & sender);
   static ObserverID observe(function<void(Event)> block,
                             Event event,
-                            GameObject * sender);
+                            const GameObject * sender);
   static void unobserve(ObserverID id,
                         Event event,
-                        GameObject * sender);
+                        const GameObject * sender);
+  
+private:
+  // MARK: Private
+  map<Event, vector<pair<function<void(Event)>, const GameObject*>>> _blocks;
+  
+  NotificationCenter() {};
+  static NotificationCenter & _instance();
+  
 };
 
 
-//
-// MARK: - Synthesizer
-//
-
+// MARK: -
 class Synthesizer
 {
   
 public:
-  enum WaveType
+  // MARK: Properties
+  int bitRate() const;
+  int sampleRate() const;
+  
+  // MARK: Member functions
+  Synthesizer(int bitRate = 8, int sampleRate = 44100);
+  void load(const char * filename);
+  void select(string id);
+  bool generate(int16_t * stream,
+                int length,
+                int & frame,
+                double maxVolume,
+                double duration,
+                double fadeIn,
+                double fadeOut);
+  
+private:
+  // MARK: Private
+  enum _WaveType
   {
     SMOOTH,
     TRIANGLE,
     SAWTOOTH,
     SQUARE
   };
-  enum PitchGlideType
+  enum _PitchGlideType
   {
     LINEAR,
     EXPONENTIAL,
     LOGARITHMIC,
     INV_LOGARITHMIC
   };
-  
-  prop<int> bit_rate;
-  prop<int> sample_rate;
-  
-  Synthesizer(int bit_rate = 8, int sample_rate = 44100);
-  void load(const char * filename);
-  void select(string id);
-  bool generate(int16_t * stream,
-                int length,
-                int & frame,
-                double max_volume,
-                double duration,
-                double fade_in,
-                double fade_out);
-  
-private:
-  class _Operator
+  struct _Operator
   {
-    
-  public:
-    double frequency;
-    double modulation_index;
-    WaveType wave_type;
-    double threshold_low;
-    double threshold_high;
-    maybe<double> pitch_glide;
-    PitchGlideType pitch_glide_type;
-    vector<_Operator*> modulators;
-    
-    _Operator(double frequency = 440,
-              double modulation_index = 1.0,
-              WaveType wave_type = SMOOTH,
-              double threshold_low = -1.0,
-              double threshold_high = 1.0,
-              maybe<double> pitch_glide = maybe<double>::nothing(),
-              PitchGlideType pitch_glide_type = EXPONENTIAL);
-    void addModulator(_Operator * modulator);
-    double calculateSample(double time, double duration);
-    
-  private:
-    double _calculatePhase(double time, double duration);
-    
+    double frequency               = 440;
+    double modulationIndex         = 1.0;
+    _WaveType waveType             = SMOOTH;
+    double thresholdLow            = -1.0;
+    double thresholdHigh           = 1.0;
+    maybe<double> pitchGlide       = maybe<double>::nothing();
+    _PitchGlideType pitchGlideType = EXPONENTIAL;
+    vector<_Operator*> modulators  = {};
   };
   struct _Algorithm
   {
     vector<_Operator> operators;
-    int num_carriers;
+    int numCarriers;
   };
   
+  int _bitRate;
+  int _sampleRate;
   map<string, _Algorithm> _algorithms;
-  _Algorithm * _current_algorithm;
+  _Algorithm * _currentAlgorithm;
+  
+  double _calculateSample(_Operator op, double time, double duration);
+  double _calculatePhase(_Operator op, double time, double duration);
   
 };
 
 
-//
-// MARK: - GameObject
-//
-
+// MARK: -
 class GameObject {
   
 public:
-  prop<string> id;
+  // MARK: Properties
+  const string & id() const;
+  
+  // MARK: Member functions
+  void assignIdentifier(const string & id);
+  
+private:
+  string _id;
   
 };
 
 
-//
-// MARK: - Entity
-//
+// MARK: -
+/**
+ *  An abstrct class for a generic component.
+ */
+class Component
+  : public GameObject
+{
+  
+public:
+  // MARK: Member functions
+  virtual ~Component() {};
+  virtual void init(Entity * entity);
+  virtual void reset() {};
+  virtual void update(const Core & core) {};
+  string id();
+  virtual string trait() const = 0;
+  
+protected:
+  // MARK: Protected
+  Entity * entity();
 
+private:
+  mutable Entity * _entity;
+  
+};
+
+
+// MARK: -
+/**
+ *  InputConponent is responsible for defining the behavior of an Entity.
+ */
+class InputComponent
+  : public Component
+{
+  
+public:
+  // MARK: Member functions
+  string trait() const;
+  
+};
+
+
+// MARK: -
+/**
+ *  AnimationComponent is responsible for moving an Entity according to a path,
+ *  either in local space or in world space.
+ */
+class AnimationComponent
+  : public Component
+{
+  
+public:
+  // MARK: Types
+  typedef vector<pair<vec3, vec3>> CubicHermiteCurve;
+  typedef pair<pair<vec3, vec3>, pair<vec3, vec3>> CubicHermiteSpline;
+  
+  // MARK: Properties
+  bool animating() const;
+  const vec3 & endVelocity() const;
+  
+  // MARK: Member functions
+  virtual void reset();
+  virtual void update(const Core & core);
+  void addSegment(string id, vec3 position, vec3 velocity);
+  void removeCurve(string id);
+  
+  /**
+   *  Initiates an animation, which will get updated by the *update* member
+   *  function.
+   *
+   *  @return 0 on success, 1 if animation with associated id does not exist.
+   */
+  void performAnimation(string id,
+                        double duration,
+                        bool updateVelocity = false);
+  
+  string trait() const;
+  
+private:
+  bool _animating;
+  vec3 _endVelocity;
+  map<string, CubicHermiteCurve> _curves;
+  CubicHermiteCurve _currentCurve;
+  vec3 _startPosition;
+  double _startTime;
+  double _duration;
+  bool _updateVelocity;
+  
+};
+
+
+// MARK: -
+/**
+ *  ColliderComponent is responsible for setting the bounds for collision 
+ *  detection between two colliders.
+ */
+class ColliderComponent
+  : public Component
+{
+  
+public:
+  // MARK: Member functions
+  virtual void update(const Core & core);
+  virtual void collide(const ColliderComponent & obsticle,
+                       const vec3 & colliderPosition,
+                       const vec3 & obsticlePosition) const = 0;
+  
+private:
+  bool _didCollide;
+  
+};
+
+
+// MARK: -
+/**
+ *  AABBColliderComponent does collision detection for axis-aligned bounding 
+ *  boxes.
+ */
+class AABBColliderComponent
+  : public ColliderComponent
+{
+  
+public:
+  // MARK: Properties
+  const box & collisionBox() const;
+  
+  // MARK: Member functions
+  void collide(const ColliderComponent & obsticle,
+               const vec3 & colliderPosition,
+               const vec3 & obsticlePosition) const;
+  void resizeCollisionBox(const vec3 & min, const vec3 & max);
+  string trait() const;
+  
+private:
+  box _collisionBox;
+  
+};
+
+
+// MARK: -
+/**
+ *  RigidBodyComponent is responsible for updating the position of an Entity
+ *  object, w.r.t. the laws of physics.
+ */
+class RigidBodyComponent
+  : public Component
+{
+
+public:
+  // MARK: Properties
+  const vec3 & gravity() const;
+  bool kinematic() const;
+  
+  // MARK: Member functions
+  RigidBodyComponent();
+  virtual void init(Entity * entity);
+  virtual void update(const Core & core);
+  void setGravity(const vec3 & force);
+  void setKinematic(bool enabled);
+  string trait() const;
+  
+private:
+  vec3 _gravity;
+  bool _kinematic;
+  
+  bool _shouldSimulate;
+  
+};
+
+
+// MARK: -
+/**
+ *  AudioComponent is responsible for generating and playing sounds.
+ */
+class AudioComponent
+  : public Component
+{
+  friend Core;
+  
+public:
+  // MARK: Member functions
+  virtual void init(Entity * entity);
+  virtual void update(const Core & core) {};
+  string trait() const;
+  
+protected:
+  // MARK: Protected
+  Synthesizer & synthesizer();
+  
+  void playSound(string id,
+                 double duration,
+                 double fade_in = 0.01,
+                 double fade_out = 0.01);
+  
+private:
+  // MARK: Private
+  struct _Audio
+  {
+    string id;
+    double duration;
+    double fadeIn;
+    double fadeOut;
+    int frame;
+  };
+  vector<_Audio> _audioPlayback;
+  
+  Synthesizer _synthesizer;
+  
+  void _audioStreamCallback(double maxVolume,
+                            int16_t * stream,
+                            int length);
+  
+};
+
+
+// MARK: -
+/**
+ *  GraphicsComponent is responsible for drawing an Entity to a SDL rendering
+ *  context.
+ */
+class GraphicsComponent
+  : public Component
+{
+  
+public:
+  // MARK: Properties
+  const vector<vec3> & vertexPositions() const;
+  const vector<vec3> & vertexColors() const;
+  const vector<ivec3> & vertexIndices() const;
+  
+  // MARK: Member functions
+  virtual void init(Entity * entity);
+  virtual void update(const Core & core);
+  void attachMesh(const vector<vec3> & positions,
+                  const vector<vec3> & colors,
+                  const vector<ivec3> & indices);
+  void attachShader(string vertexShaderFilename, string fragmentShaderFilename);
+  string trait() const;
+  
+private:
+  vector<vec3>  _vertexPositions;
+  vector<vec3>  _vertexColors;
+  vector<ivec3> _vertexIndices;
+  
+  GLuint _vertexArrayObject;
+  GLuint _positionBuffer;
+  GLuint _colorBuffer;
+  GLuint _indexBuffer;
+  
+  GLuint _shaderProgram;
+  string _vertexShaderFilename;
+  string _fragmentShaderFilename;
+
+  GLint _modelViewProjectionMatrixLocation;
+  
+};
+
+
+// MARK: -
 /**
  *  Defines a class that represents a game entity that resides in a game world.
  */
@@ -225,25 +483,25 @@ class Entity
 {
   
 public:
-  prop_r<Entity, Core*>           core;
-  prop_r<Entity, Entity*>         parent;
-  prop_r<Entity, vector<Entity*>> children;
+  // MARK: Properties
+  const Core * core() const;
+  const Entity * parent() const;
+  const vector<Entity*> & children() const;
   
-  prop<InputComponent*>           pInput;
-  prop<AnimationComponent*>       pAnimation;
-  prop<ColliderComponent*>        pCollider;
-  prop<RigidBodyComponent*>       pRigidBody;
-  prop<AudioComponent*>           pAudio;
-  prop<GraphicsComponent*>        pGraphics;
+  const InputComponent * input() const;
+  const AnimationComponent * animation() const;
+  const ColliderComponent * collider() const;
+  const RigidBodyComponent * rigidBody() const;
+  const AudioComponent * audio() const;
+  const GraphicsComponent * graphics() const;
   
-  prop_r<Entity, vec3>            localPosition;
-  prop_r<Entity, quat>            localOrientation;
+  const vec3 & localPosition() const;
+  const quat & localOrientation() const;
   
-  prop<vec3>                      pVelocity;
-  prop<bool>                      pEnabled;
+  const vec3 & velocity() const;
+  bool enabled() const;
   
   // MARK: Member functions
-  
   Entity();
   
   /**
@@ -269,8 +527,6 @@ public:
    */
   virtual void destroy();
   
-  Dimension2 dimensions();
-  
   /**
    *  Adds a child.
    *
@@ -279,6 +535,13 @@ public:
   void addChild(Entity * child);
   Entity * findChild(string id);
   void removeChild(string id);
+  
+  void attachInputComponent(InputComponent * input);
+  void attachAnimationComponent(AnimationComponent * animation);
+  void attachColliderComponent(ColliderComponent * collider);
+  void attachRigidBodyComponent(RigidBodyComponent * rigidBody);
+  void attachAudioComponent(AudioComponent * audio);
+  void attachGraphicsComponent(GraphicsComponent * graphics);
   
   mat4 localTransform();
   mat4 localTranslation();
@@ -290,260 +553,53 @@ public:
   vec3 localForward();
   vec3 localBackward();
   
-  vec3 worldPosition();
-  quat worldOrientation();
+  const vec3 & worldPosition() const;
+  const quat & worldOrientation() const;
   mat4 worldTransform();
   mat4 worldTranslation();
   mat4 worldRotation();
   
   void translate(float dx, float dy, float dz);
+  void translate(float distance, const vec3 & direction);
   void rotate(float angle, vec3 axis);
   
-  void setPosition(float x, float y, float z);
-  void setPositionX(float x);
-  void setPositionY(float y);
-  void setPositionZ(float z);
+  void reposition(float x, float y, float z);
+  void setX(float x);
+  void setY(float y);
+  void setZ(float z);
   
-  void setOrientation(float pitch, float yaw, float roll);
+  void reorient(float pitch, float yaw, float roll);
   void setPitch(float pitch);
   void setYaw(float yaw);
   void setRoll(float roll);
   
-  void update(uint8_t component_mask);
+  void update(unsigned int componentMask);
   
   bool operator ==(Entity & entity);
   bool operator !=(Entity & entity);
   
 private:
-  bool _transformNeedsUpdating;
-  vec3 _worldPosition;
-  quat _worldOrientation;
+  Core *          _core;
+  Entity *        _parent;
+  vector<Entity*> _children;
   
-  void _updateTransform();
+  InputComponent *     _input;
+  AnimationComponent * _animation;
+  ColliderComponent *  _collider;
+  RigidBodyComponent * _rigidBody;
+  AudioComponent *     _audio;
+  GraphicsComponent *  _graphics;
   
-};
-
-
-/**
- *  An abstrct class for a generic component.
- */
-class Component
-  : public GameObject
-{
+  vec3 _localPosition;
+  quat _localOrientation;
+  mutable vec3 _worldPosition;
+  mutable quat _worldOrientation;
+  vec3 _velocity;
   
-protected:
-  prop_r<Component, Entity*> entity;
+  mutable bool _transformNeedsUpdating;
+  mutable bool _enabled;
   
-public:
-  string id();
-  
-  virtual string trait() = 0;
-  
-  virtual ~Component() {};
-  virtual void init(Entity * entity);
-  virtual void reset() {};
-  virtual void update(Core & core) = 0;
-  
-};
-
-
-/**
- *  InputConponent is responsible for defining the behavior of an Entity.
- */
-class InputComponent
-  : public Component
-{
-  
-public:
-  string trait();
-  
-};
-
-
-/**
- *  AnimationComponent is responsible for moving an Entity according to a path,
- *  either in local space or in world space.
- */
-class AnimationComponent
-: public Component
-{
-  
-public:
-  typedef vector<pair<vec3, vec3>> CubicHermiteCurve;
-  typedef pair<pair<vec3, vec3>, pair<vec3, vec3>> CubicHermiteSpline;
-  
-  prop_r<AnimationComponent, bool> animating;
-  prop_r<AnimationComponent, vec3> endVelocity;
-  
-  string trait();
-  
-  virtual void reset();
-  void addSegment(string id, vec3 position, vec3 velocity);
-  void removeCurve(string id);
-  
-  /**
-   *  Initiates an animation, which will get updated by the *update* member
-   *  function.
-   *
-   *  @return 0 on success, 1 if animation with associated id does not exist.
-   */
-  void performAnimation(string id,
-                        double duration,
-                        bool updateVelocity = false);
-  
-  virtual void update(Core & core);
-  
-private:
-  map<string, CubicHermiteCurve> _curves;
-  CubicHermiteCurve _currentCurve;
-  vec3 _startPosition;
-  double _startTime;
-  double _duration;
-  bool _updateVelocity;
-};
-
-
-/**
- *  ColliderComponent is responsible for setting the bounds for collision 
- *  detection between two colliders.
- */
-class ColliderComponent
-  : public Component
-{
-  
-public:
-  virtual void collide(ColliderComponent & obsticle,
-                       vec3 & colliderPosition,
-                       vec3 & obsticlePosition) = 0;
-  virtual void update(Core & core);
-  
-private:
-  bool _didCollide;
-  
-};
-
-
-/**
- *  AABBColliderComponent does collision detection for axis-aligned bounding 
- *  boxes.
- */
-class AABBColliderComponent
-  : public ColliderComponent
-{
-  
-public:
-  prop<box> pCollisionBox;
-
-  string trait();
-  
-  void collide(ColliderComponent & obsticle,
-               vec3 & colliderPosition,
-               vec3 & obsticlePosition);
-  
-};
-
-
-/**
- *  RigidBodyComponent is responsible for updating the position of an Entity
- *  object, w.r.t. the laws of physics.
- */
-class RigidBodyComponent
-  : public Component
-{
-
-public:
-  prop<vec3> pGravity;
-  prop<bool> pIsKinematic;
-  
-  string trait();
-  
-  RigidBodyComponent();
-  virtual void init(Entity * entity);
-  virtual void update(Core & core);
-  
-private:
-  bool _shouldSimulate;
-  
-};
-
-
-/**
- *  AudioComponent is responsible for generating and playing sounds.
- */
-class AudioComponent
-  : public Component
-{
-  
-public:
-  string trait();
-  
-  virtual void init(Entity * entity);
-  virtual void update(Core & core) {};
-  
-protected:
-  prop_r<AudioComponent, Synthesizer> synthesizer;
-  
-  void playSound(string id,
-                 double duration,
-                 double fade_in = 0.01,
-                 double fade_out = 0.01);
-  
-private:
-  friend Core;
-  
-  struct _Audio
-  {
-    string id;
-    double duration;
-    double fade_in;
-    double fade_out;
-    int frame;
-  };
-  vector<_Audio> _audio_playback;
-  
-  void _audioStreamCallback(double max_volume, int16_t * stream, int length);
-  
-};
-
-/**
- *  GraphicsComponent is responsible for drawing an Entity to a SDL rendering
- *  context.
- */
-class GraphicsComponent
-  : public Component
-{
-  
-public:
-  prop_r<GraphicsComponent, Rectangle>    bounds;
-  
-  prop_r<GraphicsComponent, vector<vec3>> vertexPositions;
-  prop_r<GraphicsComponent, vector<vec3>> vertexColors;
-  prop_r<GraphicsComponent, vector<int>>  vertexIndices;
-  
-  virtual void init(Entity * entity);
-  virtual void update(Core & core);
-  void attachMesh(vector<vec3> & positions,
-                  vector<vec3> & colors,
-                  vector<int> & indices);
-  void attachShader(string vertexShaderFilename, string fragmentShaderFilename);
-  void offsetTo(int x, int y);
-  void offsetBy(int dx, int dy);
-  void resizeTo(int w, int h);
-  void resizeBy(int dw, int dh);
-  
-private:
-  string trait();
-  
-  GLuint _vertexArrayObject;
-  GLuint _positionBuffer;
-  GLuint _colorBuffer;
-  GLuint _indexBuffer;
-  
-  GLuint _shaderProgram;
-  string _vertexShaderFilename;
-  string _fragmentShaderFilename;
-
-  GLint _modelViewProjectionMatrixLocation;
+  void _updateTransform() const;
   
 };
 
@@ -572,21 +628,22 @@ class Core
 {
   
 public:
-  prop_r<Core, Entity>   root;
-  prop_r<Core, Entity*>  camera;
+  // MARK: Properties
+  const Entity & root() const;
+  Entity * camera() const;
   
-  prop_r<Core, double>   deltaTime;
-  prop_r<Core, ivec2>    mousePosition;
-  prop_r<Core, ivec2>    mouseMovement;
+  double deltaTime() const;
+  const ivec2 & mousePosition() const;
+  const ivec2 & mouseMovement() const;
   
-  prop_r<Core, int>      sampleRate;
-  prop_r<Core, double>   maxVolume;
+  int sampleRate() const;
+  double maxVolume() const;
   
-  prop_r<Core, mat4>     viewMatrix;
-  prop_r<Core, mat4>     projectionMatrix;
+  const mat4 & viewMatrix() const;
+  const mat4 & projectionMatrix() const;
 
-  prop<int>              pScale;
-  prop<vec3>             pBackgroundColor;
+  int scale() const;
+  const vec3 & backgroundColor() const;
   
   static constexpr float UNITS_PER_METER = 0.01f;
   static const vec3 WORLD_UP;
@@ -596,16 +653,12 @@ public:
   static const vec3 WORLD_FORWARD;
   static const vec3 WORLD_BACKWARD;
   
-  double elapsedTime();
-  double effectiveElapsedTime();
-  ivec2 viewDimensions();
-  
+  // MARK: Member functions
   Core(int numberOfEntities = 10000);
   bool init(CoreOptions & options);
   bool update();
   void destroy();
-
-  void resolveCollisions(Entity & collider);
+  void resolveCollisions(Entity & collider) const;
   
   static bool AABBIntersect(box & a, box & b, box & intersection);
   
@@ -629,21 +682,41 @@ public:
   void createAccumulativeTimer(double duration, function<void()> block);
   void addControl(string name, SDL_Keycode key);
   void removeControl(string name);
-  maybe<bool> checkKey(string name);
+  maybe<bool> checkKey(string name) const;
   void reset(double after_duration = 0);
   void pause();
   void resume();
+  void changeBackgroundColor(float r, float g, float b);
+  
+  double elapsedTime() const;
+  double effectiveElapsedTime() const;
+  ivec2 viewDimensions() const;
   
 private:
+  // MARK: Private
   typedef map<string, pair<SDL_Keycode, bool>> _KeyControls;
-  
   struct _Timer
   {
     double endTime;
     function<void(void)> block;
   };
-  
   enum _TimerType { _EFFECTIVE, _ACCUMULATIVE };
+  
+  Entity   _root;
+  Entity * _camera;
+  
+  double _deltaTime;
+  ivec2  _mousePosition;
+  ivec2  _mouseMovement;
+  
+  int    _sampleRate;
+  double _maxVolume;
+  
+  mat4 _viewMatrix;
+  mat4 _projectionMatrix;
+  
+  int  _scale;
+  vec3 _backgroundColor;
   
   SDL_Window * _window;
   SDL_GLContext _context;
