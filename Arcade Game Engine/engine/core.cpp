@@ -347,8 +347,9 @@ const GraphicsComponent * Entity::graphics() const   { return _graphics; }
 
 const vec3 & Entity::localPosition() const    { return _localPosition; }
 const quat & Entity::localOrientation() const { return _localOrientation; }
+const vec3 & Entity::velocity() const         { return _velocity; }
+const vec3 & Entity::force() const            { return _force; }
 
-const vec3 & Entity::velocity() const { return _velocity; }
 bool Entity::enabled() const          { return _enabled; }
 
 // MARK: Member functions
@@ -365,6 +366,7 @@ Entity::Entity()
   , _localPosition(0.0f)
   , _localOrientation(1.0f, 0.0f, 0.0f, 0.0f)
   , _velocity(0.0f)
+  , _force(0.0f)
   , _enabled(false)
   , _transformNeedsUpdating(true)
 {}
@@ -396,8 +398,6 @@ void Entity::init(Core * core)
 
 void Entity::reset()
 {
-  _velocity = vec3(0.0f);
-  
   if (_input)     _input->reset();
   if (_animation) _animation->reset();
   if (_collider)  _collider->reset();
@@ -406,6 +406,19 @@ void Entity::reset()
   if (_graphics)  _graphics->reset();
   
   for (auto child : _children) child->reset();
+}
+
+void Entity::update(unsigned int componentMask)
+{
+  if (_enabled)
+  {
+    if (componentMask & 0b100000 && _input)     _input->update(*_core);
+    if (componentMask & 0b010000 && _animation) _animation->update(*_core);
+    if (componentMask & 0b001000 && _collider)  _collider->update(*_core);
+    if (componentMask & 0b000100 && _rigidBody) _rigidBody->update(*_core);
+    if (componentMask & 0b000010 && _audio)     _audio->update(*_core);
+    if (componentMask & 0b000001 && _graphics)  _graphics->update(*_core);
+  }
 }
 
 void Entity::destroy()
@@ -572,10 +585,28 @@ void Entity::translate(float distance, const vec3 & direction)
   translate(distance*direction.x, distance*direction.y, distance*direction.z);
 }
 
-void Entity::rotate(float angle, vec3 axis)
+void Entity::rotate(float angle, const vec3 & axis)
 {
   quat newQuat = glm::angleAxis(angle, axis) * _localOrientation;
   _localOrientation = glm::normalize(newQuat);
+  _transformNeedsUpdating = true;
+  NotificationCenter::notify(DidUpdateTransform, *this);
+}
+
+void Entity::accelerate(float dvx, float dvy, float dvz)
+{
+  _velocity.x += dvx;
+  _velocity.y += dvy;
+  _velocity.z += dvz;
+  _transformNeedsUpdating = true;
+  NotificationCenter::notify(DidUpdateTransform, *this);
+}
+
+void Entity::applyForce(float fx, float fy, float fz)
+{
+  _force.x += fx;
+  _force.y += fy;
+  _force.z += fz;
   _transformNeedsUpdating = true;
   NotificationCenter::notify(DidUpdateTransform, *this);
 }
@@ -587,19 +618,20 @@ void Entity::reposition(float x, float y, float z)
   _localPosition.z = 0.0f;
   translate(x, y, z);
 }
-void Entity::setX(float x)
+
+void Entity::resetPositionX(float x)
 {
-  translate(x, _localPosition.y, _localPosition.z);
+  reposition(x, _localPosition.y, _localPosition.z);
 }
 
-void Entity::setY(float y)
+void Entity::resetPositionY(float y)
 {
-  translate(_localPosition.x, y, _localPosition.z);
+  reposition(_localPosition.x, y, _localPosition.z);
 }
 
-void Entity::setZ(float z)
+void Entity::resetPositionZ(float z)
 {
-  translate(_localPosition.x, _localPosition.y, z);
+  reposition(_localPosition.x, _localPosition.y, z);
 }
 
 void Entity::reorient(float pitch, float yaw, float roll)
@@ -612,35 +644,68 @@ void Entity::reorient(float pitch, float yaw, float roll)
   NotificationCenter::notify(DidUpdateTransform, *this);
 }
 
-void Entity::setPitch(float pitch)
+void Entity::resetPitch(float pitch)
 {
   vec3 eulerAngles = glm::eulerAngles(_localOrientation);
   reorient(pitch, eulerAngles.y, eulerAngles.z);
 }
 
-void Entity::setYaw(float yaw)
+void Entity::resetYaw(float yaw)
 {
   vec3 eulerAngles = glm::eulerAngles(_localOrientation);
   reorient(eulerAngles.x, yaw, eulerAngles.z);
 }
 
-void Entity::setRoll(float roll)
+void Entity::resetRoll(float roll)
 {
   vec3 eulerAngles = glm::eulerAngles(_localOrientation);
   reorient(eulerAngles.x, eulerAngles.y, roll);
 }
 
-void Entity::update(unsigned int componentMask)
+void Entity::resetVelocity(float vx, float vy, float vz)
 {
-  if (_enabled)
-  {
-    if (componentMask & 0b100000 && _input)     _input->update(*_core);
-    if (componentMask & 0b010000 && _animation) _animation->update(*_core);
-    if (componentMask & 0b001000 && _collider)  _collider->update(*_core);
-    if (componentMask & 0b000100 && _rigidBody) _rigidBody->update(*_core);
-    if (componentMask & 0b000010 && _audio)     _audio->update(*_core);
-    if (componentMask & 0b000001 && _graphics)  _graphics->update(*_core);
-  }
+  _velocity.x = 0.0f;
+  _velocity.y = 0.0f;
+  _velocity.z = 0.0f;
+  accelerate(vx, vy, vz);
+}
+
+void Entity::resetVelocityX(float vx)
+{
+  resetVelocity(vx, _velocity.y, _velocity.z);
+}
+
+void Entity::resetVelocityY(float vy)
+{
+  resetVelocity(_velocity.x, vy, _velocity.z);
+}
+
+void Entity::resetVelocityZ(float vz)
+{
+  resetVelocity(_velocity.x, _velocity.y, vz);
+}
+
+void Entity::resetForce(float fx, float fy, float fz)
+{
+  _force.x = 0.0f;
+  _force.y = 0.0f;
+  _force.z = 0.0f;
+  applyForce(fx, fy, fz);
+}
+
+void Entity::resetForceX(float fx)
+{
+  resetForce(fx, _force.y, _force.z);
+}
+
+void Entity::resetForceY(float fy)
+{
+  resetForce(_force.x, fy, _force.z);
+}
+
+void Entity::resetForceZ(float fz)
+{
+  resetForce(_force.x, _force.y, fz);
 }
 
 bool Entity::operator ==(Entity & entity)
@@ -821,7 +886,7 @@ bool Core::update()
   bool shouldContinue = true;
   
   // record time
-  static double prevTime;
+  static double prevTime = elapsedTime();
   double startTime = elapsedTime();
   _deltaTime = startTime - prevTime;
   prevTime = startTime;
@@ -885,7 +950,7 @@ bool Core::update()
   uint8_t mask = !_pause ? 0b111111 : 0b000001;
   for (uint8_t i = 0b100000; i > 0b000001; i = i >>= 1)
   {
-    for (auto entity : _entities)
+    for (auto & entity : _entities)
     {
       entity.update(mask & i);
     }
@@ -905,9 +970,10 @@ bool Core::update()
                                   300.0f);
   
   // render entities
-  for (auto entity : _entities)
+  for (auto & entity : _entities)
   {
     entity.update(0b000001);
+    entity.resetForce(0.0f, 0.0f, 0.0f);
   }
   
   // swap buffers

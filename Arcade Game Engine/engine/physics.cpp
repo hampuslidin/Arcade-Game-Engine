@@ -339,9 +339,17 @@ string AABBColliderComponent::trait() const
 
 
 // MARK: -
+// MARK: Properties
+float RigidBodyComponent::mass() const            { return _mass; }
+float RigidBodyComponent::thermalVelocity() const { return _thermalVelocity; }
+const vec3 & RigidBodyComponent::gravity() const  { return _gravity; }
+bool RigidBodyComponent::kinematic() const        { return _kinematic; }
+
 // MARK: Member functions
 RigidBodyComponent::RigidBodyComponent()
-  : _gravity(0.0f, -9.82f, 0.0f)
+  : _mass(1.0f)
+  , _thermalVelocity(INFINITY)
+  , _gravity(0.0f, -9.82f, 0.0f)
   , _kinematic(false)
 {}
 
@@ -369,17 +377,41 @@ void RigidBodyComponent::update(const Core & core)
 {
   if (_shouldSimulate && _kinematic)
   {
-    // TODO: refactor physics to work with forces
-//    vec3 velocity = _gravity*float(core.deltaTime()*Core::UNITS_PER_METER);
-//    entity()->_velocity += velocity;
-//    vec3 distance = entity()->pVelocity() * float(core.deltaTime());
-//    entity()->translate(distance.x, distance.y, distance.z);
+    // apply external forces to entity
+    const float t = core.deltaTime();
+    const vec3 a = _gravity + entity()->force()/_mass;
+    const vec3 v = a*t;
+    entity()->accelerate(v.x, v.y, v.z);
+    
+    // adjust for thermal velocity
+    vec3 u = entity()->velocity();
+    if (glm::length(u) > _thermalVelocity)
+    {
+      u = glm::normalize(u) * _thermalVelocity;
+      entity()->resetVelocity(u.x, u.y, u.z);
+    }
+    
+    // update position
+    const vec3 d = entity()->velocity()*t*float(Core::UNITS_PER_METER);
+    entity()->translate(d.x, d.y, d.z);
   }
 }
 
-void RigidBodyComponent::setGravity(const vec3 & force)
+void RigidBodyComponent::setMass(float m)
 {
-  _gravity = force;
+  _mass = m;
+}
+
+void RigidBodyComponent::setThermalVelocity(float v)
+{
+  _thermalVelocity = v;
+}
+
+void RigidBodyComponent::setGravity(float gx, float gy, float gz)
+{
+  _gravity.x = gx;
+  _gravity.y = gy;
+  _gravity.z = gz;
 }
 
 void RigidBodyComponent::setKinematic(bool enabled)

@@ -51,9 +51,10 @@ void AnimationComponent::update(const Core & core)
       entity()->reposition(_startPosition.x + lastHalfSpline.first.x,
                            _startPosition.y + lastHalfSpline.first.y,
                            _startPosition.z + lastHalfSpline.first.z);
-      // TODO: Change to work with forces
-//      if (_updateVelocity)
-//        entity()->velocity() = lastHalfSpline.second/(float)_duration;
+      if (_updateVelocity)
+        entity()->resetVelocity(lastHalfSpline.second.x/_duration,
+                                lastHalfSpline.second.y/_duration,
+                                lastHalfSpline.second.z/_duration);
       _animating = false;
       NotificationCenter::notify(DidStopAnimating, *this);
     }

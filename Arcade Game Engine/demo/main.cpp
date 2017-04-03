@@ -21,23 +21,40 @@ public:
     yaw   -= 0.01f * core.mouseMovement().x;
     pitch -= 0.01f * core.mouseMovement().y;
     float distance = 10.0f * core.deltaTime();
-    
-//    entity()->setOrientation(pitch, yaw, 0.0f);
-
-    // This code behaves weird, especially when moving the mouse really fast.
+  
     entity()->rotate(-0.01f * core.mouseMovement().x, Core::WORLD_UP);
     entity()->rotate(-0.01f * core.mouseMovement().y, entity()->localRight());
     
     if (core.checkKey("up"))
-      entity()->translate(distance, entity()->localForward());
+    {
+      vec3 f = 100.0f*distance*entity()->localForward();
+      entity()->applyForce(f.x, f.y, f.z);
+    }
     if (core.checkKey("down"))
-      entity()->translate(distance, entity()->localBackward());
+    {
+      vec3 f = 100.0f*distance*entity()->localBackward();
+      entity()->applyForce(f.x, f.y, f.z);
+    }
     if (core.checkKey("left"))
       entity()->translate(distance, entity()->localLeft());
     if (core.checkKey("right"))
       entity()->translate(distance, entity()->localRight());
   }
   
+};
+
+class CameraRigidBodyComponent
+  : public RigidBodyComponent
+{
+  
+public:
+  CameraRigidBodyComponent()
+    : RigidBodyComponent()
+  {
+    setThermalVelocity(10.0f);
+    setGravity(0.0f, 0.0f, 0.0f);
+    setKinematic(true);
+  }
 };
 
 class CubeInputComponent
@@ -134,7 +151,7 @@ int main(int argc, char *  argv[])
   // static cube
   Entity * staticCube = core.createEntity("staticCube");
   staticCube->translate(0.0f, 0.0f, -5.0f);
-  staticCube->attachInputComponent(new CubeInputComponent);
+//  staticCube->attachInputComponent(new CubeInputComponent);
   AABBColliderComponent * colliderAABB = new AABBColliderComponent;
   colliderAABB->resizeCollisionBox({-0.5f, -0.5f, -0.5f},
                                    { 0.5f,  0.5f,  0.5f});
@@ -154,6 +171,7 @@ int main(int argc, char *  argv[])
   
   // camera
   core.camera()->attachInputComponent(new CameraInputComponent);
+  core.camera()->attachRigidBodyComponent(new CameraRigidBodyComponent);
   
   if (core.init(options))
   {

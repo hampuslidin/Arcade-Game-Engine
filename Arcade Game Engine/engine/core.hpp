@@ -366,6 +366,8 @@ class RigidBodyComponent
 
 public:
   // MARK: Properties
+  float mass() const;
+  float thermalVelocity() const;
   const vec3 & gravity() const;
   bool kinematic() const;
   
@@ -373,11 +375,17 @@ public:
   RigidBodyComponent();
   virtual void init(Entity * entity);
   virtual void update(const Core & core);
-  void setGravity(const vec3 & force);
+  
+  void setMass(float m);
+  void setThermalVelocity(float v);
+  void setGravity(float gx, float gy, float gz);
   void setKinematic(bool enabled);
+  
   string trait() const;
   
 private:
+  float _mass;
+  float _thermalVelocity;
   vec3 _gravity;
   bool _kinematic;
   
@@ -497,8 +505,9 @@ public:
   
   const vec3 & localPosition() const;
   const quat & localOrientation() const;
-  
   const vec3 & velocity() const;
+  const vec3 & force() const;
+  
   bool enabled() const;
   
   // MARK: Member functions
@@ -516,6 +525,7 @@ public:
   virtual void init(Core * core);
   
   virtual void reset();
+  void update(unsigned int componentMask);
   
   /**
    *  Destroys an entity.
@@ -561,19 +571,29 @@ public:
   
   void translate(float dx, float dy, float dz);
   void translate(float distance, const vec3 & direction);
-  void rotate(float angle, vec3 axis);
+  void rotate(float angle, const vec3 & axis);
+  void accelerate(float dvx, float dvy, float dvz);
+  void applyForce(float fx, float fy, float fz);
   
   void reposition(float x, float y, float z);
-  void setX(float x);
-  void setY(float y);
-  void setZ(float z);
+  void resetPositionX(float x);
+  void resetPositionY(float y);
+  void resetPositionZ(float z);
   
   void reorient(float pitch, float yaw, float roll);
-  void setPitch(float pitch);
-  void setYaw(float yaw);
-  void setRoll(float roll);
+  void resetPitch(float pitch);
+  void resetYaw(float yaw);
+  void resetRoll(float roll);
   
-  void update(unsigned int componentMask);
+  void resetVelocity(float vx, float vy, float vz);
+  void resetVelocityX(float vx);
+  void resetVelocityY(float vy);
+  void resetVelocityZ(float vz);
+  
+  void resetForce(float fx, float fy, float fz);
+  void resetForceX(float fx);
+  void resetForceY(float fy);
+  void resetForceZ(float fz);
   
   bool operator ==(Entity & entity);
   bool operator !=(Entity & entity);
@@ -592,9 +612,11 @@ private:
   
   vec3 _localPosition;
   quat _localOrientation;
+  vec3 _velocity;
+  vec3 _force;
+  
   mutable vec3 _worldPosition;
   mutable quat _worldOrientation;
-  vec3 _velocity;
   
   mutable bool _transformNeedsUpdating;
   mutable bool _enabled;
@@ -645,7 +667,7 @@ public:
   int scale() const;
   const vec3 & backgroundColor() const;
   
-  static constexpr float UNITS_PER_METER = 0.01f;
+  static constexpr float UNITS_PER_METER = 1.0f;
   static const vec3 WORLD_UP;
   static const vec3 WORLD_DOWN;
   static const vec3 WORLD_LEFT;
