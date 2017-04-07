@@ -18,7 +18,7 @@ void AnimationComponent::reset()
   _updateVelocity = false;
 }
 
-void AnimationComponent::update(const Core & core)
+void AnimationComponent::animate(const Core & core)
 {
   if (_animating)
   {

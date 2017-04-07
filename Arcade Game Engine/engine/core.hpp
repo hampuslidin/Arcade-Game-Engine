@@ -6,6 +6,7 @@
 #pragma once
 
 #include <map>
+#include <set>
 #include <vector>
 #include <string>
 #include <functional>
@@ -41,6 +42,7 @@ class Component;
 class InputComponent;
 class AnimationComponent;
 class ColliderComponent;
+class SphereColliderComponent;
 class RigidBodyComponent;
 class AudioComponent;
 class GraphicsComponent;
@@ -229,7 +231,6 @@ public:
   virtual ~Component() {};
   virtual void init(Entity * entity);
   virtual void reset() {};
-  virtual void update(const Core & core) {};
   string id();
   virtual string trait() const = 0;
   
@@ -253,6 +254,7 @@ class InputComponent
   
 public:
   // MARK: Member functions
+  virtual void handleInput(const Core & core) = 0;
   string trait() const;
   
 };
@@ -278,7 +280,7 @@ public:
   
   // MARK: Member functions
   virtual void reset();
-  virtual void update(const Core & core);
+  virtual void animate(const Core & core);
   void addSegment(string id, vec3 position, vec3 velocity);
   void removeCurve(string id);
   
@@ -309,48 +311,57 @@ private:
 
 // MARK: -
 /**
- *  ColliderComponent is responsible for setting the bounds for collision 
- *  detection between two colliders.
+ *  ColliderComponent is an interface all colliders must inherit from.
  */
 class ColliderComponent
   : public Component
 {
   
 public:
+  // MARK: Properties
+  virtual const box & axisAlignedBoundingBox() const = 0;
+  const vec3 & origin() const;
+  
   // MARK: Member functions
-  virtual void update(const Core & core);
-  virtual void collide(const ColliderComponent & obsticle,
+  ColliderComponent(const vec3 & origin = {0.0f, 0.0f, 0.0f});
+  virtual void update(const Core & core) = 0;
+  virtual bool collide(const ColliderComponent & obsticle,
                        const vec3 & colliderPosition,
                        const vec3 & obsticlePosition) const = 0;
+  void reposition(const vec3 & origin);
   
 private:
-  bool _didCollide;
+  vec3 _origin;
   
 };
 
 
 // MARK: -
 /**
- *  AABBColliderComponent does collision detection for axis-aligned bounding 
- *  boxes.
+ *  SphereColliderComponent does collision detection for spheres.
  */
-class AABBColliderComponent
+class SphereColliderComponent
   : public ColliderComponent
 {
   
 public:
   // MARK: Properties
-  const box & collisionBox() const;
+  const box & axisAlignedBoundingBox() const;
+  float radius() const;
   
   // MARK: Member functions
-  void collide(const ColliderComponent & obsticle,
+  SphereColliderComponent(float radius);
+  SphereColliderComponent(const vec3 & origin, float radius);
+  void update(const Core & core);
+  bool collide(const ColliderComponent & obsticle,
                const vec3 & colliderPosition,
                const vec3 & obsticlePosition) const;
-  void resizeCollisionBox(const vec3 & min, const vec3 & max);
+  void resize(float radius);
   string trait() const;
   
 private:
-  box _collisionBox;
+  box _axisAlignedBoundingBox;
+  float _radius;
   
 };
 
@@ -406,7 +417,6 @@ class AudioComponent
 public:
   // MARK: Member functions
   virtual void init(Entity * entity);
-  virtual void update(const Core & core) {};
   string trait() const;
   
 protected:
@@ -456,7 +466,7 @@ public:
   
   // MARK: Member functions
   virtual void init(Entity * entity);
-  virtual void update(const Core & core);
+  virtual void render(const Core & core);
   void attachMesh(const vector<vec3> & positions,
                   const vector<vec3> & colors,
                   const vector<ivec3> & indices);
@@ -496,12 +506,12 @@ public:
   const Entity * parent() const;
   const vector<Entity*> & children() const;
   
-  const InputComponent * input() const;
-  const AnimationComponent * animation() const;
-  const ColliderComponent * collider() const;
-  const RigidBodyComponent * rigidBody() const;
-  const AudioComponent * audio() const;
-  const GraphicsComponent * graphics() const;
+  InputComponent * input() const;
+  AnimationComponent * animation() const;
+  ColliderComponent * collider() const;
+  RigidBodyComponent * rigidBody() const;
+  AudioComponent * audio() const;
+  GraphicsComponent * graphics() const;
   
   const vec3 & localPosition() const;
   const quat & localOrientation() const;
@@ -525,7 +535,6 @@ public:
   virtual void init(Core * core);
   
   virtual void reset();
-  void update(unsigned int componentMask);
   
   /**
    *  Destroys an entity.
@@ -675,14 +684,19 @@ public:
   static const vec3 WORLD_FORWARD;
   static const vec3 WORLD_BACKWARD;
   
+  // MARK: Class functions
+  static bool AABBIntersect(const box & a, const box & b, box & intersection);
+  static bool SphereIntersect(const vec3 & p1,
+                              const vec3 & p2,
+                              float r1,
+                              float r2,
+                              vec3 & intersection);
+  
   // MARK: Member functions
   Core(int numberOfEntities = 10000);
   bool init(CoreOptions & options);
   bool update();
   void destroy();
-  void resolveCollisions(Entity & collider) const;
-  
-  static bool AABBIntersect(box & a, box & b, box & intersection);
   
   /**
    *  Creates and adds an Entity to the game world.
@@ -715,7 +729,7 @@ public:
   ivec2 viewDimensions() const;
   
 private:
-  // MARK: Private
+  // MARK: Private types
   typedef map<string, pair<SDL_Keycode, bool>> _KeyControls;
   struct _Timer
   {
@@ -723,6 +737,14 @@ private:
     function<void(void)> block;
   };
   enum _TimerType { _EFFECTIVE, _ACCUMULATIVE };
+  struct _IntervalBound
+  {
+    enum Type { START, END };
+    
+    Type type;
+    int i;
+    const float * v;
+  };
   
   Entity   _root;
   Entity * _camera;
@@ -740,15 +762,19 @@ private:
   int  _scale;
   vec3 _backgroundColor;
   
-  SDL_Window * _window;
+  SDL_Window *  _window;
   SDL_GLContext _context;
   
-  int _entityCount;
-  int _maximumNumberOfEntities;
-  vector<Entity> _entities;
+  int             _entityCount;
+  int             _maximumNumberOfEntities;
+  vector<Entity>  _entities;
+  vector<Entity*> _colliders;
   
   _KeyControls _keyControls;
   vector<pair<_Timer, _TimerType>> _timers;
+  
+  vector<_IntervalBound> _intervalBounds[3];
+  vector<vector<bool>>   _intervalPairOverlaps[3];
   
   double _pauseDuration;
   bool _reset;

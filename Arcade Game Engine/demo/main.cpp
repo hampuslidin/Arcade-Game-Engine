@@ -14,31 +14,27 @@ class CameraInputComponent
 {
   
 public:
-  void update(const Core & core)
+  void handleInput(const Core & core)
   {
     static float yaw   = 0.0f;
     static float pitch = 0.0f;
     yaw   -= 0.01f * core.mouseMovement().x;
     pitch -= 0.01f * core.mouseMovement().y;
-    float distance = 10.0f * core.deltaTime();
+    float distance = 1000.0f * core.deltaTime();
   
-    entity()->rotate(-0.01f * core.mouseMovement().x, Core::WORLD_UP);
-    entity()->rotate(-0.01f * core.mouseMovement().y, entity()->localRight());
+    const vec3 localUp       = entity()->localUp();
+    const vec3 localRight    = entity()->localRight();
+    const vec3 localBackward = entity()->localBackward();
     
-    if (core.checkKey("up"))
-    {
-      vec3 f = 100.0f*distance*entity()->localForward();
-      entity()->applyForce(f.x, f.y, f.z);
-    }
-    if (core.checkKey("down"))
-    {
-      vec3 f = 100.0f*distance*entity()->localBackward();
-      entity()->applyForce(f.x, f.y, f.z);
-    }
-    if (core.checkKey("left"))
-      entity()->translate(distance, entity()->localLeft());
-    if (core.checkKey("right"))
-      entity()->translate(distance, entity()->localRight());
+    entity()->rotate(-0.01f * core.mouseMovement().x, localUp);
+    entity()->rotate(-0.01f * core.mouseMovement().y, localRight);
+    
+    vec3 f(0.0f);
+    if (core.checkKey("up"))    f -= distance*localBackward;
+    if (core.checkKey("down"))  f += distance*localBackward;
+    if (core.checkKey("left"))  f -= distance*localRight;
+    if (core.checkKey("right")) f += distance*localRight;
+    entity()->applyForce(f.x, f.y, f.z);
   }
   
 };
@@ -62,7 +58,7 @@ class CubeInputComponent
 {
   
 public:
-  void update(const Core & core)
+  void handleInput(const Core & core)
   {
     const float angle = 3.0f * core.deltaTime();
     
@@ -139,7 +135,9 @@ public:
 int main(int argc, char *  argv[])
 {
   // core settings
-  Core core(3);
+  int maxN = 10;
+  int maxM = 10;
+  Core core(maxN*maxM*2+1);
   
   CoreOptions options {"Demo", 800, 700};
   core.changeBackgroundColor(0.2f, 0.2f, 0.2f);
@@ -148,26 +146,31 @@ int main(int argc, char *  argv[])
   core.addControl("left",  SDLK_a);
   core.addControl("right", SDLK_d);
   
-  // static cube
-  Entity * staticCube = core.createEntity("staticCube");
-  staticCube->translate(0.0f, 0.0f, -5.0f);
-//  staticCube->attachInputComponent(new CubeInputComponent);
-  AABBColliderComponent * colliderAABB = new AABBColliderComponent;
-  colliderAABB->resizeCollisionBox({-0.5f, -0.5f, -0.5f},
-                                   { 0.5f,  0.5f,  0.5f});
-  staticCube->attachColliderComponent(colliderAABB);
-  staticCube->attachRigidBodyComponent(new RigidBodyComponent);
-  staticCube->attachGraphicsComponent(new CubeGraphicsComponent);
-  
-  // kinematic cube
-  Entity * kinematicCube = core.createEntity("kinematicCube");
-  kinematicCube->translate(0.0f, 2.0f, -5.0f);
-  colliderAABB = new AABBColliderComponent;
-  colliderAABB->resizeCollisionBox({-0.5f, -0.5f, -0.5f},
-                                   { 0.5f,  0.5f,  0.5f});
-  kinematicCube->attachColliderComponent(colliderAABB);
-  kinematicCube->attachRigidBodyComponent(new CubeRigidBodyComponent);
-  kinematicCube->attachGraphicsComponent(new CubeGraphicsComponent);
+  for (int n = 0; n < maxN; ++n)
+  {
+    for (int m = 0; m < maxM; ++m)
+    {
+      string indexString = to_string(n) + "_" + to_string(m);
+      // static cube
+      Entity * staticCube = core.createEntity("staticCube" + indexString);
+      staticCube->translate(n-maxN/2, -5.0f, m-maxM/2-25.0f);
+//      staticCube->attachInputComponent(new CubeInputComponent);
+      SphereColliderComponent * sphereCollider = new SphereColliderComponent(0.5f);
+      sphereCollider->resize(0.5f);
+      staticCube->attachColliderComponent(sphereCollider);
+      staticCube->attachRigidBodyComponent(new RigidBodyComponent);
+      staticCube->attachGraphicsComponent(new CubeGraphicsComponent);
+      
+      // kinematic cube
+      Entity * kinematicCube = core.createEntity("kinematicCube" + indexString);
+      kinematicCube->translate(n-maxN/2, 10.0f, m-maxM/2-25.0f);
+      sphereCollider = new SphereColliderComponent(0.5f);
+      sphereCollider->resize(0.5f);
+      kinematicCube->attachColliderComponent(sphereCollider);
+      kinematicCube->attachRigidBodyComponent(new CubeRigidBodyComponent);
+      kinematicCube->attachGraphicsComponent(new CubeGraphicsComponent);
+    }
+  }
   
   // camera
   core.camera()->attachInputComponent(new CameraInputComponent);
