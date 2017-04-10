@@ -321,8 +321,8 @@ void GraphicsComponent::attachMesh(const vector<vec3> & positions,
   }
 }
 
-void GraphicsComponent::attachShader(string vertexShaderFilename,
-                                     string fragmentShaderFilename)
+void GraphicsComponent::attachShader(const string & vertexShaderFilename,
+                                     const string & fragmentShaderFilename)
 {
   _vertexShaderFilename   = vertexShaderFilename;
   _fragmentShaderFilename = fragmentShaderFilename;
@@ -465,14 +465,14 @@ void Entity::attachAnimationComponent(AnimationComponent * animation)
   _animation = animation;
 }
 
-void Entity::attachColliderComponent(ColliderComponent * collider)
-{
-  _collider = collider;
-}
-
 void Entity::attachRigidBodyComponent(RigidBodyComponent * rigidBody)
 {
   _rigidBody = rigidBody;
+}
+
+void Entity::attachColliderComponent(ColliderComponent * collider)
+{
+  _collider = collider;
 }
 
 void Entity::attachAudioComponent(AudioComponent * audio)
@@ -557,18 +557,11 @@ mat4 Entity::worldRotation()
   return glm::toMat4(worldOrientation());
 }
 
-void Entity::translate(float dx, float dy, float dz)
+void Entity::translate(const vec3 & d)
 {
-  _localPosition.x += dx;
-  _localPosition.y += dy;
-  _localPosition.z += dz;
+  _localPosition += d;
   _transformNeedsUpdating = true;
   NotificationCenter::notify(DidUpdateTransform, *this);
-}
-
-void Entity::translate(float distance, const vec3 & direction)
-{
-  translate(distance*direction.x, distance*direction.y, distance*direction.z);
 }
 
 void Entity::rotate(float angle, const vec3 & axis)
@@ -579,52 +572,47 @@ void Entity::rotate(float angle, const vec3 & axis)
   NotificationCenter::notify(DidUpdateTransform, *this);
 }
 
-void Entity::accelerate(float dvx, float dvy, float dvz)
+void Entity::accelerate(const vec3 & v)
 {
-  _velocity.x += dvx;
-  _velocity.y += dvy;
-  _velocity.z += dvz;
-  _transformNeedsUpdating = true;
-  NotificationCenter::notify(DidUpdateTransform, *this);
+  _velocity += v;
 }
 
-void Entity::applyForce(float fx, float fy, float fz)
+void Entity::applyForce(const vec3 & f)
 {
-  _force.x += fx;
-  _force.y += fy;
-  _force.z += fz;
-  _transformNeedsUpdating = true;
-  NotificationCenter::notify(DidUpdateTransform, *this);
+  _force += f;
 }
 
-void Entity::reposition(float x, float y, float z)
+void Entity::reposition(const vec3 & p)
 {
   _localPosition.x = 0.0f;
   _localPosition.y = 0.0f;
   _localPosition.z = 0.0f;
-  translate(x, y, z);
+  translate(p);
 }
 
 void Entity::resetPositionX(float x)
 {
-  reposition(x, _localPosition.y, _localPosition.z);
+  _localPosition.x = 0.0f;
+  translate({x, 0.0f, 0.0f});
 }
 
 void Entity::resetPositionY(float y)
 {
-  reposition(_localPosition.x, y, _localPosition.z);
+  _localPosition.y = 0.0f;
+  translate({0.0f, y, 0.0f});
 }
 
 void Entity::resetPositionZ(float z)
 {
-  reposition(_localPosition.x, _localPosition.y, z);
+  _localPosition.z = 0.0f;
+  translate({0.0f, 0.0f, z});
 }
 
-void Entity::reorient(float pitch, float yaw, float roll)
+void Entity::reorient(const vec3 & o)
 {
-  quat qX = glm::angleAxis(pitch, Core::WORLD_RIGHT);
-  quat qY = glm::angleAxis(yaw,   Core::WORLD_UP);
-  quat qZ = glm::angleAxis(roll,  Core::WORLD_BACKWARD);
+  quat qX = glm::angleAxis(o.x, Core::WORLD_RIGHT);
+  quat qY = glm::angleAxis(o.y, Core::WORLD_UP);
+  quat qZ = glm::angleAxis(o.z, Core::WORLD_BACKWARD);
   _localOrientation = qZ * qY * qX;
   _transformNeedsUpdating = true;
   NotificationCenter::notify(DidUpdateTransform, *this);
@@ -633,65 +621,71 @@ void Entity::reorient(float pitch, float yaw, float roll)
 void Entity::resetPitch(float pitch)
 {
   vec3 eulerAngles = glm::eulerAngles(_localOrientation);
-  reorient(pitch, eulerAngles.y, eulerAngles.z);
+  reorient({pitch, eulerAngles.y, eulerAngles.z});
 }
 
 void Entity::resetYaw(float yaw)
 {
   vec3 eulerAngles = glm::eulerAngles(_localOrientation);
-  reorient(eulerAngles.x, yaw, eulerAngles.z);
+  reorient({eulerAngles.x, yaw, eulerAngles.z});
 }
 
 void Entity::resetRoll(float roll)
 {
   vec3 eulerAngles = glm::eulerAngles(_localOrientation);
-  reorient(eulerAngles.x, eulerAngles.y, roll);
+  reorient({eulerAngles.x, eulerAngles.y, roll});
 }
 
-void Entity::resetVelocity(float vx, float vy, float vz)
+void Entity::resetVelocity(const vec3 & v)
 {
   _velocity.x = 0.0f;
   _velocity.y = 0.0f;
   _velocity.z = 0.0f;
-  accelerate(vx, vy, vz);
+  accelerate(v);
 }
 
 void Entity::resetVelocityX(float vx)
 {
-  resetVelocity(vx, _velocity.y, _velocity.z);
+  _velocity.x = 0.0f;
+  accelerate({vx, 0.0f, 0.0f});
 }
 
 void Entity::resetVelocityY(float vy)
 {
-  resetVelocity(_velocity.x, vy, _velocity.z);
+  _velocity.y = 0.0f;
+  accelerate({0.0f, vy, 0.0f});
 }
 
 void Entity::resetVelocityZ(float vz)
 {
-  resetVelocity(_velocity.x, _velocity.y, vz);
+  _velocity.z = 0.0f;
+  accelerate({0.0f, 0.0f, vz});
 }
 
-void Entity::resetForce(float fx, float fy, float fz)
+void Entity::resetForce(const vec3 & f)
 {
   _force.x = 0.0f;
   _force.y = 0.0f;
   _force.z = 0.0f;
-  applyForce(fx, fy, fz);
+  applyForce(f);
 }
 
 void Entity::resetForceX(float fx)
 {
-  resetForce(fx, _force.y, _force.z);
+  _force.x = 0.0f;
+  applyForce({fx, 0.0f, 0.0f});
 }
 
 void Entity::resetForceY(float fy)
 {
-  resetForce(_force.x, fy, _force.z);
+  _force.y = 0.0f;
+  applyForce({0.0f, fy, 0.0f});
 }
 
 void Entity::resetForceZ(float fz)
 {
-  resetForce(_force.x, _force.y, fz);
+  _force.z = 0.0f;
+  applyForce({0.0f, 0.0f, fz});
 }
 
 bool Entity::operator ==(Entity & entity)
@@ -748,13 +742,6 @@ const vec3 Core::WORLD_BACKWARD { 0.0f,  0.0f,  1.0f};
 // MARK: Class functions
 bool Core::AABBIntersect(const box & a, const box & b, box & intersection)
 {
-  intersection.min.x = 0.0f;
-  intersection.min.y = 0.0f;
-  intersection.min.z = 0.0f;
-  intersection.max.x = 0.0f;
-  intersection.max.y = 0.0f;
-  intersection.max.z = 0.0f;
-  
   for (int i = 0; i < 3; i++)
   {
     const float aMin_i = a.min[i];
@@ -770,251 +757,6 @@ bool Core::AABBIntersect(const box & a, const box & b, box & intersection)
   }
   
   return true;
-
-  //
-  //  SDL_Rect colliderBeforeRect
-  //  {
-  //    (int)(colPos.x + colliderCB.pos.x),
-  //    (int)(colPos.y + colliderCB.pos.y),
-  //    (int)colliderCB.dim.x,
-  //    (int)colliderCB.dim.y
-  //  };
-  //
-  //  SDL_Rect obsticleRect
-  //  {
-  //    (int)(obsPos.x + obsticleCB.pos.x),
-  //    (int)(obsPos.y + obsticleCB.pos.y),
-  //    (int)obsticleCB.dim.x,
-  //    (int)obsticleCB.dim.y
-  //  };
-  //
-  //  // second condition is a hack for enemies not colliding away from each other
-  //  bool isResponding = collisionResponse && !obsticle.pRigidBody()->dynamic();
-  //
-  //  // check so that the collider is not already colliding with obsticle
-  //  SDL_Rect intersectionRect;
-  //  if (!SDL_IntersectRect(&colliderBeforeRect,
-  //                         &obsticleRect,
-  //                         &intersectionRect))
-  //  {
-  //    // collider is outside of obsticle
-  //    SDL_Rect colliderAfterRect
-  //    {
-  //      (int)(colPos.x + colliderCB.pos.x + travelDistance.x),
-  //      (int)(colPos.y + colliderCB.pos.y + travelDistance.y),
-  //      (int)colliderCB.dim.x,
-  //      (int)colliderCB.dim.y
-  //    };
-  //
-  //    // the bounding box for the colliders before and after traviling the
-  //    // distance
-  //    SDL_Rect largeRect;
-  //    largeRect.x = (int)std::min(min_x(colliderBeforeRect),
-  //                                min_x(colliderAfterRect));
-  //    largeRect.y = (int)std::min(min_y(colliderBeforeRect),
-  //                                min_y(colliderAfterRect));
-  //    largeRect.w = (int)std::max(max_x(colliderBeforeRect),
-  //                                max_x(colliderAfterRect)) - largeRect.x;
-  //    largeRect.h = (int)std::max(max_y(colliderBeforeRect),
-  //                                max_y(colliderAfterRect)) - largeRect.y;
-  //
-  //    if (SDL_IntersectRect(&largeRect, &obsticleRect, &intersectionRect))
-  //    {
-  //      // collider will collide with obsticle between this frame and the next
-  //      result.push_back(&obsticle);
-  //
-  //      if (isResponding)
-  //      {
-  //        typedef struct { int x1, y1, x2, y2; } Line;
-  //
-  //        auto distance = [](int x1, int y1, int x2, int y2)
-  //        {
-  //          double dx = x2-x1;
-  //          double dy = y2-y1;
-  //          return sqrt(dx*dx+dy*dy);
-  //        };
-  //
-  //        Line upperLeft, upperRight, lowerLeft, lowerRight;
-  //
-  //        upperLeft.x1  = (int)min_x(colliderBeforeRect);
-  //        upperLeft.y1  = (int)min_y(colliderBeforeRect);
-  //        upperLeft.x2  = (int)min_x(colliderAfterRect);
-  //        upperLeft.y2  = (int)min_y(colliderAfterRect);
-  //
-  //        upperRight.x1 = (int)max_x(colliderBeforeRect);
-  //        upperRight.y1 = (int)min_y(colliderBeforeRect);
-  //        upperRight.x2 = (int)max_x(colliderAfterRect);
-  //        upperRight.y2 = (int)min_y(colliderAfterRect);
-  //
-  //        lowerLeft.x1  = (int)min_x(colliderBeforeRect);
-  //        lowerLeft.y1  = (int)max_y(colliderBeforeRect);
-  //        lowerLeft.x2  = (int)min_x(colliderAfterRect);
-  //        lowerLeft.y2  = (int)max_y(colliderAfterRect);
-  //
-  //        lowerRight.x1 = (int)max_x(colliderBeforeRect);
-  //        lowerRight.y1 = (int)max_y(colliderBeforeRect);
-  //        lowerRight.x2 = (int)max_x(colliderAfterRect);
-  //        lowerRight.y2 = (int)max_y(colliderAfterRect);
-  //
-  //        int intersections = 0;
-  //        intersections += SDL_IntersectRectAndLine(&obsticleRect,
-  //                                                  &upperLeft.x1,
-  //                                                  &upperLeft.y1,
-  //                                                  &upperLeft.x2,
-  //                                                  &upperLeft.y2);
-  //        intersections += SDL_IntersectRectAndLine(&obsticleRect,
-  //                                                  &upperRight.x1,
-  //                                                  &upperRight.y1,
-  //                                                  &upperRight.x2,
-  //                                                  &upperRight.y2);
-  //        intersections += SDL_IntersectRectAndLine(&obsticleRect,
-  //                                                  &lowerLeft.x1,
-  //                                                  &lowerLeft.y1,
-  //                                                  &lowerLeft.x2,
-  //                                                  &lowerLeft.y2);
-  //        intersections += SDL_IntersectRectAndLine(&obsticleRect,
-  //                                                  &lowerRight.x1,
-  //                                                  &lowerRight.y1,
-  //                                                  &lowerRight.x2,
-  //                                                  &lowerRight.y2);
-  //
-  //        if (intersections > 0)
-  //        {
-  //          //// find the line with the shortest distance to its originating
-  //          //// corner
-  //          int currentDistance;
-  //
-  //          // upper left corner
-  //          int index = 0;
-  //          int shortestDistance = (int)distance((int)min_x(colliderBeforeRect),
-  //                                               (int)min_y(colliderBeforeRect),
-  //                                               upperLeft.x1,
-  //                                               upperLeft.y1);
-  //
-  //          // upper right corner
-  //          currentDistance = (int)distance((int)max_x(colliderBeforeRect),
-  //                                          (int)min_y(colliderBeforeRect),
-  //                                          upperRight.x1,
-  //                                          upperRight.y1);
-  //          if (currentDistance < shortestDistance)
-  //          {
-  //            index = 1;
-  //            shortestDistance = currentDistance;
-  //          }
-  //
-  //          // lower left corner
-  //          currentDistance = (int)distance((int)min_x(colliderBeforeRect),
-  //                                          (int)max_y(colliderBeforeRect),
-  //                                          lowerLeft.x1,
-  //                                          lowerLeft.y1);
-  //          if (currentDistance < shortestDistance)
-  //          {
-  //            index = 2;
-  //            shortestDistance = currentDistance;
-  //          }
-  //
-  //          // lower right corner
-  //          currentDistance = (int)distance((int)max_x(colliderBeforeRect),
-  //                                          (int)max_y(colliderBeforeRect),
-  //                                          lowerRight.x1,
-  //                                          lowerRight.y1);
-  //          if (currentDistance < shortestDistance)
-  //          {
-  //            index = 3;
-  //            shortestDistance = currentDistance;
-  //          }
-  //
-  //          // update travel distance
-  //          switch (index)
-  //          {
-  //            case 0:
-  //              travelDistance.x = min_x(colliderBeforeRect)-upperLeft.x1;
-  //              travelDistance.y = min_y(colliderBeforeRect)-upperLeft.y1;
-  //              break;
-  //            case 1:
-  //              travelDistance.x = max_x(colliderBeforeRect)-upperRight.x1;
-  //              travelDistance.y = min_y(colliderBeforeRect)-upperRight.y1;
-  //              break;
-  //            case 2:
-  //              travelDistance.x = min_x(colliderBeforeRect)-lowerLeft.x1;
-  //              travelDistance.y = max_y(colliderBeforeRect)-lowerLeft.y1;
-  //              break;
-  //            case 3:
-  //              travelDistance.x = max_x(colliderBeforeRect)-lowerRight.x1;
-  //              travelDistance.y = max_y(colliderBeforeRect)-lowerRight.y1;
-  //              break;
-  //          }
-  //
-  //          // update velocity
-  //          collider.pVelocity() = vec3(0.0f);
-  //        }
-  //      }
-  //    }
-  //  }
-  //  else
-  //  {
-  //    // collider is inside obsticle (rare)
-  //    result.push_back(&obsticle);
-  //
-  //    if (isResponding)
-  //    {
-  //      //// find shortest distance to one of the obsticles edges
-  //      int current_distance;
-  //
-  //      // distance to upper edge
-  //      int index = 0;
-  //      int shortest_distance =
-  //      (int)min_y(obsticleRect) - (int)min_y(colliderBeforeRect);
-  //
-  //      // distance to lower edge
-  //      current_distance = (int)max_y(obsticleRect) - (int)max_y(colliderBeforeRect);
-  //      if (current_distance < shortest_distance)
-  //      {
-  //        index = 1;
-  //        shortest_distance = current_distance;
-  //      }
-  //
-  //      // distance to left edge
-  //      current_distance = (int)min_x(obsticleRect) - (int)min_x(colliderBeforeRect);
-  //      if (current_distance < shortest_distance)
-  //      {
-  //        index = 2;
-  //        shortest_distance = current_distance;
-  //      }
-  //
-  //      // distance to right edge
-  //      current_distance = (int)max_x(obsticleRect) - (int)max_x(colliderBeforeRect);
-  //      if (current_distance < shortest_distance)
-  //      {
-  //        index = 3;
-  //        shortest_distance = current_distance;
-  //      }
-  //
-  //      // update travel distance
-  //      switch (index)
-  //      {
-  //        case 0:
-  //          travelDistance.x = 0;
-  //          travelDistance.y = -(shortest_distance + colliderBeforeRect.h);
-  //          break;
-  //        case 1:
-  //          travelDistance.x = 0;
-  //          travelDistance.y = shortest_distance + colliderBeforeRect.h;
-  //          break;
-  //        case 2:
-  //          travelDistance.x = -(shortest_distance + colliderBeforeRect.w);
-  //          travelDistance.y = 0;
-  //          break;
-  //        case 3:
-  //          travelDistance.x = shortest_distance + colliderBeforeRect.w;
-  //          travelDistance.y = 0;
-  //          break;
-  //      }
-  //
-  //      // update velocity
-  //      collider.pVelocity = vec3(0.0f);
-  //    }
-  //  }
 }
 
 
@@ -1024,15 +766,43 @@ bool Core::SphereIntersect(const vec3 & p1,
                            float r2,
                            vec3 & intersection)
 {
-  intersection.x = 0.0f;
-  intersection.y = 0.0f;
-  intersection.z = 0.0f;
-  
   vec3 d = p2-p1;
   const float diff = r1 + r2 - glm::length(d);
   if (diff < 0)
     return false;
   intersection = diff * glm::normalize(d);
+  return true;
+}
+
+bool Core::SphereCollision(const vec3 & o1,
+                           const vec3 & o2,
+                           const vec3 & v1,
+                           const vec3 & v2,
+                           float r1,
+                           float r2,
+                           float & time,
+                           vec3 & p1,
+                           vec3 & p2)
+{
+  const vec3 v  = v1-v2;
+  const vec3 l    = o1-o2;
+  const float r = r1+r2;
+  const float a = glm::dot(v, v);
+  if (a == 0.0f)
+    return false;
+  const float b   = 2.0f*glm::dot(l, v);
+  const float c   = glm::dot(l, l) - r*r;
+  const float d   = b*b - 4.0f*a*c;
+  if (d < 0.0f)
+    return false;
+  const float q   = -0.5f*(b + glm::sign(b)*glm::sqrt(d));
+  if (q == 0.0f)
+    return false;
+  const float t0  = q/a;
+  const float t1  = c/q;
+  time = glm::min(t0, t1);
+  p1   = o1 + time*v1;
+  p2   = o2 + time*v2;
   return true;
 }
 
@@ -1134,7 +904,7 @@ bool Core::init(CoreOptions & options)
   _intervalPairOverlaps[2].resize(size-1);
   for (int i = 0; i < size; ++i)
   {
-    auto & aabb = _colliders[i]->collider()->axisAlignedBoundingBox();
+    auto & aabb = _colliders[i]->collider()->dynamicAxisAlignedBoundingBox();
     _intervalBounds[0][2*i]   = {_IntervalBound::START, i, &aabb.min.x};
     _intervalBounds[0][2*i+1] = {_IntervalBound::END,   i, &aabb.max.x};
     _intervalBounds[1][2*i]   = {_IntervalBound::START, i, &aabb.min.y};
@@ -1266,12 +1036,7 @@ bool Core::update()
       entity.animation()->animate(*this);
   }
   
-  // update physics
-  for (auto & entity : _entities)
-  {
-    if (entity.enabled() && entity.rigidBody())
-      entity.rigidBody()->update(*this);
-  }
+  // update colliders
   for (auto & entity : _entities)
   {
     if (entity.enabled() && entity.collider())
@@ -1318,21 +1083,48 @@ bool Core::update()
   // collide entities
   for (int i = 0; i < _colliders.size(); ++i)
   {
+    Entity * colliderEntity      = _colliders[i];
+    ColliderComponent * collider = colliderEntity->collider();
+    const vec3 colliderPosition  = colliderEntity->worldPosition();
+    const vec3 colliderVelocity  = colliderEntity->velocity();
     for (int j = i+1; j < _colliders.size(); ++j)
     {
-//      if (_intervalPairOverlaps[0][i][j-1] &&
-//          _intervalPairOverlaps[1][i][j-1] &&
-//          _intervalPairOverlaps[2][i][j-1])
-//      {
-        Entity * collider = _colliders[i];
-        const vec3 colliderPosition = collider->worldPosition();
-        Entity * obsticle = _colliders[j];
-        const vec3 obsticlePosition = obsticle->worldPosition();
-        collider->collider()->collide(*obsticle->collider(),
-                                      colliderPosition,
-                                      obsticlePosition);
-//      }
+      if (_intervalPairOverlaps[0][i][j-1] &&
+          _intervalPairOverlaps[1][i][j-1] &&
+          _intervalPairOverlaps[2][i][j-1])
+      {
+        Entity * obsticleEntity      = _colliders[j];
+        ColliderComponent * obsticle = obsticleEntity->collider();
+        const vec3 obsticlePosition  = obsticleEntity->worldPosition();
+        const vec3 obsticleVelocity  = obsticleEntity->velocity();
+        if (dynamic_cast<SphereColliderComponent*>(collider))
+        {
+          auto sphereCollider = (SphereColliderComponent*)collider;
+          if (dynamic_cast<SphereColliderComponent*>(obsticle))
+          {
+            auto sphereObsticle = (SphereColliderComponent*)obsticle;
+            vec3 intersection;
+            if (SphereIntersect(colliderPosition,
+                                obsticlePosition,
+                                sphereCollider->radius(),
+                                sphereObsticle->radius(),
+                                intersection))
+            {
+              // TODO: better collision response
+              obsticleEntity->resetVelocity(-obsticleVelocity);
+              obsticleEntity->translate(intersection);
+            }
+          }
+        }
+      }
     }
+  }
+  
+  // update rigid bodies
+  for (auto & entity : _entities)
+  {
+    if (entity.enabled() && entity.rigidBody())
+      entity.rigidBody()->update(*this);
   }
   
   // update view and projection matrix
@@ -1346,14 +1138,13 @@ bool Core::update()
   _projectionMatrix = perspective(radians(45.0f),
                                   float(d.x) / float(d.y),
                                   0.01f,
-                                  300.0f);
+                                  1e38f);
   
-  // render entities and reset forces
+  // update entities to their next state and render
   for (auto & entity : _entities)
   {
     if (entity.enabled() && entity.graphics())
       entity.graphics()->render(*this);
-    entity.resetForce(0.0f, 0.0f, 0.0f);
   }
   
   // swap buffers

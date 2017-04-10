@@ -319,15 +319,13 @@ class ColliderComponent
   
 public:
   // MARK: Properties
-  virtual const box & axisAlignedBoundingBox() const = 0;
+  virtual const box & staticAxisAlignedBoundingBox() const = 0;
+  virtual const box & dynamicAxisAlignedBoundingBox() const = 0;
   const vec3 & origin() const;
   
   // MARK: Member functions
   ColliderComponent(const vec3 & origin = {0.0f, 0.0f, 0.0f});
   virtual void update(const Core & core) = 0;
-  virtual bool collide(const ColliderComponent & obsticle,
-                       const vec3 & colliderPosition,
-                       const vec3 & obsticlePosition) const = 0;
   void reposition(const vec3 & origin);
   
 private:
@@ -346,21 +344,20 @@ class SphereColliderComponent
   
 public:
   // MARK: Properties
-  const box & axisAlignedBoundingBox() const;
+  const box & staticAxisAlignedBoundingBox() const;
+  const box & dynamicAxisAlignedBoundingBox() const;
   float radius() const;
   
   // MARK: Member functions
   SphereColliderComponent(float radius);
   SphereColliderComponent(const vec3 & origin, float radius);
   void update(const Core & core);
-  bool collide(const ColliderComponent & obsticle,
-               const vec3 & colliderPosition,
-               const vec3 & obsticlePosition) const;
   void resize(float radius);
   string trait() const;
   
 private:
-  box _axisAlignedBoundingBox;
+  box _staticAxisAlignedBoundingBox;
+  box _dynamicAxisAlignedBoundingBox;
   float _radius;
   
 };
@@ -470,7 +467,8 @@ public:
   void attachMesh(const vector<vec3> & positions,
                   const vector<vec3> & colors,
                   const vector<ivec3> & indices);
-  void attachShader(string vertexShaderFilename, string fragmentShaderFilename);
+  void attachShader(const string & vertexShaderFilename,
+                    const string & fragmentShaderFilename);
   string trait() const;
   
 private:
@@ -578,28 +576,27 @@ public:
   mat4 worldTranslation();
   mat4 worldRotation();
   
-  void translate(float dx, float dy, float dz);
-  void translate(float distance, const vec3 & direction);
+  void translate(const vec3 & d);
   void rotate(float angle, const vec3 & axis);
-  void accelerate(float dvx, float dvy, float dvz);
-  void applyForce(float fx, float fy, float fz);
+  void accelerate(const vec3 & v);
+  void applyForce(const vec3 & f);
   
-  void reposition(float x, float y, float z);
+  void reposition(const vec3 & p = {});
   void resetPositionX(float x);
   void resetPositionY(float y);
   void resetPositionZ(float z);
   
-  void reorient(float pitch, float yaw, float roll);
+  void reorient(const vec3 & o = {});
   void resetPitch(float pitch);
   void resetYaw(float yaw);
   void resetRoll(float roll);
   
-  void resetVelocity(float vx, float vy, float vz);
+  void resetVelocity(const vec3 & v = {});
   void resetVelocityX(float vx);
   void resetVelocityY(float vy);
   void resetVelocityZ(float vz);
   
-  void resetForce(float fx, float fy, float fz);
+  void resetForce(const vec3 & f = {});
   void resetForceX(float fx);
   void resetForceY(float fy);
   void resetForceZ(float fz);
@@ -685,12 +682,73 @@ public:
   static const vec3 WORLD_BACKWARD;
   
   // MARK: Class functions
-  static bool AABBIntersect(const box & a, const box & b, box & intersection);
-  static bool SphereIntersect(const vec3 & p1,
-                              const vec3 & p2,
+  /**
+   *  Computes the intersection between two static AABBs.
+   *
+   *  The intersection between the two AABBs is stored in the parameter
+   *  'intersection' only if there is an overlap. Otherwise, this parameter
+   *  remains unchanged.
+   *
+   *  @param    a             The first static AABB.
+   *  @param    b             The second static AABB.
+   *  @param    intersection  The intersected volume.
+   *  @returns  true, if the AABBs overlap, otherwise false.
+   **/
+  static bool AABBIntersect(const box & a,
+                            const box & b,
+                            box & intersection);
+  
+  /**
+   *  Computes the intersection between two static spheres.
+   *
+   *  The intersection between the two spheres is stored in the parameter
+   *  'intersection' only if there is an overlap. Otherwise, this parameter
+   *  remains unchanged.
+   *
+   *  @param    o1            The origin of the first sphere.
+   *  @param    o2            The origin of the second sphere.
+   *  @param    r1            The radius of the first sphere.
+   *  @param    r2            The radius of the second sphere.
+   *  @param    intersection  The intersected distance and direction relative 
+   *                          the first sphere.
+   *  @returns  true, if the spheres overlap, otherwise false.
+   **/
+  static bool SphereIntersect(const vec3 & o1,
+                              const vec3 & o2,
                               float r1,
                               float r2,
                               vec3 & intersection);
+  
+  /**
+   *  Computes the collision between two dynamic spheres.
+   *
+   *  The locations of the spheres at the point of collision, as well as the 
+   *  time the collision will occur, is stored in the parameters 'p1', 'p2', and
+   *  'time', respectively, only if a collision will occur during the time of 
+   *  the frame. Otherwise, these parameters remain unchanged.
+   *
+   *  @param    o1            The origin of the first sphere.
+   *  @param    o2            The origin of the second sphere.
+   *  @param    v1            The velocity of the first sphere.
+   *  @param    v2            The velocity of the second sphere.
+   *  @param    r1            The radius of the first sphere.
+   *  @param    r2            The radius of the second sphere.
+   *  @param    time          The time when the spheres collide.
+   *  @param    p1            The position of the first sphere at the point of
+   *                          impact.
+   *  @param    p2            The position of the second sphere at the point of
+   *                          impact.
+   *  @returns  true, if the spheres collide during the frame, otherwise false.
+   **/
+  static bool SphereCollision(const vec3 & o1,
+                              const vec3 & o2,
+                              const vec3 & v1,
+                              const vec3 & v2,
+                              float r1,
+                              float r2,
+                              float & time,
+                              vec3 & p1,
+                              vec3 & p2);
   
   // MARK: Member functions
   Core(int numberOfEntities = 10000);

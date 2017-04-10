@@ -40,21 +40,14 @@ void AnimationComponent::animate(const Core & core)
       const auto s1 = _currentCurve[i+1];
       const vec3 p = s0.first*cp0 + s0.second*cm0 +
       s1.first*cp1 + s1.second*cm1;
-      
-      entity()->reposition(_startPosition.x + p.x,
-                           _startPosition.y + p.y,
-                           _startPosition.z + p.z);
+      entity()->reposition(_startPosition + p);
     }
     else
     {
       auto lastHalfSpline = _currentCurve.back();
-      entity()->reposition(_startPosition.x + lastHalfSpline.first.x,
-                           _startPosition.y + lastHalfSpline.first.y,
-                           _startPosition.z + lastHalfSpline.first.z);
+      entity()->reposition(_startPosition + lastHalfSpline.first);
       if (_updateVelocity)
-        entity()->resetVelocity(lastHalfSpline.second.x/_duration,
-                                lastHalfSpline.second.y/_duration,
-                                lastHalfSpline.second.z/_duration);
+        entity()->resetVelocity(lastHalfSpline.second/float(_duration));
       _animating = false;
       NotificationCenter::notify(DidStopAnimating, *this);
     }

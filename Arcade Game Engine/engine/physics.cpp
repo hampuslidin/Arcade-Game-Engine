@@ -22,10 +22,15 @@ void ColliderComponent::reposition(const vec3 & origin)
 
 // MARK: -
 // MARK: Properties
-const box & SphereColliderComponent::axisAlignedBoundingBox() const
+const box & SphereColliderComponent::staticAxisAlignedBoundingBox() const
 {
-  return _axisAlignedBoundingBox;
+  return _staticAxisAlignedBoundingBox;
 }
+const box & SphereColliderComponent::dynamicAxisAlignedBoundingBox() const
+{
+  return _dynamicAxisAlignedBoundingBox;
+}
+float SphereColliderComponent::radius() const { return _radius; }
 
 // MARK: Member functions
 SphereColliderComponent::SphereColliderComponent(float radius)
@@ -42,30 +47,15 @@ SphereColliderComponent::SphereColliderComponent(const vec3 & origin,
 void SphereColliderComponent::update(const Core & core)
 {
   vec3 worldPosition = origin() + entity()->worldPosition();
-  _axisAlignedBoundingBox.min = worldPosition - _radius;
-  _axisAlignedBoundingBox.max = worldPosition + _radius;
-}
-
-bool SphereColliderComponent::collide(const ColliderComponent & obsticle,
-                                      const vec3 & colliderPosition,
-                                      const vec3 & obsticlePosition) const
-{
-  string obsticleTrait = obsticle.trait();
-  if (obsticleTrait.compare(trait()) == 0)
-  {
-    auto sphereObsticle = (const SphereColliderComponent&)obsticle;
-    vec3 intersection;
-    if (Core::SphereIntersect(colliderPosition,
-                              obsticlePosition,
-                              _radius,
-                              sphereObsticle._radius,
-                              intersection))
-    {
-      printf("Collided!\n");
-      return true;
-    }
-  }
-  return false;
+  vec3 & oldMin      = _staticAxisAlignedBoundingBox.min;
+  vec3 & oldMax      = _staticAxisAlignedBoundingBox.max;
+  vec3 newMin        = worldPosition - _radius;
+  vec3 newMax        = worldPosition + _radius;
+  
+  _dynamicAxisAlignedBoundingBox.min = glm::min(oldMin, newMin);
+  _dynamicAxisAlignedBoundingBox.max = glm::max(oldMax, newMax);
+  oldMin = newMin;
+  oldMax = newMax;
 }
 
 void SphereColliderComponent::resize(float radius)
@@ -118,23 +108,15 @@ void RigidBodyComponent::update(const Core & core)
 {
   if (_shouldSimulate && _kinematic)
   {
-    // apply external forces to entity
     const float t = core.deltaTime();
     const vec3 a = _gravity + entity()->force()/_mass;
-    const vec3 v = a*t*float(Core::UNITS_PER_METER);
-    entity()->accelerate(v.x, v.y, v.z);
-    
-    // adjust for thermal velocity
-    vec3 u = entity()->velocity();
-    if (glm::length(u) > _thermalVelocity)
-    {
-      u = glm::normalize(u) * _thermalVelocity;
-      entity()->resetVelocity(u.x, u.y, u.z);
-    }
-    
-    // update position
-    const vec3 d = entity()->velocity()*t;
-    entity()->translate(d.x, d.y, d.z);
+    vec3 v = entity()->velocity() + a*t;
+    float absoluteVelocity = glm::length(v);
+    if (absoluteVelocity > _thermalVelocity)
+      v *= _thermalVelocity / absoluteVelocity;
+    entity()->resetVelocity(v);
+    entity()->translate(v*float(core.deltaTime()));
+    entity()->resetForce();
   }
 }
 
