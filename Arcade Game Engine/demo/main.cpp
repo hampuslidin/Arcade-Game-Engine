@@ -101,7 +101,7 @@ public:
 int main(int argc, char *  argv[])
 {
   // core settings
-  Core core(3);
+  Core core(19);
   
   CoreOptions options {"Demo", 800, 700};
   core.changeBackgroundColor(0.2f, 0.2f, 0.2f);
@@ -110,20 +110,96 @@ int main(int argc, char *  argv[])
   core.addControl("left",  SDLK_a);
   core.addControl("right", SDLK_d);
   
-  // static cube
-  Entity * staticCube = core.createEntity("staticCube");
-  staticCube->translate({-0.5f, -5.0f, -25.0f});
-//  staticCube->attachInputComponent(new CubeInputComponent);
-  staticCube->attachColliderComponent(new SphereColliderComponent(0.49f));
-  staticCube->attachRigidBodyComponent(new RigidBodyComponent);
-  staticCube->attachGraphicsComponent(new CubeGraphicsComponent);
+  // high static cube
+  Entity * highStaticCube = core.createEntity("highStaticCube");
+  highStaticCube->translate({0.0f, -2.0f, -25.0f});
+  highStaticCube->attachColliderComponent(new SphereColliderComponent(0.49f));
+  highStaticCube->attachRigidBodyComponent(new RigidBodyComponent);
+  highStaticCube->attachGraphicsComponent(new CubeGraphicsComponent);
   
-  // kinematic cube
-  Entity * kinematicCube = core.createEntity("kinematicCube");
-  kinematicCube->translate({-0.5f, 2.0f, -25.0f});
-  kinematicCube->attachColliderComponent(new SphereColliderComponent(0.49f));
-  kinematicCube->attachRigidBodyComponent(new CubeRigidBodyComponent);
-  kinematicCube->attachGraphicsComponent(new CubeGraphicsComponent);
+  // middle static cubes
+  int n = 0;
+  for (int i = 0; i <= 1; ++i)
+  {
+    for (int j = -1; j <= 1; j += 2)
+    {
+      string id = "middleStaticCube" + to_string(n);
+      Entity * middleStaticCube = core.createEntity(id);
+      if (i == 0)
+      {
+        middleStaticCube->translate({j, -5.0f, -25.0f});
+      } else
+      {
+        middleStaticCube->translate({0.0f, -5.0f, j-25.0f});
+      }
+      middleStaticCube->attachColliderComponent(new SphereColliderComponent(0.49f));
+      middleStaticCube->attachRigidBodyComponent(new RigidBodyComponent);
+      middleStaticCube->attachGraphicsComponent(new CubeGraphicsComponent);
+      ++n;
+    }
+  }
+  
+  // low static cubes
+  n = 0;
+  for (int i = -1; i <= 1; i += 2)
+  {
+    for (int j = -1; j <= 1; j += 2)
+    {
+      string id = "lowStaticCube" + to_string(n);
+      Entity * lowStaticCube = core.createEntity(id);
+      lowStaticCube->translate({i, -8.0f, j-25.0f});
+      lowStaticCube->attachColliderComponent(new SphereColliderComponent(0.49f));
+      lowStaticCube->attachRigidBodyComponent(new RigidBodyComponent);
+      lowStaticCube->attachGraphicsComponent(new CubeGraphicsComponent);
+      ++n;
+    }
+  }
+  
+  // high bouncing cube
+  Entity * highBouncingCube = core.createEntity("highBouncingCube");
+  highBouncingCube->translate({0.0f, 8.0f, -25.0f});
+  highBouncingCube->attachColliderComponent(new SphereColliderComponent(0.49f));
+  highBouncingCube->attachRigidBodyComponent(new CubeRigidBodyComponent);
+  highBouncingCube->attachGraphicsComponent(new CubeGraphicsComponent);
+  
+  // middle bouncing cubes
+  n = 0;
+  for (int i = 0; i <= 1; ++i)
+  {
+    for (int j = -1; j <= 1; j += 2)
+    {
+      string id = "middleBouncingCube" + to_string(n);
+      Entity * middleBouncingCube = core.createEntity(id);
+      if (i == 0)
+      {
+        middleBouncingCube->translate({j, 8.0f, -25.0f});
+      } else
+      {
+        middleBouncingCube->translate({0.0f, 8.0f, j-25.0f});
+      }
+      middleBouncingCube->attachColliderComponent(new SphereColliderComponent(0.49f));
+      middleBouncingCube->attachRigidBodyComponent(new CubeRigidBodyComponent);
+      middleBouncingCube->attachGraphicsComponent(new CubeGraphicsComponent);
+      ++n;
+    }
+  }
+  
+  // low bouncing cubes
+  n = 0;
+  for (int i = -1; i <= 1; i += 2)
+  {
+    for (int j = -1; j <= 1; j += 2)
+    {
+      string id = "lowBouncingCube" + to_string(n);
+      Entity * lowBouncingCube = core.createEntity(id);
+      lowBouncingCube->translate({i, 8.0f, j-25.0f});
+      lowBouncingCube->attachColliderComponent(new SphereColliderComponent(0.49f));
+      lowBouncingCube->attachRigidBodyComponent(new CubeRigidBodyComponent);
+      lowBouncingCube->attachGraphicsComponent(new CubeGraphicsComponent);
+      ++n;
+    }
+  }
+  
   
   // camera
   core.camera()->attachInputComponent(new CameraInputComponent);
