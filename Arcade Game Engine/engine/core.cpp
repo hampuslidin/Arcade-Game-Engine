@@ -5,6 +5,12 @@
 
 #include "core.hpp"
 #include <fstream>
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "tiny_obj_loader.h"
+
+using namespace tinyobj;
 
 
 // MARK: Member functions
@@ -177,17 +183,17 @@ string InputComponent::trait() const { return "Input"; }
 
 // MARK: -
 // MARK: Properties
-const vector<vec3> & GraphicsComponent::vertexPositions() const
+const vector<float> & GraphicsComponent::vertices() const
 {
-  return _vertexPositions;
+  return _vertices;
 }
-const vector<vec3> & GraphicsComponent::vertexColors() const
+const vector<float> & GraphicsComponent::textureCoordinates() const
 {
-  return _vertexColors;
+  return _textureCoordinates;
 }
-const vector<ivec3> & GraphicsComponent::vertexIndices() const
+long GraphicsComponent::numberOfVertices() const
 {
-  return _vertexIndices;
+  return _numberOfVertices;
 }
 
 // MARK: Member functions
@@ -199,33 +205,46 @@ void GraphicsComponent::init(Entity * entity)
   glGenVertexArrays(1, &_vertexArrayObject);
   glBindVertexArray(_vertexArrayObject);
   
-  // generate position buffer
-  glGenBuffers(1, &_positionBuffer);
-  glBindBuffer(GL_ARRAY_BUFFER, _positionBuffer);
+  // generate vertices buffer
+  glGenBuffers(1, &_verticesBuffer);
+  glBindBuffer(GL_ARRAY_BUFFER, _verticesBuffer);
   glBufferData(GL_ARRAY_BUFFER,
-               _vertexPositions.size()*sizeof(vec3),
-               &_vertexPositions[0].x,
+               _vertices.size()*sizeof(float),
+               &_vertices[0],
                GL_STATIC_DRAW);
   glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
   glEnableVertexAttribArray(0);
   
-  // generate color buffer
-  glGenBuffers(1, &_colorBuffer);
-  glBindBuffer(GL_ARRAY_BUFFER, _colorBuffer);
+  // generate texture coordinates buffer
+  glGenBuffers(1, &_textureCoordinatesBuffer);
+  glBindBuffer(GL_ARRAY_BUFFER, _textureCoordinatesBuffer);
   glBufferData(GL_ARRAY_BUFFER,
-               _vertexColors.size()*sizeof(vec3),
-               &_vertexColors[0].x,
+               _textureCoordinates.size()*sizeof(float),
+               &_textureCoordinates[0],
                GL_STATIC_DRAW);
-  glVertexAttribPointer(1, 3, GL_FLOAT, false, 0, 0);
+  glVertexAttribPointer(1, 2, GL_FLOAT, false, 0, 0);
   glEnableVertexAttribArray(1);
   
-  // generate index buffer
-  glGenBuffers(1, &_indexBuffer);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _indexBuffer);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-               _vertexIndices.size()*sizeof(ivec3),
-               &_vertexIndices[0].x,
-               GL_STATIC_DRAW);
+  // load texture
+  int width, height, components;
+  auto image = stbi_load(_texturePath.c_str(),
+                         &width,
+                         &height,
+                         &components,
+                         STBI_rgb_alpha);
+  glGenTextures(1, &_texture);
+  glBindTexture(GL_TEXTURE_2D, _texture);
+  glTexImage2D(GL_TEXTURE_2D,
+               0,
+               GL_RGBA,
+               width,
+               height,
+               0,
+               GL_RGBA,
+               GL_UNSIGNED_BYTE,
+               image);
+  glGenerateMipmap(GL_TEXTURE_2D);
+  free(image);
   
   // TODO: handle errors
   // create shader program
@@ -277,55 +296,60 @@ void GraphicsComponent::render(const Core & core)
                      false,
                      &modelViewProjectionMatrix[0].x);
   
+  // activate texture
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, _texture);
+  
   // render
   glBindVertexArray(_vertexArrayObject);
-  glDrawElements(GL_TRIANGLES,
-                 (int)_vertexIndices.size()*sizeof(ivec3),
-                 GL_UNSIGNED_INT,
-                 0);
+  glDrawArrays(GL_TRIANGLES, 0, (int)_numberOfVertices);
 }
 
-void GraphicsComponent::attachMesh(const vector<vec3> & positions,
-                                   const vector<vec3> & colors,
-                                   const vector<ivec3> & indices)
+void GraphicsComponent::loadMeshFromObjFile(const string & fileName,
+                                            const string & extension,
+                                            const string & objectBaseDir,
+                                            const string & materialBaseDir,
+                                            const string & textureBaseDir)
 {
-  _vertexPositions.resize(positions.size());
-  _vertexColors.resize(colors.size());
-  _vertexIndices.resize(indices.size());
+  attrib_t           attrib;
+  vector<shape_t>    shapes;
+  vector<material_t> materials;
+  string             error;
+  LoadObj(&attrib,
+          &shapes,
+          &materials,
+          &error,
+          (objectBaseDir + "/" + fileName + "." + extension).c_str(),
+          (materialBaseDir + "/").c_str());
   
-  for (int i = 0; i < positions.size(); i++)
+  if (shapes.size() >= 1 && materials.size() >= 1)
   {
-    vec3 & vPos = _vertexPositions[i];
-    vec3 pos = positions[i];
-    vPos.x = pos.x;
-    vPos.y = pos.y;
-    vPos.z = pos.z;
-  }
-  
-  for (int i = 0; i < colors.size(); i++)
-  {
-    vec3 & vCol = _vertexColors[i];
-    vec3 col = colors[i];
-    vCol.x = col.x;
-    vCol.y = col.y;
-    vCol.z = col.z;
-  }
-  
-  for (int i = 0; i < indices.size(); i++)
-  {
-    ivec3 & vInd = _vertexIndices[i];
-    vec3 ind = indices[i];
-    vInd.x = ind.x;
-    vInd.y = ind.y;
-    vInd.z = ind.z;
+    auto indices = shapes[0].mesh.indices;
+    _numberOfVertices = indices.size();
+    _vertices.resize(_numberOfVertices*3);
+    _textureCoordinates.resize(_numberOfVertices*2);
+    for (int i = 0; i < indices.size(); ++i)
+    {
+      auto index                 = indices[i];
+      _vertices[3*i]             = attrib.vertices[3*index.vertex_index];
+      _vertices[3*i+1]           = attrib.vertices[3*index.vertex_index+1];
+      _vertices[3*i+2]           = attrib.vertices[3*index.vertex_index+2];
+      _textureCoordinates[2*i]   = attrib.texcoords[2*index.texcoord_index];
+      _textureCoordinates[2*i+1] = attrib.texcoords[2*index.texcoord_index+1];
+    }
+    
+    _texturePath = textureBaseDir + "/" + materials[0].diffuse_texname;
   }
 }
 
-void GraphicsComponent::attachShader(const string & vertexShaderFilename,
-                                     const string & fragmentShaderFilename)
+void GraphicsComponent::loadShader(const string & fileName,
+                                   const string & vertexShaderExtension,
+                                   const string & fragmentShaderExtension,
+                                   const string & shaderBaseDir)
 {
-  _vertexShaderFilename   = vertexShaderFilename;
-  _fragmentShaderFilename = fragmentShaderFilename;
+  const string prefix = shaderBaseDir + "/" + fileName + ".";
+  _vertexShaderFilename   = prefix + vertexShaderExtension;
+  _fragmentShaderFilename = prefix + fragmentShaderExtension;
 }
 
 string GraphicsComponent::trait() const { return "Graphics"; }
@@ -1086,7 +1110,6 @@ bool Core::update()
     Entity * colliderEntity      = _colliders[i];
     ColliderComponent * collider = colliderEntity->collider();
     const vec3 colliderPosition  = colliderEntity->worldPosition();
-    const vec3 colliderVelocity  = colliderEntity->velocity();
     for (int j = i+1; j < _colliders.size(); ++j)
     {
       if (_intervalPairOverlaps[0][i][j-1] &&

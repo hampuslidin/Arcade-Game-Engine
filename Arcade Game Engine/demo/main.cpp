@@ -7,8 +7,6 @@
 #include <glm/gtx/transform.hpp>
 
 
-float r = 0.5f;
-
 const Event DidPressKey("DidPressKey");
 const Event DidReleaseKey("DidReleaseKey");
 
@@ -94,43 +92,8 @@ public:
   CubeGraphicsComponent()
     : GraphicsComponent()
   {
-    vector<vec3> positions {
-      {-r, -r, -r},
-      { r, -r, -r},
-      {-r,  r, -r},
-      { r,  r, -r},
-      {-r, -r,  r},
-      { r, -r,  r},
-      {-r,  r,  r},
-      { r,  r,  r}
-    };
-    vector<vec3> colors {
-      {0.0f, 0.0f, 0.0f},
-      {1.0f, 0.0f, 0.0f},
-      {0.0f, 1.0f, 0.0f},
-      {1.0f, 1.0f, 0.0f},
-      {0.0f, 0.0f, 1.0f},
-      {1.0f, 0.0f, 1.0f},
-      {0.0f, 1.0f, 1.0f},
-      {1.0f, 1.0f, 1.0f}
-    };
-    vector<ivec3> indices {
-      {0, 6, 2},
-      {0, 4, 6},
-      {1, 3, 7},
-      {1, 7, 5},
-      {2, 1, 0},
-      {2, 3, 1},
-      {3, 6, 7},
-      {3, 2, 6},
-      {4, 0, 1},
-      {4, 1, 5},
-      {5, 6, 4},
-      {5, 7, 6}
-    };
-    
-    attachMesh(positions, colors, indices);
-    attachShader("shaders/simple.vert", "shaders/simple.frag");
+    loadMeshFromObjFile("cube");
+    loadShader("simple");
   }
   
 };
@@ -138,9 +101,7 @@ public:
 int main(int argc, char *  argv[])
 {
   // core settings
-  int maxN = 5;
-  int maxM = 5;
-  Core core(maxN*maxM*2+1);
+  Core core(3);
   
   CoreOptions options {"Demo", 800, 700};
   core.changeBackgroundColor(0.2f, 0.2f, 0.2f);
@@ -149,41 +110,24 @@ int main(int argc, char *  argv[])
   core.addControl("left",  SDLK_a);
   core.addControl("right", SDLK_d);
   
-  for (int n = 0; n < maxN; ++n)
-  {
-    for (int m = 0; m < maxM; ++m)
-    {
-      string indexString = to_string(n) + "_" + to_string(m);
-      // static cube
-      Entity * staticCube = core.createEntity("staticCube" + indexString);
-      staticCube->translate
-      ({
-        (2*n-maxN)*r,
-        (arc4random()/float(RAND_MAX)-10.0f)*r,
-        (2*m-maxM)*r-25.0f
-      });
-      staticCube->attachInputComponent(new CubeInputComponent);
-      staticCube->attachColliderComponent(new SphereColliderComponent(0.98*r));
-      staticCube->attachRigidBodyComponent(new RigidBodyComponent);
-      staticCube->attachGraphicsComponent(new CubeGraphicsComponent);
-      
-      // kinematic cube
-      Entity * kinematicCube = core.createEntity("kinematicCube" + indexString);
-      kinematicCube->translate
-      ({
-        (2*n-maxN)*r,
-        (arc4random()/float(RAND_MAX)*4+4)*r,
-        (2*m-maxM)*r-25.0f
-      });
-      kinematicCube->attachColliderComponent(new SphereColliderComponent(0.98*r));
-      kinematicCube->attachRigidBodyComponent(new CubeRigidBodyComponent);
-      kinematicCube->attachGraphicsComponent(new CubeGraphicsComponent);
-    }
-  }
+  // static cube
+  Entity * staticCube = core.createEntity("staticCube");
+  staticCube->translate({-0.5f, -5.0f, -25.0f});
+//  staticCube->attachInputComponent(new CubeInputComponent);
+  staticCube->attachColliderComponent(new SphereColliderComponent(0.49f));
+  staticCube->attachRigidBodyComponent(new RigidBodyComponent);
+  staticCube->attachGraphicsComponent(new CubeGraphicsComponent);
+  
+  // kinematic cube
+  Entity * kinematicCube = core.createEntity("kinematicCube");
+  kinematicCube->translate({-0.5f, 2.0f, -25.0f});
+  kinematicCube->attachColliderComponent(new SphereColliderComponent(0.49f));
+  kinematicCube->attachRigidBodyComponent(new CubeRigidBodyComponent);
+  kinematicCube->attachGraphicsComponent(new CubeGraphicsComponent);
   
   // camera
   core.camera()->attachInputComponent(new CameraInputComponent);
-  core.camera()->attachColliderComponent(new SphereColliderComponent(15.0f));
+//  core.camera()->attachColliderComponent(new SphereColliderComponent(15.0f));
   core.camera()->attachRigidBodyComponent(new CameraRigidBodyComponent);
   
   if (core.init(options))

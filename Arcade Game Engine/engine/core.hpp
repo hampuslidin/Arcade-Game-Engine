@@ -457,29 +457,36 @@ class GraphicsComponent
   
 public:
   // MARK: Properties
-  const vector<vec3> & vertexPositions() const;
-  const vector<vec3> & vertexColors() const;
-  const vector<ivec3> & vertexIndices() const;
+  const vector<float> & vertices() const;
+  const vector<float> & textureCoordinates() const;
+  long numberOfVertices() const;
   
   // MARK: Member functions
   virtual void init(Entity * entity);
   virtual void render(const Core & core);
-  void attachMesh(const vector<vec3> & positions,
-                  const vector<vec3> & colors,
-                  const vector<ivec3> & indices);
-  void attachShader(const string & vertexShaderFilename,
-                    const string & fragmentShaderFilename);
+  void loadMeshFromObjFile(const string & fileName,
+                           const string & extension = "obj",
+                           const string & objectBaseDir = "objects",
+                           const string & materialBaseDir = "materials",
+                           const string & textureBaseDir = "textures");
+  void loadShader(const string & fileName,
+                  const string & vertexShaderExtension = "vert",
+                  const string & fragmentShaderExtension = "frag",
+                  const string & shaderBaseDir = "shaders");
   string trait() const;
   
 private:
-  vector<vec3>  _vertexPositions;
-  vector<vec3>  _vertexColors;
-  vector<ivec3> _vertexIndices;
+  vector<float>  _vertices;
+  vector<float>  _textureCoordinates;
+  long _numberOfVertices;
+  
+  string _texturePath;
   
   GLuint _vertexArrayObject;
-  GLuint _positionBuffer;
-  GLuint _colorBuffer;
-  GLuint _indexBuffer;
+  GLuint _verticesBuffer;
+  GLuint _textureCoordinatesBuffer;
+  
+  GLuint _texture;
   
   GLuint _shaderProgram;
   string _vertexShaderFilename;
