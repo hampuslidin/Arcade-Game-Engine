@@ -498,6 +498,9 @@ private:
 
 
 // MARK: -
+enum EntityType { Default, Camera, Light };
+
+// MARK: -
 /**
  *  Defines a class that represents a game entity that resides in a game world.
  */
@@ -524,6 +527,7 @@ public:
   const vec3 & force() const;
   
   bool enabled() const;
+  const EntityType & type() const;
   
   // MARK: Member functions
   Entity();
@@ -608,6 +612,8 @@ public:
   void resetForceY(float fy);
   void resetForceZ(float fz);
   
+  void type(const EntityType & newType);
+  
   bool operator ==(Entity & entity);
   bool operator !=(Entity & entity);
   
@@ -632,7 +638,9 @@ private:
   mutable quat _worldOrientation;
   
   mutable bool _transformNeedsUpdating;
-  mutable bool _enabled;
+  
+  bool _enabled;
+  EntityType _type;
   
   void _updateTransform() const;
   
@@ -777,7 +785,9 @@ public:
    *          associated with an Entity or if there is no Entity associated with
    *          the *parentId*, then *nullptr* is returned.
    */
-  Entity * createEntity(string id, string parentId = "root");
+  Entity * createEntity(string id,
+                        string parentId = "root",
+                        EntityType type = Default);
   
   void createEffectiveTimer(double duration, function<void()> block);
   void createAccumulativeTimer(double duration, function<void()> block);
@@ -834,6 +844,7 @@ private:
   int             _maximumNumberOfEntities;
   vector<Entity>  _entities;
   vector<Entity*> _colliders;
+  vector<Entity*> _lights;
   
   _KeyControls _keyControls;
   vector<pair<_Timer, _TimerType>> _timers;

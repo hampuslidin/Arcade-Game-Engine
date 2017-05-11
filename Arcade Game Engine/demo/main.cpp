@@ -54,6 +54,34 @@ public:
   }
 };
 
+class OrbitingInputController
+: public InputComponent
+{
+  
+public:
+  void handleInput(const Core & core)
+  {
+    const double t = core.effectiveElapsedTime();
+    const double T = 10.0;
+    const double p = 2*M_PI*t/T;
+    
+    entity()->reposition({10.0f*cos(p), 10.0f, 10.0f*sin(p)-25.0f});
+  }
+  
+};
+
+class SphereGraphicsComponent
+  : public GraphicsComponent
+{
+public:
+  SphereGraphicsComponent()
+    : GraphicsComponent()
+  {
+    loadMeshFromObjFile("sphere");
+    loadShader("default");
+  }
+};
+
 class CubeInputComponent
   : public InputComponent
 {
@@ -101,7 +129,7 @@ public:
 int main(int argc, char *  argv[])
 {
   // core settings
-  Core core(19);
+  Core core(20);
   
   CoreOptions options {"Demo", 800, 700};
   core.changeBackgroundColor(0.2f, 0.2f, 0.2f);
@@ -200,6 +228,10 @@ int main(int argc, char *  argv[])
     }
   }
   
+  // light
+  Entity * light = core.createEntity("light", "root", Light);
+  light->attachInputComponent(new OrbitingInputController);
+  light->attachGraphicsComponent(new SphereGraphicsComponent);
   
   // camera
   core.camera()->attachInputComponent(new CameraInputComponent);

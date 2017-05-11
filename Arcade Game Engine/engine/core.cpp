@@ -215,36 +215,39 @@ void GraphicsComponent::init(Entity * entity)
   glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
   glEnableVertexAttribArray(0);
   
-  // generate texture coordinates buffer
-  glGenBuffers(1, &_textureCoordinatesBuffer);
-  glBindBuffer(GL_ARRAY_BUFFER, _textureCoordinatesBuffer);
-  glBufferData(GL_ARRAY_BUFFER,
-               _textureCoordinates.size()*sizeof(float),
-               &_textureCoordinates[0],
-               GL_STATIC_DRAW);
-  glVertexAttribPointer(1, 2, GL_FLOAT, false, 0, 0);
-  glEnableVertexAttribArray(1);
-  
-  // load texture
-  int width, height, components;
-  auto image = stbi_load(_texturePath.c_str(),
-                         &width,
-                         &height,
-                         &components,
-                         STBI_rgb_alpha);
-  glGenTextures(1, &_texture);
-  glBindTexture(GL_TEXTURE_2D, _texture);
-  glTexImage2D(GL_TEXTURE_2D,
-               0,
-               GL_RGBA,
-               width,
-               height,
-               0,
-               GL_RGBA,
-               GL_UNSIGNED_BYTE,
-               image);
-  glGenerateMipmap(GL_TEXTURE_2D);
-  free(image);
+  if (!_texturePath.empty() && _textureCoordinates.size() > 0)
+  {
+    // generate texture coordinates buffer
+    glGenBuffers(1, &_textureCoordinatesBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, _textureCoordinatesBuffer);
+    glBufferData(GL_ARRAY_BUFFER,
+                 _textureCoordinates.size()*sizeof(float),
+                 &_textureCoordinates[0],
+                 GL_STATIC_DRAW);
+    glVertexAttribPointer(1, 2, GL_FLOAT, false, 0, 0);
+    glEnableVertexAttribArray(1);
+    
+    // load texture
+    int width, height, components;
+    auto image = stbi_load(_texturePath.c_str(),
+                           &width,
+                           &height,
+                           &components,
+                           STBI_rgb_alpha);
+    glGenTextures(1, &_texture);
+    glBindTexture(GL_TEXTURE_2D, _texture);
+    glTexImage2D(GL_TEXTURE_2D,
+                 0,
+                 GL_RGBA,
+                 width,
+                 height,
+                 0,
+                 GL_RGBA,
+                 GL_UNSIGNED_BYTE,
+                 image);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    free(image);
+  }
   
   // TODO: handle errors
   // create shader program
@@ -303,6 +306,8 @@ void GraphicsComponent::render(const Core & core)
   // render
   glBindVertexArray(_vertexArrayObject);
   glDrawArrays(GL_TRIANGLES, 0, (int)_numberOfVertices);
+  
+  glUseProgram(0);
 }
 
 void GraphicsComponent::loadMeshFromObjFile(const string & fileName,
@@ -311,6 +316,11 @@ void GraphicsComponent::loadMeshFromObjFile(const string & fileName,
                                             const string & materialBaseDir,
                                             const string & textureBaseDir)
 {
+  _numberOfVertices = 0;
+  _vertices.clear();
+  _textureCoordinates.clear();
+  _texturePath = "";
+  
   attrib_t           attrib;
   vector<shape_t>    shapes;
   vector<material_t> materials;
@@ -321,25 +331,39 @@ void GraphicsComponent::loadMeshFromObjFile(const string & fileName,
           &error,
           (objectBaseDir + "/" + fileName + "." + extension).c_str(),
           (materialBaseDir + "/").c_str());
-  
-  if (shapes.size() >= 1 && materials.size() >= 1)
+
+  if (shapes.size() >= 1)
   {
     auto indices = shapes[0].mesh.indices;
     _numberOfVertices = indices.size();
-    _vertices.resize(_numberOfVertices*3);
-    _textureCoordinates.resize(_numberOfVertices*2);
+    
+    const bool hasVertices = attrib.vertices.size() > 0;
+    if (hasVertices)
+      _vertices.resize(_numberOfVertices*3);
+    
+    const bool hasTextureCoordinates = attrib.texcoords.size() > 0;
+    if (hasTextureCoordinates)
+      _textureCoordinates.resize(_numberOfVertices*2);
+    
     for (int i = 0; i < indices.size(); ++i)
     {
-      auto index                 = indices[i];
-      _vertices[3*i]             = attrib.vertices[3*index.vertex_index];
-      _vertices[3*i+1]           = attrib.vertices[3*index.vertex_index+1];
-      _vertices[3*i+2]           = attrib.vertices[3*index.vertex_index+2];
-      _textureCoordinates[2*i]   = attrib.texcoords[2*index.texcoord_index];
-      _textureCoordinates[2*i+1] = attrib.texcoords[2*index.texcoord_index+1];
+      auto index       = indices[i];
+     
+      if (hasVertices)
+      {
+        _vertices[3*i]   = attrib.vertices[3*index.vertex_index];
+        _vertices[3*i+1] = attrib.vertices[3*index.vertex_index+1];
+        _vertices[3*i+2] = attrib.vertices[3*index.vertex_index+2];
+      }
+      if (hasTextureCoordinates)
+      {
+        _textureCoordinates[2*i]   = attrib.texcoords[2*index.texcoord_index];
+        _textureCoordinates[2*i+1] = attrib.texcoords[2*index.texcoord_index+1];
+      }
     }
-    
-    _texturePath = textureBaseDir + "/" + materials[0].diffuse_texname;
   }
+  if (materials.size() >= 1)
+    _texturePath = textureBaseDir + "/" + materials[0].diffuse_texname;
 }
 
 void GraphicsComponent::loadShader(const string & fileName,
@@ -373,7 +397,8 @@ const quat & Entity::localOrientation() const { return _localOrientation; }
 const vec3 & Entity::velocity() const         { return _velocity; }
 const vec3 & Entity::force() const            { return _force; }
 
-bool Entity::enabled() const { return _enabled; }
+bool Entity::enabled() const            { return _enabled; }
+const EntityType & Entity::type() const { return _type; }
 
 // MARK: Member functions
 Entity::Entity()
@@ -391,6 +416,7 @@ Entity::Entity()
   , _velocity(0.0f)
   , _force(0.0f)
   , _enabled(false)
+  , _type(Default)
   , _transformNeedsUpdating(true)
 {}
 
@@ -712,6 +738,11 @@ void Entity::resetForceZ(float fz)
   applyForce({0.0f, 0.0f, fz});
 }
 
+void Entity::type(const EntityType & newType)
+{
+  _type = newType;
+}
+
 bool Entity::operator ==(Entity & entity)
 {
   return id().compare(entity.id()) == 0;
@@ -914,9 +945,10 @@ bool Core::init(CoreOptions & options)
   _root.init(this);
   _root.reset();
   
-  // save references for colliders
+  // store collider and light entity references
   for (auto & entity : _entities)
     if (entity.collider()) _colliders.push_back(&entity);
+  
   
   // initialize data structures for the sweep and prune algorithm
   const long size = _colliders.size();
@@ -1210,7 +1242,7 @@ void Core::destroy()
   SDL_Quit();
 }
 
-Entity * Core::createEntity(string id, string parentId)
+Entity * Core::createEntity(string id, string parentId, EntityType type)
 {
   Entity * entity = nullptr;
   if (_entityCount < _maximumNumberOfEntities && !_root.findChild(id))
@@ -1220,7 +1252,9 @@ Entity * Core::createEntity(string id, string parentId)
     {
       entity = &_entities[_entityCount++];
       entity->assignIdentifier(id);
+      entity->type(type);
       parent->addChild(entity);
+      if (type == Light) _lights.push_back(entity);
     }
   }
   return entity;

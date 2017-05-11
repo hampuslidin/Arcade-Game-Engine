@@ -40,6 +40,8 @@
 		D2479B5F1E8301F70039DE28 /* simple.vert */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; name = simple.vert; path = ../shaders/simple.vert; sourceTree = "<group>"; };
 		D2569F8A1E6AE1D100637699 /* tinyxml2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 2; name = tinyxml2.h; path = external/tinyxml2/tinyxml2.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		D2569F8B1E6AE1D100637699 /* tinyxml2.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 2; name = tinyxml2.cpp; path = external/tinyxml2/tinyxml2.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		D282A1B61EC4D2A200C3E747 /* default.frag */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = default.frag; path = shaders/default.frag; sourceTree = SOURCE_ROOT; };
+		D282A1B71EC4D2B100C3E747 /* shaders */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = folder; name = shaders; path = ../shaders; sourceTree = "<group>"; };
 		D28DB7F81EC33E170066391E /* stb_image.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = stb_image.h; sourceTree = "<group>"; };
 		D29D666F1E80175100CA60AC /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = main.cpp; path = demo/main.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		D29D66711E8018A900CA60AC /* SDL2_image.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SDL2_image.framework; path = "Arcade Game Engine/external/SDL2_image.framework"; sourceTree = "<group>"; };
@@ -73,6 +75,8 @@
 			children = (
 				D2479B5E1E8301F70039DE28 /* simple.frag */,
 				D2479B5F1E8301F70039DE28 /* simple.vert */,
+				D282A1B61EC4D2A200C3E747 /* default.frag */,
+				D282A1B71EC4D2B100C3E747 /* shaders */,
 			);
 			name = shaders;
 			sourceTree = "<group>";
