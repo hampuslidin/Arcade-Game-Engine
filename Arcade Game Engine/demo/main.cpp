@@ -65,7 +65,12 @@ public:
     const double T = 10.0;
     const double p = 2*M_PI*t/T;
     
-    entity()->reposition({10.0f*cos(p), 10.0f, 10.0f*sin(p)-25.0f});
+    entity()->reposition
+    ({
+      8.0f*cos(p),
+      8.0f*sin(p/2.718),
+      8.0f*sin(p)-25.0f
+    });
   }
   
 };
@@ -121,7 +126,7 @@ public:
     : GraphicsComponent()
   {
     loadMeshFromObjFile("cube");
-    loadShader("simple");
+    loadShader("deferred_geometry");
   }
   
 };

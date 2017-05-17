@@ -38,7 +38,7 @@ class maybe
   
 public:
   static maybe<Value> just(const Value & v) { return maybe(v); }
-  static maybe<Value> nothing()       { return maybe();  }
+  static maybe<Value> nothing()             { return maybe();  }
   bool isNothing() { return !_just; }
   operator Value() { if (_just) return _v; throw unwrap_nothing(); }
   

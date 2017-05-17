@@ -1,9 +1,10 @@
 #version 410
 
-layout(location = 0) in vec3 position;
 uniform mat4 modelViewProjectionMatrix;
+
+layout(location = 0) in vec3 vPosition;
 
 void main()
 {
-  gl_Position = modelViewProjectionMatrix * vec4(position, 1.0);
+  gl_Position = modelViewProjectionMatrix * vec4(vPosition, 1.0);
 }

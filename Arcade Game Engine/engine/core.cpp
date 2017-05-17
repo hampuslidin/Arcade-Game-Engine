@@ -4,6 +4,7 @@
 //
 
 #include "core.hpp"
+#include <iostream>
 #include <fstream>
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -205,17 +206,31 @@ void GraphicsComponent::init(Entity * entity)
   glGenVertexArrays(1, &_vertexArrayObject);
   glBindVertexArray(_vertexArrayObject);
   
-  // generate vertices buffer
-  glGenBuffers(1, &_verticesBuffer);
-  glBindBuffer(GL_ARRAY_BUFFER, _verticesBuffer);
-  glBufferData(GL_ARRAY_BUFFER,
-               _vertices.size()*sizeof(float),
-               &_vertices[0],
-               GL_STATIC_DRAW);
-  glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
-  glEnableVertexAttribArray(0);
+  if (_vertices.size() > 0) {
+    // generate vertices buffer
+    glGenBuffers(1, &_verticesBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, _verticesBuffer);
+    glBufferData(GL_ARRAY_BUFFER,
+                 _vertices.size()*sizeof(float),
+                 &_vertices[0],
+                 GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
+    glEnableVertexAttribArray(0);
+  }
+
+  if (_normals.size() > 0) {
+    // generate normals buffer
+    glGenBuffers(1, &_normalsBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, _normalsBuffer);
+    glBufferData(GL_ARRAY_BUFFER,
+                 _normals.size()*sizeof(float),
+                 &_normals[0],
+                 GL_STATIC_DRAW);
+    glVertexAttribPointer(1, 3, GL_FLOAT, false, 0, 0);
+    glEnableVertexAttribArray(1);
+  }
   
-  if (!_texturePath.empty() && _textureCoordinates.size() > 0)
+  if (_textureCoordinates.size() > 0)
   {
     // generate texture coordinates buffer
     glGenBuffers(1, &_textureCoordinatesBuffer);
@@ -224,16 +239,19 @@ void GraphicsComponent::init(Entity * entity)
                  _textureCoordinates.size()*sizeof(float),
                  &_textureCoordinates[0],
                  GL_STATIC_DRAW);
-    glVertexAttribPointer(1, 2, GL_FLOAT, false, 0, 0);
-    glEnableVertexAttribArray(1);
-    
-    // load texture
-    int width, height, components;
-    auto image = stbi_load(_texturePath.c_str(),
-                           &width,
-                           &height,
-                           &components,
-                           STBI_rgb_alpha);
+    glVertexAttribPointer(2, 2, GL_FLOAT, false, 0, 0);
+    glEnableVertexAttribArray(2);
+  }
+  
+  
+  // load texture
+  int width, height, components;
+  auto image = stbi_load(_texturePath.c_str(),
+                         &width,
+                         &height,
+                         &components,
+                         STBI_rgb_alpha);
+  if (image) {
     glGenTextures(1, &_texture);
     glBindTexture(GL_TEXTURE_2D, _texture);
     glTexImage2D(GL_TEXTURE_2D,
@@ -249,55 +267,44 @@ void GraphicsComponent::init(Entity * entity)
     free(image);
   }
   
-  // TODO: handle errors
-  // create shader program
-  GLuint vertexShader   = glCreateShader(GL_VERTEX_SHADER);
-  GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-  
-  ifstream vertexShaderFile(_vertexShaderFilename);
-  string vertexShaderSource((istreambuf_iterator<char>(vertexShaderFile)),
-                            istreambuf_iterator<char>());
-  
-  ifstream fragmentShaderFile(_fragmentShaderFilename);
-  string fragmentShaderSource((istreambuf_iterator<char>(fragmentShaderFile)),
-                              istreambuf_iterator<char>());
-  
-  const char * vertexShaderSourceStr   = vertexShaderSource.c_str();
-  const char * fragmentShaderSourceStr = fragmentShaderSource.c_str();
-  
-  glShaderSource(vertexShader, 1, &vertexShaderSourceStr, nullptr);
-  glShaderSource(fragmentShader, 1, &fragmentShaderSourceStr, nullptr);
-  glCompileShader(vertexShader);
-  glCompileShader(fragmentShader);
-  
-  _shaderProgram = glCreateProgram();
-  glAttachShader(_shaderProgram, fragmentShader);
-  glAttachShader(_shaderProgram, vertexShader);
-  glDeleteShader(vertexShader);
-  glDeleteShader(fragmentShader);
-  glLinkProgram(_shaderProgram);
+  _shaderProgram = Core::CreateShaderProgram(_vertexShaderFilename,
+                                             _fragmentShaderFilename);
   
   // retrieve uniform locations
+  _modelMatrixLocation =
+    glGetUniformLocation(_shaderProgram, "modelMatrix");
   _modelViewProjectionMatrixLocation =
     glGetUniformLocation(_shaderProgram, "modelViewProjectionMatrix");
+  _normalMatrixLocation =
+    glGetUniformLocation(_shaderProgram, "normalMatrix");
+  
 }
 
 void GraphicsComponent::render(const Core & core)
 {
   // construct matrices
-  const mat4 modelTranslation    = glm::translate(entity()->worldPosition());
-  const mat4 modelRotation       = glm::toMat4(entity()->worldOrientation());
-  const mat4 modelMatrix         = modelTranslation * modelRotation;
-  const mat4 viewMatrix          = core.viewMatrix();
-  const mat4 projectionMatrix    = core.projectionMatrix();
-  mat4 modelViewProjectionMatrix = projectionMatrix * viewMatrix * modelMatrix;
+  const mat4 viewMatrix           = core.viewMatrix();
+  const mat4 projectionMatrix     = core.projectionMatrix();
+  const mat4 modelTranslation     = glm::translate(entity()->worldPosition());
+  const mat4 modelRotation        = glm::toMat4(entity()->worldOrientation());
+  mat4 modelMatrix                = modelTranslation * modelRotation;
+  mat4 modelViewProjectionMatrix  = projectionMatrix * viewMatrix * modelMatrix;
+  const mat3 modelMatrixInverse   = glm::inverse(mat3(modelMatrix));
   
-  // send model-view-projection matrix to shader
+  // set shader uniforms
   glUseProgram(_shaderProgram);
+  glUniformMatrix4fv(_modelMatrixLocation,
+                     1,
+                     false,
+                     &modelMatrix[0].x);
   glUniformMatrix4fv(_modelViewProjectionMatrixLocation,
                      1,
                      false,
                      &modelViewProjectionMatrix[0].x);
+  glUniformMatrix3fv(_normalMatrixLocation,
+                     1,
+                     true,
+                     &modelMatrixInverse[0].x);
   
   // activate texture
   glActiveTexture(GL_TEXTURE0);
@@ -318,6 +325,7 @@ void GraphicsComponent::loadMeshFromObjFile(const string & fileName,
 {
   _numberOfVertices = 0;
   _vertices.clear();
+  _normals.clear();
   _textureCoordinates.clear();
   _texturePath = "";
   
@@ -338,22 +346,30 @@ void GraphicsComponent::loadMeshFromObjFile(const string & fileName,
     _numberOfVertices = indices.size();
     
     const bool hasVertices = attrib.vertices.size() > 0;
+    const bool hasNormals = attrib.normals.size() > 0;
+    const bool hasTextureCoordinates = attrib.texcoords.size() > 0;
+    
     if (hasVertices)
       _vertices.resize(_numberOfVertices*3);
-    
-    const bool hasTextureCoordinates = attrib.texcoords.size() > 0;
+    if (hasNormals)
+      _normals.resize(_numberOfVertices*3);
     if (hasTextureCoordinates)
       _textureCoordinates.resize(_numberOfVertices*2);
     
     for (int i = 0; i < indices.size(); ++i)
     {
       auto index       = indices[i];
-     
       if (hasVertices)
       {
         _vertices[3*i]   = attrib.vertices[3*index.vertex_index];
         _vertices[3*i+1] = attrib.vertices[3*index.vertex_index+1];
         _vertices[3*i+2] = attrib.vertices[3*index.vertex_index+2];
+      }
+      if (hasNormals)
+      {
+        _normals[3*i]   = attrib.vertices[3*index.normal_index];
+        _normals[3*i+1] = attrib.vertices[3*index.normal_index+1];
+        _normals[3*i+2] = attrib.vertices[3*index.normal_index+2];
       }
       if (hasTextureCoordinates)
       {
@@ -861,6 +877,99 @@ bool Core::SphereCollision(const vec3 & o1,
   return true;
 }
 
+string _shaderInfoLog(GLuint object)
+{
+  int logLength = 0;
+  string log = "UNKNOWN ERROR";
+  glGetShaderiv(object, GL_INFO_LOG_LENGTH, &logLength);
+  if (logLength > 0)
+  {
+    char * tmpLog = new char[logLength];
+    glGetShaderInfoLog(object, logLength, &logLength, tmpLog);
+    log = tmpLog;
+    delete[] tmpLog;
+  }
+  return log;
+}
+
+bool _compileShader(GLuint shader, string shaderFileName)
+{
+  int success;
+  cout << "Compiling '" << shaderFileName << "'... ";
+  glCompileShader(shader);
+  glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+  if (!success)
+  {
+    cout << endl << "└─> " << _shaderInfoLog(shader) << endl;
+    return false;
+  }
+  cout << "ok" << endl;
+  return true;
+}
+
+bool _linkProgram(GLuint program)
+{
+  int success;
+  cout << "Linking... ";
+  glLinkProgram(program);
+  glGetProgramiv(program, GL_LINK_STATUS, &success);
+  if (!success)
+  {
+    cout << endl << "└─> " << _shaderInfoLog(program) << endl;
+    return false;
+  }
+  cout << "ok" << endl;
+  return true;
+}
+
+maybe<GLuint> Core::CreateShaderProgram(string vertexShaderFileName,
+                                        string fragmentShaderFileName)
+{
+  GLuint vertexShader   = glCreateShader(GL_VERTEX_SHADER);
+  GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+  
+  ifstream vertexShaderFile(vertexShaderFileName);
+  string vertexShaderSource((istreambuf_iterator<char>(vertexShaderFile)),
+                            istreambuf_iterator<char>());
+  
+  ifstream fragmentShaderFile(fragmentShaderFileName);
+  string fragmentShaderSource((istreambuf_iterator<char>(fragmentShaderFile)),
+                              istreambuf_iterator<char>());
+  
+  const char * vertexShaderSourceStr   = vertexShaderSource.c_str();
+  const char * fragmentShaderSourceStr = fragmentShaderSource.c_str();
+  
+  glShaderSource(vertexShader, 1, &vertexShaderSourceStr, nullptr);
+  glShaderSource(fragmentShader, 1, &fragmentShaderSourceStr, nullptr);
+  
+  if (!_compileShader(vertexShader,   vertexShaderFileName) ||
+      !_compileShader(fragmentShader, fragmentShaderFileName))
+    return maybe<GLuint>::nothing();
+  
+  GLuint shaderProgram = glCreateProgram();
+  glAttachShader(shaderProgram, fragmentShader);
+  glAttachShader(shaderProgram, vertexShader);
+  glDeleteShader(vertexShader);
+  glDeleteShader(fragmentShader);
+  CHECK_GL_ERROR(true);
+  if (!_linkProgram(shaderProgram))
+    return maybe<GLuint>::nothing();
+  
+  return maybe<GLuint>::just(shaderProgram);
+}
+
+bool Core::CheckGLError(bool fatal)
+{
+  bool error = false;
+  for (GLenum err = glGetError(); err != GL_NO_ERROR; err = glGetError())
+  {
+    error = fatal;
+    cout << "OpenGL " << (fatal ? "error: " : "warning: ");
+    cout << gluErrorString(err) << endl;
+  }
+  return error;
+}
+
 // MARK: Member functions
 Core::Core(int numberOfEntities)
   : _mousePosition(0, 0)
@@ -908,10 +1017,7 @@ bool Core::init(CoreOptions & options)
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
   
   // create window
-  auto windowOptions = SDL_WINDOW_SHOWN |
-  SDL_WINDOW_RESIZABLE |
-  SDL_WINDOW_FULLSCREEN_DESKTOP |
-  SDL_WINDOW_ALLOW_HIGHDPI;
+  auto windowOptions = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;
   _window = SDL_CreateWindow(options.title,
                              SDL_WINDOWPOS_UNDEFINED,
                              SDL_WINDOWPOS_UNDEFINED,
@@ -937,18 +1043,103 @@ bool Core::init(CoreOptions & options)
   glewExperimental = true;
 #endif
   glewInit();
+  CHECK_GL_ERROR(false);
   
   // 1 for v-sync
   SDL_GL_SetSwapInterval(1);
+  
+  // clear and swap frame
+  glClear(GL_COLOR_BUFFER_BIT);
+  SDL_GL_SwapWindow(_window);
+  
+  // generate vertex array object for fullscreen quad
+  glGenVertexArrays(1, &_quadVertexArrayObject);
+  glBindVertexArray(_quadVertexArrayObject);
+  
+  vector<float> quadPositions =
+  {
+    -1.0f, -1.0f,
+     1.0f, -1.0f,
+    -1.0f,  1.0f,
+     1.0f,  1.0f
+  };
+  GLuint quadPositionsBuffer;
+  glGenBuffers(1, &quadPositionsBuffer);
+  glBindBuffer(GL_ARRAY_BUFFER, quadPositionsBuffer);
+  glBufferData(GL_ARRAY_BUFFER, quadPositions.size()*sizeof(float),
+               &quadPositions[0], GL_STATIC_DRAW);
+  glVertexAttribPointer(0, 2, GL_FLOAT, false, 0, 0);
+  glEnableVertexAttribArray(0);
+  
+  // generate geometry buffer
+  glGenFramebuffers(1, &_geometryBuffer);
+  glBindFramebuffer(GL_FRAMEBUFFER, _geometryBuffer);
+  
+  // generate textures for geometry buffer
+  const ivec2 d = viewDimensions();
+  glGenTextures(1, &_geometryPositionTexture);
+  glBindTexture(GL_TEXTURE_2D, _geometryPositionTexture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, d.x, d.y, 0,
+               GL_RGB, GL_FLOAT, nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         _geometryPositionTexture, 0);
+  
+  glGenTextures(1, &_geometryNormalTexture);
+  glBindTexture(GL_TEXTURE_2D, _geometryNormalTexture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, d.x, d.y, 0,
+               GL_RGB, GL_FLOAT, nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
+                         _geometryNormalTexture, 0);
+  
+  glGenTextures(1, &_geometryColorTexture);
+  glBindTexture(GL_TEXTURE_2D, _geometryColorTexture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, d.x, d.y, 0,
+               GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D,
+                         _geometryColorTexture, 0);
+  
+  GLuint attachments[3] =
+  {
+    GL_COLOR_ATTACHMENT0,
+    GL_COLOR_ATTACHMENT1,
+    GL_COLOR_ATTACHMENT2
+  };
+  glDrawBuffers(3, attachments);
+  
+  // generate render buffer
+  GLuint renderBuffer;
+  glGenRenderbuffers(1, &renderBuffer);
+  glBindRenderbuffer(GL_RENDERBUFFER, renderBuffer);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, d.x, d.y);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                            GL_RENDERBUFFER, renderBuffer);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  
+  // create light shader program
+  auto result = CreateShaderProgram("shaders/deferred_lighting.vert",
+                                    "shaders/deferred_lighting.frag");
+  if (result.isNothing()) return false;
+  _lightingPass = result;
+  
+  // set shader samplers
+  glUseProgram(_lightingPass);
+  glUniform1i(glGetUniformLocation(_lightingPass, "gPosition"), 0);
+  glUniform1i(glGetUniformLocation(_lightingPass, "gNormal"), 1);
+  glUniform1i(glGetUniformLocation(_lightingPass, "gColor"), 2);
   
   // initialize entities
   _root.init(this);
   _root.reset();
   
-  // store collider and light entity references
+  // store collider entity references
   for (auto & entity : _entities)
     if (entity.collider()) _colliders.push_back(&entity);
-  
   
   // initialize data structures for the sweep and prune algorithm
   const long size = _colliders.size();
@@ -1017,11 +1208,19 @@ bool Core::update()
 {
   bool shouldContinue = true;
   
+  ////////////////////////////////////////
+  // FRAME TIME SETUP
+  ////////////////////////////////////////
+  
   // record time
   static double prevTime = elapsedTime();
   double startTime = elapsedTime();
   _deltaTime = startTime - prevTime;
   prevTime = startTime;
+  
+  ////////////////////////////////////////
+  // INPUT
+  ////////////////////////////////////////
   
   // check user input
   _mouseMovement.x = 0;
@@ -1068,16 +1267,6 @@ bool Core::update()
     }
   }
   
-  // set up OpenGl
-  ivec2 d = viewDimensions();
-  glViewport(0, 0, d.x, d.y);
-  glEnable(GL_DEPTH_TEST);
-  glEnable(GL_CULL_FACE);
-  
-  // clear screen
-  glClearColor(_backgroundColor.r, _backgroundColor.g, _backgroundColor.b, 1.0);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  
   // handle input for entities
   for (auto & entity : _entities)
   {
@@ -1085,12 +1274,20 @@ bool Core::update()
       entity.input()->handleInput(*this);
   }
   
+  ////////////////////////////////////////
+  // ANIMATION
+  ////////////////////////////////////////
+  
   // animate entities
   for (auto & entity : _entities)
   {
     if (entity.enabled() && entity.animation())
       entity.animation()->animate(*this);
   }
+  
+  ////////////////////////////////////////
+  // COLLISION DETECTION
+  ////////////////////////////////////////
   
   // update colliders
   for (auto & entity : _entities)
@@ -1175,6 +1372,10 @@ bool Core::update()
     }
   }
   
+  ////////////////////////////////////////
+  // PHYSICS
+  ////////////////////////////////////////
+  
   // update rigid bodies
   for (auto & entity : _entities)
   {
@@ -1182,28 +1383,96 @@ bool Core::update()
       entity.rigidBody()->update(*this);
   }
   
-  // update view and projection matrix
-  mat4 cameraTranslation = glm::translate(_camera->worldPosition());
-  cameraTranslation[3].x *= -1;
-  cameraTranslation[3].y *= -1;
-  cameraTranslation[3].z *= -1;
-  quat inverseCameraOrientation = glm::inverse(_camera->worldOrientation());
-  const mat4 cameraRotation = glm::toMat4(inverseCameraOrientation);
-  _viewMatrix = cameraRotation * cameraTranslation;
-  _projectionMatrix = perspective(radians(45.0f),
-                                  float(d.x) / float(d.y),
-                                  0.01f,
-                                  1e38f);
+  ////////////////////////////////////////
+  // RENDERING
+  ////////////////////////////////////////
   
-  // update entities to their next state and render
+  // retrieve view frame dimensions
+  ivec2 d = viewDimensions();
+  
+  // enable depth test and face culling
+  glEnable(GL_DEPTH_TEST);
+  glEnable(GL_CULL_FACE);
+  
+  // update view and projection matrix
+  mat4 cameraTranslation        = glm::translate(-_camera->worldPosition());
+  quat inverseCameraOrientation = glm::inverse(_camera->worldOrientation());
+  const mat4 cameraRotation     = glm::toMat4(inverseCameraOrientation);
+  _viewMatrix                   = cameraRotation * cameraTranslation;
+  _projectionMatrix             = glm::perspective(glm::radians(45.0f),
+                                                   float(d.x) / float(d.y),
+                                                   0.01f, 1000.0f);
+  
+  // clear default and geometry framebuffers
+  glClearColor(_backgroundColor.r, _backgroundColor.g, _backgroundColor.b, 1.0);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glBindFramebuffer(GL_FRAMEBUFFER, _geometryBuffer);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  
+  // render entities to geometry buffer
+  glViewport(0, 0, d.x, d.y);
   for (auto & entity : _entities)
   {
     if (entity.enabled() && entity.graphics())
       entity.graphics()->render(*this);
   }
   
+  // bind textures
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glUseProgram(_lightingPass);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, _geometryPositionTexture);
+  glActiveTexture(GL_TEXTURE1);
+  glBindTexture(GL_TEXTURE_2D, _geometryNormalTexture);
+  glActiveTexture(GL_TEXTURE2);
+  glBindTexture(GL_TEXTURE_2D, _geometryColorTexture);
+  
+  // update uniform data in shader
+  for (int i = 0; i < _lights.size(); ++i)
+  {
+    const vec3 position    = _lights[i]->worldPosition();
+    const vec3 color       = {0.8f, 0.8f, 1.0f};
+    const float constant   = 1.0f;
+    const float linear     = 0.7f;
+    const float quadratic  = 1.8f;
+    
+    const string prefix    = "lights[" + to_string(i) + "].";
+    const char * posName   = (prefix + "position").c_str();
+    const char * colName   = (prefix + "color").c_str();
+    const char * constName = (prefix + "constant").c_str();
+    const char * linName   = (prefix + "linear").c_str();
+    const char * quadName  = (prefix + "quadratic").c_str();
+    const GLuint posLoc    = glGetUniformLocation(_lightingPass, posName);
+    const GLuint colLoc    = glGetUniformLocation(_lightingPass, colName);
+    const GLuint constLoc  = glGetUniformLocation(_lightingPass, constName);
+    const GLuint linLoc    = glGetUniformLocation(_lightingPass, linName);
+    const GLuint quadLoc   = glGetUniformLocation(_lightingPass, quadName);
+    
+    glUniform3fv(posLoc, 1, &position.x);
+    glUniform3fv(colLoc, 1, &color.x);
+    glUniform1f(constLoc, constant);
+    glUniform1f(linLoc, linear);
+    glUniform1f(quadLoc, quadratic);
+  }
+  
+  // draw fullscreen quad
+  glViewport(0, 0, d.x, d.y);
+  glBindVertexArray(_quadVertexArrayObject);
+  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+  
+  // copy depth data to default framebuffer
+  glBindFramebuffer(GL_READ_FRAMEBUFFER, _geometryBuffer);
+  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+  glBlitFramebuffer(0, 0, d.x, d.y, 0, 0, d.x, d.y, GL_DEPTH_BUFFER_BIT,
+                    GL_NEAREST);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
   // swap buffers
   SDL_GL_SwapWindow(_window);
+  
+  ////////////////////////////////////////
+  // TIMERS
+  ////////////////////////////////////////
   
   // possibly do a reset
   if (_reset)

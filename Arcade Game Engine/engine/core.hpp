@@ -30,6 +30,11 @@
 using namespace std;
 using namespace glm;
 
+#define CHECK_GL_ERROR(fatal) (Core::CheckGLError(fatal) && (__debugbreak(), 1))
+#if !defined(_WIN32)
+#	define __debugbreak() assert(false)
+#endif
+
 class Sprite;
 class SpriteCollection;
 class NotificationCenter;
@@ -476,23 +481,26 @@ public:
   string trait() const;
   
 private:
-  vector<float>  _vertices;
-  vector<float>  _textureCoordinates;
+  vector<float> _vertices;
+  vector<float> _normals;
+  vector<float> _textureCoordinates;
   long _numberOfVertices;
-  
-  string _texturePath;
   
   GLuint _vertexArrayObject;
   GLuint _verticesBuffer;
+  GLuint _normalsBuffer;
   GLuint _textureCoordinatesBuffer;
   
   GLuint _texture;
+  string _texturePath;
   
   GLuint _shaderProgram;
   string _vertexShaderFilename;
   string _fragmentShaderFilename;
 
+  GLint _modelMatrixLocation;
   GLint _modelViewProjectionMatrixLocation;
+  GLint _normalMatrixLocation;
   
 };
 
@@ -765,6 +773,11 @@ public:
                               vec3 & p1,
                               vec3 & p2);
   
+  static maybe<GLuint> CreateShaderProgram(string vertexShaderFileName,
+                                           string fragmentShaderFileName);
+  
+  static bool CheckGLError(bool fatal = true);
+  
   // MARK: Member functions
   Core(int numberOfEntities = 10000);
   bool init(CoreOptions & options);
@@ -830,6 +843,13 @@ private:
   
   int    _sampleRate;
   double _maxVolume;
+  
+  GLuint _quadVertexArrayObject;
+  GLuint _geometryBuffer;
+  GLuint _geometryPositionTexture;
+  GLuint _geometryNormalTexture;
+  GLuint _geometryColorTexture;
+  GLuint _lightingPass;
   
   mat4 _viewMatrix;
   mat4 _projectionMatrix;

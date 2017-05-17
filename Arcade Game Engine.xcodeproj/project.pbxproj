@@ -36,12 +36,11 @@
 /* Begin PBXFileReference section */
 		D215B0B11E59951C00846D94 /* animation.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = animation.cpp; path = engine/animation.cpp; sourceTree = "<group>"; };
 		D23716CD1E6C9EAB00C9D798 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
-		D2479B5E1E8301F70039DE28 /* simple.frag */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; name = simple.frag; path = ../shaders/simple.frag; sourceTree = "<group>"; };
-		D2479B5F1E8301F70039DE28 /* simple.vert */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; name = simple.vert; path = ../shaders/simple.vert; sourceTree = "<group>"; };
+		D2479B5E1E8301F70039DE28 /* deferred_geometry.frag */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; name = deferred_geometry.frag; path = ../shaders/deferred_geometry.frag; sourceTree = "<group>"; };
+		D2479B5F1E8301F70039DE28 /* deferred_geometry.vert */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; name = deferred_geometry.vert; path = ../shaders/deferred_geometry.vert; sourceTree = "<group>"; };
 		D2569F8A1E6AE1D100637699 /* tinyxml2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 2; name = tinyxml2.h; path = external/tinyxml2/tinyxml2.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		D2569F8B1E6AE1D100637699 /* tinyxml2.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 2; name = tinyxml2.cpp; path = external/tinyxml2/tinyxml2.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		D282A1B61EC4D2A200C3E747 /* default.frag */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = default.frag; path = shaders/default.frag; sourceTree = SOURCE_ROOT; };
-		D282A1B71EC4D2B100C3E747 /* shaders */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = folder; name = shaders; path = ../shaders; sourceTree = "<group>"; };
 		D28DB7F81EC33E170066391E /* stb_image.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = stb_image.h; sourceTree = "<group>"; };
 		D29D666F1E80175100CA60AC /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = main.cpp; path = demo/main.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		D29D66711E8018A900CA60AC /* SDL2_image.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SDL2_image.framework; path = "Arcade Game Engine/external/SDL2_image.framework"; sourceTree = "<group>"; };
@@ -51,6 +50,11 @@
 		D29DC53B1E509D780005EC95 /* core.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = core.cpp; path = engine/core.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		D29DC53C1E509D780005EC95 /* physics.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = physics.cpp; path = engine/physics.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		D29DC5491E509F5E0005EC95 /* SDL2.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SDL2.framework; path = "Arcade Game Engine/external/SDL2.framework"; sourceTree = "<group>"; };
+		D2C3FCBE1ECAD45200A3DCBD /* default.vert */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = default.vert; path = ../shaders/default.vert; sourceTree = "<group>"; };
+		D2C3FCC01ECAFA2D00A3DCBD /* deferred_lighting.frag */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = deferred_lighting.frag; path = shaders/deferred_lighting.frag; sourceTree = SOURCE_ROOT; };
+		D2C3FCC11ECAFAF100A3DCBD /* deferred_lighting.vert */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = deferred_lighting.vert; path = shaders/deferred_lighting.vert; sourceTree = SOURCE_ROOT; };
+		D2C3FCC21ECB444C00A3DCBD /* simple.frag */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; name = simple.frag; path = shaders/simple.frag; sourceTree = SOURCE_ROOT; };
+		D2C3FCC31ECB444C00A3DCBD /* simple.vert */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; name = simple.vert; path = shaders/simple.vert; sourceTree = SOURCE_ROOT; };
 		D2DC12DF1EC37F1100C0B68A /* tiny_obj_loader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = tiny_obj_loader.h; sourceTree = "<group>"; };
 		D2F614D41E53183C00B33DAB /* types.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = types.cpp; path = engine/types.cpp; sourceTree = "<group>"; };
 		D2F99C281E66DA1200820400 /* audio.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = audio.cpp; path = engine/audio.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
@@ -73,10 +77,14 @@
 		D2479B5D1E8301CF0039DE28 /* shaders */ = {
 			isa = PBXGroup;
 			children = (
-				D2479B5E1E8301F70039DE28 /* simple.frag */,
-				D2479B5F1E8301F70039DE28 /* simple.vert */,
 				D282A1B61EC4D2A200C3E747 /* default.frag */,
-				D282A1B71EC4D2B100C3E747 /* shaders */,
+				D2C3FCBE1ECAD45200A3DCBD /* default.vert */,
+				D2479B5E1E8301F70039DE28 /* deferred_geometry.frag */,
+				D2479B5F1E8301F70039DE28 /* deferred_geometry.vert */,
+				D2C3FCC21ECB444C00A3DCBD /* simple.frag */,
+				D2C3FCC31ECB444C00A3DCBD /* simple.vert */,
+				D2C3FCC01ECAFA2D00A3DCBD /* deferred_lighting.frag */,
+				D2C3FCC11ECAFAF100A3DCBD /* deferred_lighting.vert */,
 			);
 			name = shaders;
 			sourceTree = "<group>";
