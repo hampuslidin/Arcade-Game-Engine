@@ -12,11 +12,10 @@ struct Light
 {
   vec3 position;
   vec3 color;
-  float constant;
   float linear;
   float quadratic;
 };
-const int numberOfLights = 1;
+const int numberOfLights = 35;
 uniform Light lights[numberOfLights];
 
 void main()
@@ -25,7 +24,7 @@ void main()
   vec3 fNormal   = texture(gNormal,   fTextureCoordinates).rgb;
   vec3 fColor    = texture(gColor,    fTextureCoordinates).rgb;
   
-  vec3 lighting = fColor*0.2;
+  vec3 lighting = fColor*0.1;
   for (int i = 0; i < numberOfLights; ++i)
   {
     Light l = lights[i];
@@ -33,8 +32,8 @@ void main()
     vec3 lightDir    = normalize(lightVector);
     vec3 diffuse     = max(dot(fNormal, lightDir), 0.0) * fColor * l.color;
     float dist       = length(lightVector);
-    float att        = 1.0/(l.constant+l.linear*dist+l.quadratic*dist*dist);
-    diffuse  *= 100*att;
+    float att        = 1.0/(1.0+l.linear*dist+l.quadratic*dist*dist);
+    diffuse  *= att;
     lighting += diffuse;
   }
   

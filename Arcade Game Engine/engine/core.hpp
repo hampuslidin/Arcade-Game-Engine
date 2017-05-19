@@ -452,6 +452,9 @@ private:
 
 
 // MARK: -
+enum TextureType { Diffuse, Specular };
+
+// MARK: -
 /**
  *  GraphicsComponent is responsible for drawing an Entity to a SDL rendering
  *  context.
@@ -463,44 +466,36 @@ class GraphicsComponent
 public:
   // MARK: Properties
   const vector<float> & vertices() const;
-  const vector<float> & textureCoordinates() const;
   long numberOfVertices() const;
+  const vec3 & diffuseColor() const;
   
   // MARK: Member functions
+  GraphicsComponent();
   virtual void init(Entity * entity);
   virtual void render(const Core & core);
-  void loadMeshFromObjFile(const string & fileName,
-                           const string & extension = "obj",
-                           const string & objectBaseDir = "objects",
-                           const string & materialBaseDir = "materials",
-                           const string & textureBaseDir = "textures");
-  void loadShader(const string & fileName,
-                  const string & vertexShaderExtension = "vert",
-                  const string & fragmentShaderExtension = "frag",
-                  const string & shaderBaseDir = "shaders");
+  bool loadObject(const char * objectFileName);
+  bool loadTexture(const char * textureFileName,
+                   TextureType textureType);
+  bool loadShader(const char * vertexShaderFileName,
+                  const char * fragmentShaderFileName);
+  
   string trait() const;
+  
+  void diffuseColor(const vec3 & color);
   
 private:
   vector<float> _vertices;
-  vector<float> _normals;
-  vector<float> _textureCoordinates;
-  long _numberOfVertices;
+  long   _numberOfVertices;
+  
+  vec3 _diffuseColor;
   
   GLuint _vertexArrayObject;
-  GLuint _verticesBuffer;
-  GLuint _normalsBuffer;
-  GLuint _textureCoordinatesBuffer;
-  
-  GLuint _texture;
-  string _texturePath;
-  
+  GLuint _diffuseMap;
   GLuint _shaderProgram;
-  string _vertexShaderFilename;
-  string _fragmentShaderFilename;
-
-  GLint _modelMatrixLocation;
-  GLint _modelViewProjectionMatrixLocation;
-  GLint _normalMatrixLocation;
+  GLint  _modelMatrixLocation;
+  GLint  _modelViewProjectionMatrixLocation;
+  GLint  _normalMatrixLocation;
+  GLuint _diffuseColorLocation;
   
 };
 
@@ -531,6 +526,7 @@ public:
   
   const vec3 & localPosition() const;
   const quat & localOrientation() const;
+  const vec3 & localScale() const;
   const vec3 & velocity() const;
   const vec3 & force() const;
   
@@ -579,36 +575,45 @@ public:
   void attachAudioComponent(AudioComponent * audio);
   void attachGraphicsComponent(GraphicsComponent * graphics);
   
-  mat4 localTransform();
-  mat4 localTranslation();
-  mat4 localRotation();
-  vec3 localUp();
-  vec3 localDown();
-  vec3 localLeft();
-  vec3 localRight();
-  vec3 localForward();
-  vec3 localBackward();
+  mat4 localTransform() const;
+  mat4 localTranslation() const;
+  mat4 localRotation() const;
+  vec3 localUp() const;
+  vec3 localDown() const;
+  vec3 localLeft() const;
+  vec3 localRight() const;
+  vec3 localForward() const;
+  vec3 localBackward() const;
   
   const vec3 & worldPosition() const;
   const quat & worldOrientation() const;
-  mat4 worldTransform();
-  mat4 worldTranslation();
-  mat4 worldRotation();
+  const vec3 & worldScale() const;
+  mat4 worldTransform() const;
+  mat4 worldTranslation() const;
+  mat4 worldRotation() const;
+  mat4 worldScaling() const;
   
   void translate(const vec3 & d);
   void rotate(float angle, const vec3 & axis);
+  void scale(float s);
+  void scale(const vec3 & s);
   void accelerate(const vec3 & v);
   void applyForce(const vec3 & f);
   
   void reposition(const vec3 & p = {});
-  void resetPositionX(float x);
-  void resetPositionY(float y);
-  void resetPositionZ(float z);
+  void repositionX(float x);
+  void repositionY(float y);
+  void repositionZ(float z);
   
   void reorient(const vec3 & o = {});
   void resetPitch(float pitch);
   void resetYaw(float yaw);
   void resetRoll(float roll);
+  
+  void rescale(const vec3 & s = {1.0f, 1.0f, 1.0f});
+  void rescaleX(float x);
+  void rescaleY(float y);
+  void rescaleZ(float z);
   
   void resetVelocity(const vec3 & v = {});
   void resetVelocityX(float vx);
@@ -639,11 +644,13 @@ private:
   
   vec3 _localPosition;
   quat _localOrientation;
+  vec3 _localScale;
   vec3 _velocity;
   vec3 _force;
   
   mutable vec3 _worldPosition;
   mutable quat _worldOrientation;
+  mutable vec3 _worldScale;
   
   mutable bool _transformNeedsUpdating;
   
@@ -654,11 +661,21 @@ private:
   
 };
 
+// MARK: -
+class PointLight
+  : public Entity
+{
+  
+public:
+  PointLight(float distance);
+  
+private:
+  float _linear;
+  float _quadratic;
+};
 
-//
-// MARK: - CoreOptions
-//
 
+// MARK: -
 struct CoreOptions
 {
   const char * title;
@@ -773,13 +790,13 @@ public:
                               vec3 & p1,
                               vec3 & p2);
   
-  static maybe<GLuint> CreateShaderProgram(string vertexShaderFileName,
-                                           string fragmentShaderFileName);
+  static maybe<GLuint> CreateShaderProgram(const char * vertexShaderFileName,
+                                           const char * fragmentShaderFileName);
   
   static bool CheckGLError(bool fatal = true);
   
   // MARK: Member functions
-  Core(int numberOfEntities = 10000);
+  Core(int numberOfEntities);
   bool init(CoreOptions & options);
   bool update();
   void destroy();
@@ -798,9 +815,11 @@ public:
    *          associated with an Entity or if there is no Entity associated with
    *          the *parentId*, then *nullptr* is returned.
    */
-  Entity * createEntity(string id,
-                        string parentId = "root",
+  Entity * createEntity(const string & id,
+                        const string & parentId = "root",
                         EntityType type = Default);
+  
+  const Entity * findEntity(const string & id) const;
   
   void createEffectiveTimer(double duration, function<void()> block);
   void createAccumulativeTimer(double duration, function<void()> block);
@@ -846,9 +865,9 @@ private:
   
   GLuint _quadVertexArrayObject;
   GLuint _geometryBuffer;
-  GLuint _geometryPositionTexture;
-  GLuint _geometryNormalTexture;
-  GLuint _geometryColorTexture;
+  GLuint _geometryPositionMap;
+  GLuint _geometryNormalMap;
+  GLuint _geometryColorMap;
   GLuint _lightingPass;
   
   mat4 _viewMatrix;
@@ -863,8 +882,8 @@ private:
   int             _entityCount;
   int             _maximumNumberOfEntities;
   vector<Entity>  _entities;
-  vector<Entity*> _colliders;
   vector<Entity*> _lights;
+  vector<Entity*> _colliders;
   
   _KeyControls _keyControls;
   vector<pair<_Timer, _TimerType>> _timers;

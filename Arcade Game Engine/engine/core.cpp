@@ -188,96 +188,26 @@ const vector<float> & GraphicsComponent::vertices() const
 {
   return _vertices;
 }
-const vector<float> & GraphicsComponent::textureCoordinates() const
-{
-  return _textureCoordinates;
-}
 long GraphicsComponent::numberOfVertices() const
 {
   return _numberOfVertices;
 }
+const vec3 & GraphicsComponent::diffuseColor() const
+{
+  return _diffuseColor;
+}
 
 // MARK: Member functions
+GraphicsComponent::GraphicsComponent()
+  : Component()
+  , _diffuseColor(0.8, 0.8, 0.8)
+{}
+
 void GraphicsComponent::init(Entity * entity)
 {
   Component::init(entity);
   
-  // generate vertex array object
   glGenVertexArrays(1, &_vertexArrayObject);
-  glBindVertexArray(_vertexArrayObject);
-  
-  if (_vertices.size() > 0) {
-    // generate vertices buffer
-    glGenBuffers(1, &_verticesBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, _verticesBuffer);
-    glBufferData(GL_ARRAY_BUFFER,
-                 _vertices.size()*sizeof(float),
-                 &_vertices[0],
-                 GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
-    glEnableVertexAttribArray(0);
-  }
-
-  if (_normals.size() > 0) {
-    // generate normals buffer
-    glGenBuffers(1, &_normalsBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, _normalsBuffer);
-    glBufferData(GL_ARRAY_BUFFER,
-                 _normals.size()*sizeof(float),
-                 &_normals[0],
-                 GL_STATIC_DRAW);
-    glVertexAttribPointer(1, 3, GL_FLOAT, false, 0, 0);
-    glEnableVertexAttribArray(1);
-  }
-  
-  if (_textureCoordinates.size() > 0)
-  {
-    // generate texture coordinates buffer
-    glGenBuffers(1, &_textureCoordinatesBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, _textureCoordinatesBuffer);
-    glBufferData(GL_ARRAY_BUFFER,
-                 _textureCoordinates.size()*sizeof(float),
-                 &_textureCoordinates[0],
-                 GL_STATIC_DRAW);
-    glVertexAttribPointer(2, 2, GL_FLOAT, false, 0, 0);
-    glEnableVertexAttribArray(2);
-  }
-  
-  
-  // load texture
-  int width, height, components;
-  auto image = stbi_load(_texturePath.c_str(),
-                         &width,
-                         &height,
-                         &components,
-                         STBI_rgb_alpha);
-  if (image) {
-    glGenTextures(1, &_texture);
-    glBindTexture(GL_TEXTURE_2D, _texture);
-    glTexImage2D(GL_TEXTURE_2D,
-                 0,
-                 GL_RGBA,
-                 width,
-                 height,
-                 0,
-                 GL_RGBA,
-                 GL_UNSIGNED_BYTE,
-                 image);
-    glGenerateMipmap(GL_TEXTURE_2D);
-    free(image);
-  }
-  
-  _shaderProgram = Core::CreateShaderProgram(_vertexShaderFilename,
-                                             _fragmentShaderFilename);
-  
-  // retrieve uniform locations
-  _modelMatrixLocation =
-    glGetUniformLocation(_shaderProgram, "modelMatrix");
-  _modelViewProjectionMatrixLocation =
-    glGetUniformLocation(_shaderProgram, "modelViewProjectionMatrix");
-  _normalMatrixLocation =
-    glGetUniformLocation(_shaderProgram, "normalMatrix");
-  
 }
 
 void GraphicsComponent::render(const Core & core)
@@ -285,30 +215,29 @@ void GraphicsComponent::render(const Core & core)
   // construct matrices
   const mat4 viewMatrix           = core.viewMatrix();
   const mat4 projectionMatrix     = core.projectionMatrix();
-  const mat4 modelTranslation     = glm::translate(entity()->worldPosition());
-  const mat4 modelRotation        = glm::toMat4(entity()->worldOrientation());
-  mat4 modelMatrix                = modelTranslation * modelRotation;
+  mat4 modelMatrix                = entity()->worldTransform();
   mat4 modelViewProjectionMatrix  = projectionMatrix * viewMatrix * modelMatrix;
   const mat3 modelMatrixInverse   = glm::inverse(mat3(modelMatrix));
   
   // set shader uniforms
   glUseProgram(_shaderProgram);
-  glUniformMatrix4fv(_modelMatrixLocation,
-                     1,
-                     false,
-                     &modelMatrix[0].x);
-  glUniformMatrix4fv(_modelViewProjectionMatrixLocation,
-                     1,
-                     false,
+  glUniformMatrix4fv(_modelMatrixLocation, 1, false, &modelMatrix[0].x);
+  glUniformMatrix4fv(_modelViewProjectionMatrixLocation, 1, false,
                      &modelViewProjectionMatrix[0].x);
-  glUniformMatrix3fv(_normalMatrixLocation,
-                     1,
-                     true,
-                     &modelMatrixInverse[0].x);
+  glUniformMatrix3fv(_normalMatrixLocation, 1, true, &modelMatrixInverse[0].x);
+  glUniform3fv(_diffuseColorLocation, 1, &_diffuseColor.x);
   
-  // activate texture
-  glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, _texture);
+  // activate diffuse map
+  if (_diffuseMap)
+  {
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, _diffuseMap);
+  }
+  
+  if (false)
+  {
+    // activate other types of textures
+  }
   
   // render
   glBindVertexArray(_vertexArrayObject);
@@ -317,82 +246,209 @@ void GraphicsComponent::render(const Core & core)
   glUseProgram(0);
 }
 
-void GraphicsComponent::loadMeshFromObjFile(const string & fileName,
-                                            const string & extension,
-                                            const string & objectBaseDir,
-                                            const string & materialBaseDir,
-                                            const string & textureBaseDir)
+bool GraphicsComponent::loadObject(const char * objectFileName)
 {
-  _numberOfVertices = 0;
-  _vertices.clear();
-  _normals.clear();
-  _textureCoordinates.clear();
-  _texturePath = "";
-  
   attrib_t           attrib;
   vector<shape_t>    shapes;
-  vector<material_t> materials;
+//  vector<material_t> materials;
   string             error;
-  LoadObj(&attrib,
-          &shapes,
-          &materials,
-          &error,
-          (objectBaseDir + "/" + fileName + "." + extension).c_str(),
-          (materialBaseDir + "/").c_str());
+  LoadObj(&attrib, &shapes, nullptr, &error, objectFileName); // TODO: test
 
-  if (shapes.size() >= 1)
+  if (shapes.size() >= 1 && !attrib.vertices.empty())
   {
-    auto indices = shapes[0].mesh.indices;
-    _numberOfVertices = indices.size();
+    // initialize data collections
+    vector<float> normals, textureCoordinates;
+    auto shape = shapes[0];
+    _numberOfVertices = shape.mesh.indices.size();
+    _vertices.resize(3*_numberOfVertices);
+    normals.resize(3*_numberOfVertices);
+    textureCoordinates.resize(2*_numberOfVertices);
     
-    const bool hasVertices = attrib.vertices.size() > 0;
-    const bool hasNormals = attrib.normals.size() > 0;
-    const bool hasTextureCoordinates = attrib.texcoords.size() > 0;
-    
-    if (hasVertices)
-      _vertices.resize(_numberOfVertices*3);
-    if (hasNormals)
-      _normals.resize(_numberOfVertices*3);
-    if (hasTextureCoordinates)
-      _textureCoordinates.resize(_numberOfVertices*2);
-    
-    for (int i = 0; i < indices.size(); ++i)
+    // populate data collections
+    for (int face = 0; face < _numberOfVertices/3; ++face)
     {
-      auto index       = indices[i];
-      if (hasVertices)
+      // indices
+      const auto i0 = shape.mesh.indices[3*face];
+      const auto i1 = shape.mesh.indices[3*face+1];
+      const auto i2 = shape.mesh.indices[3*face+2];
+      
+      // vertices
+      const vec3 v0 =
       {
-        _vertices[3*i]   = attrib.vertices[3*index.vertex_index];
-        _vertices[3*i+1] = attrib.vertices[3*index.vertex_index+1];
-        _vertices[3*i+2] = attrib.vertices[3*index.vertex_index+2];
-      }
-      if (hasNormals)
+        attrib.vertices[3*i0.vertex_index],
+        attrib.vertices[3*i0.vertex_index+1],
+        attrib.vertices[3*i0.vertex_index+2]
+      };
+      const vec3 v1 =
       {
-        _normals[3*i]   = attrib.vertices[3*index.normal_index];
-        _normals[3*i+1] = attrib.vertices[3*index.normal_index+1];
-        _normals[3*i+2] = attrib.vertices[3*index.normal_index+2];
-      }
-      if (hasTextureCoordinates)
+        attrib.vertices[3*i1.vertex_index],
+        attrib.vertices[3*i1.vertex_index+1],
+        attrib.vertices[3*i1.vertex_index+2]
+      };
+      const vec3 v2 =
       {
-        _textureCoordinates[2*i]   = attrib.texcoords[2*index.texcoord_index];
-        _textureCoordinates[2*i+1] = attrib.texcoords[2*index.texcoord_index+1];
+        attrib.vertices[3*i2.vertex_index],
+        attrib.vertices[3*i2.vertex_index+1],
+        attrib.vertices[3*i2.vertex_index+2]
+      };
+      
+      _vertices[9*face]   = v0.x;
+      _vertices[9*face+1] = v0.y;
+      _vertices[9*face+2] = v0.z;
+      _vertices[9*face+3] = v1.x;
+      _vertices[9*face+4] = v1.y;
+      _vertices[9*face+5] = v1.z;
+      _vertices[9*face+6] = v2.x;
+      _vertices[9*face+7] = v2.y;
+      _vertices[9*face+8] = v2.z;
+      
+      // normals
+      if (!attrib.normals.empty())
+      {
+        normals[9*face]   = attrib.normals[3*i0.normal_index];
+        normals[9*face+1] = attrib.normals[3*i0.normal_index+1];
+        normals[9*face+2] = attrib.normals[3*i0.normal_index+2];
+        normals[9*face+3] = attrib.normals[3*i1.normal_index];
+        normals[9*face+4] = attrib.normals[3*i1.normal_index+1];
+        normals[9*face+5] = attrib.normals[3*i1.normal_index+2];
+        normals[9*face+6] = attrib.normals[3*i2.normal_index];
+        normals[9*face+7] = attrib.normals[3*i2.normal_index+1];
+        normals[9*face+8] = attrib.normals[3*i2.normal_index+2];
       }
+      else
+      {
+        // calculate face normal
+        vec3 e0 = normalize(v1-v0);
+        vec3 e1 = normalize(v2-v0);
+        vec3 n  = cross(e0, e1);
+        normals[9*face]   = n.x;
+        normals[9*face+1] = n.y;
+        normals[9*face+2] = n.z;
+        normals[9*face+3] = n.x;
+        normals[9*face+4] = n.y;
+        normals[9*face+5] = n.z;
+        normals[9*face+6] = n.x;
+        normals[9*face+7] = n.y;
+        normals[9*face+8] = n.z;
+      }
+      
+      // texture coordinates
+      textureCoordinates[6*face]   = attrib.texcoords[2*i0.texcoord_index];
+      textureCoordinates[6*face+1] = attrib.texcoords[2*i0.texcoord_index+1];
+      textureCoordinates[6*face+2] = attrib.texcoords[2*i1.texcoord_index];
+      textureCoordinates[6*face+3] = attrib.texcoords[2*i1.texcoord_index+1];
+      textureCoordinates[6*face+4] = attrib.texcoords[2*i2.texcoord_index];
+      textureCoordinates[6*face+5] = attrib.texcoords[2*i2.texcoord_index+1];
     }
+    
+    // bind vertex array object
+    glBindVertexArray(_vertexArrayObject);
+    
+    // generate vertices buffer
+    GLuint verticesBuffer;
+    glGenBuffers(1, &verticesBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, verticesBuffer);
+    glBufferData(GL_ARRAY_BUFFER, 3*_numberOfVertices*sizeof(float),
+                 &_vertices[0], GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
+    glEnableVertexAttribArray(0);
+    
+    // generate normals buffer
+    GLuint normalsBuffer;
+    glGenBuffers(1, &normalsBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, normalsBuffer);
+    glBufferData(GL_ARRAY_BUFFER, 3*_numberOfVertices*sizeof(float),
+                 &normals[0], GL_STATIC_DRAW);
+    glVertexAttribPointer(1, 3, GL_FLOAT, false, 0, 0);
+    glEnableVertexAttribArray(1);
+    
+    // generate texture coordinates buffer
+    GLuint textureCoordinatesBuffer;
+    glGenBuffers(1, &textureCoordinatesBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, textureCoordinatesBuffer);
+    glBufferData(GL_ARRAY_BUFFER, 2*_numberOfVertices*sizeof(float),
+                 &textureCoordinates[0], GL_STATIC_DRAW);
+    glVertexAttribPointer(2, 2, GL_FLOAT, false, 0, 0);
+    glEnableVertexAttribArray(2);
+    
+    return true;
   }
-  if (materials.size() >= 1)
-    _texturePath = textureBaseDir + "/" + materials[0].diffuse_texname;
+  return false;
 }
 
-void GraphicsComponent::loadShader(const string & fileName,
-                                   const string & vertexShaderExtension,
-                                   const string & fragmentShaderExtension,
-                                   const string & shaderBaseDir)
+bool GraphicsComponent::loadTexture(const char * textureFileName,
+                                    TextureType textureType)
 {
-  const string prefix = shaderBaseDir + "/" + fileName + ".";
-  _vertexShaderFilename   = prefix + vertexShaderExtension;
-  _fragmentShaderFilename = prefix + fragmentShaderExtension;
+  if (_shaderProgram)
+  {
+    // load image
+    int width, height, components;
+    auto image = stbi_load(textureFileName, &width, &height, &components,
+                           STBI_rgb_alpha);
+    if (image) {
+      // determine texture type
+      GLuint * texture = nullptr;
+      if (textureType == Diffuse)
+        texture = &_diffuseMap;
+      else
+        // TODO: implement more texture types
+        return nullptr;
+      
+      // generate texture
+      glGenTextures(1, texture);
+      glBindTexture(GL_TEXTURE_2D, *texture);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
+                   GL_UNSIGNED_BYTE, image);
+      free(image);
+      
+      // set filtering options and attach texture to shader
+      glUseProgram(_shaderProgram);
+      if (textureType == Diffuse)
+      {
+        glGenerateMipmap(GL_TEXTURE_2D);
+        glUniform1i(glGetUniformLocation(_shaderProgram, "diffuseMap"), 0);
+      }
+      else
+      {
+        // other texture types
+      }
+      
+      return true;
+    }
+  }
+  return false;
+}
+
+bool GraphicsComponent::loadShader(const char * vertexShaderFileName,
+                                   const char * fragmentShaderFileName)
+{
+  auto result = Core::CreateShaderProgram(vertexShaderFileName,
+                                          fragmentShaderFileName);
+  if (!result.isNothing())
+  {
+    _shaderProgram = result;
+    
+    // retrieve uniform locations
+    _modelMatrixLocation =
+      glGetUniformLocation(_shaderProgram, "modelMatrix");
+    _modelViewProjectionMatrixLocation =
+      glGetUniformLocation(_shaderProgram, "modelViewProjectionMatrix");
+    _normalMatrixLocation =
+      glGetUniformLocation(_shaderProgram, "normalMatrix");
+    _diffuseColorLocation =
+      glGetUniformLocation(_shaderProgram, "diffuseColor");
+    
+    return true;
+  }
+  return false;
 }
 
 string GraphicsComponent::trait() const { return "Graphics"; }
+
+void GraphicsComponent::diffuseColor(const vec3 & color)
+{
+  _diffuseColor = color;
+}
 
 
 // MARK: -
@@ -410,6 +466,7 @@ GraphicsComponent * Entity::graphics() const   { return _graphics; }
 
 const vec3 & Entity::localPosition() const    { return _localPosition; }
 const quat & Entity::localOrientation() const { return _localOrientation; }
+const vec3 & Entity::localScale() const       { return _localScale; }
 const vec3 & Entity::velocity() const         { return _velocity; }
 const vec3 & Entity::force() const            { return _force; }
 
@@ -429,6 +486,7 @@ Entity::Entity()
   , _graphics(nullptr)
   , _localPosition(0.0f)
   , _localOrientation(1.0f, 0.0f, 0.0f, 0.0f)
+  , _localScale(1.0f, 1.0f, 1.0f)
   , _velocity(0.0f)
   , _force(0.0f)
   , _enabled(false)
@@ -551,47 +609,47 @@ void Entity::attachGraphicsComponent(GraphicsComponent * graphics)
   _graphics = graphics;
 }
 
-mat4 Entity::localTransform()
+mat4 Entity::localTransform() const
 {
   return localTranslation() * localRotation();
 }
 
-mat4 Entity::localTranslation()
+mat4 Entity::localTranslation() const
 {
   return glm::translate(_localPosition);
 }
 
-mat4 Entity::localRotation()
+mat4 Entity::localRotation() const
 {
   return glm::toMat4(_localOrientation);
 }
 
-vec3 Entity::localUp()
+vec3 Entity::localUp() const
 {
   return glm::rotate(_localOrientation, Core::WORLD_UP);
 }
 
-vec3 Entity::localDown()
+vec3 Entity::localDown() const
 {
   return glm::rotate(_localOrientation, Core::WORLD_DOWN);
 }
 
-vec3 Entity::localLeft()
+vec3 Entity::localLeft() const
 {
   return glm::rotate(_localOrientation, Core::WORLD_LEFT);
 }
 
-vec3 Entity::localRight()
+vec3 Entity::localRight() const
 {
   return glm::rotate(_localOrientation, Core::WORLD_RIGHT);
 }
 
-vec3 Entity::localForward()
+vec3 Entity::localForward() const
 {
   return glm::rotate(_localOrientation, Core::WORLD_FORWARD);
 }
 
-vec3 Entity::localBackward()
+vec3 Entity::localBackward() const
 {
   return glm::rotate(_localOrientation, Core::WORLD_BACKWARD);
 }
@@ -608,19 +666,30 @@ const quat & Entity::worldOrientation() const
   return _worldOrientation;
 }
 
-mat4 Entity::worldTransform()
+const vec3 & Entity::worldScale() const
 {
-  return worldTranslation() * worldRotation();
+  if (_transformNeedsUpdating) _updateTransform();
+  return _worldScale;
 }
 
-mat4 Entity::worldTranslation()
+mat4 Entity::worldTransform() const
 {
-  return glm::translate(_worldPosition);
+  return worldTranslation() * worldRotation() * worldScaling();
 }
 
-mat4 Entity::worldRotation()
+mat4 Entity::worldTranslation() const
+{
+  return glm::translate(worldPosition());
+}
+
+mat4 Entity::worldRotation() const
 {
   return glm::toMat4(worldOrientation());
+}
+
+mat4 Entity::worldScaling() const
+{
+  return glm::scale(worldScale());
 }
 
 void Entity::translate(const vec3 & d)
@@ -634,6 +703,18 @@ void Entity::rotate(float angle, const vec3 & axis)
 {
   quat newQuat = glm::angleAxis(angle, axis) * _localOrientation;
   _localOrientation = glm::normalize(newQuat);
+  _transformNeedsUpdating = true;
+  NotificationCenter::notify(DidUpdateTransform, *this);
+}
+
+void Entity::scale(float s)
+{
+  scale({s, s, s});
+}
+
+void Entity::scale(const vec3 & s)
+{
+  _localScale *= s;
   _transformNeedsUpdating = true;
   NotificationCenter::notify(DidUpdateTransform, *this);
 }
@@ -656,19 +737,19 @@ void Entity::reposition(const vec3 & p)
   translate(p);
 }
 
-void Entity::resetPositionX(float x)
+void Entity::repositionX(float x)
 {
   _localPosition.x = 0.0f;
   translate({x, 0.0f, 0.0f});
 }
 
-void Entity::resetPositionY(float y)
+void Entity::repositionY(float y)
 {
   _localPosition.y = 0.0f;
   translate({0.0f, y, 0.0f});
 }
 
-void Entity::resetPositionZ(float z)
+void Entity::repositionZ(float z)
 {
   _localPosition.z = 0.0f;
   translate({0.0f, 0.0f, z});
@@ -700,6 +781,32 @@ void Entity::resetRoll(float roll)
 {
   vec3 eulerAngles = glm::eulerAngles(_localOrientation);
   reorient({eulerAngles.x, eulerAngles.y, roll});
+}
+
+void Entity::rescale(const vec3 & s)
+{
+  _localScale.x = 1.0f;
+  _localScale.y = 1.0f;
+  _localScale.z = 1.0f;
+  scale(s);
+}
+
+void Entity::rescaleX(float x)
+{
+  _localScale.x = 1.0f;
+  scale({x, 1.0f, 1.0f});
+}
+
+void Entity::rescaleY(float y)
+{
+  _localScale.y = 1.0f;
+  translate({1.0f, y, 1.0f});
+}
+
+void Entity::rescaleZ(float z)
+{
+  _localScale.z = 1.0f;
+  translate({1.0f, 1.0f, z});
 }
 
 void Entity::resetVelocity(const vec3 & v)
@@ -776,13 +883,25 @@ void Entity::_updateTransform() const
   {
     _worldPosition    = _parent->worldPosition() + _localPosition;
     _worldOrientation = _parent->worldOrientation() * _localOrientation;
+    _worldScale       = _parent->worldScale() * _localScale;
   }
   else
   {
     _worldPosition    = _localPosition;
     _worldOrientation = _localOrientation;
+    _worldScale       = _localScale;
   }
+  _transformNeedsUpdating = false;
 }
+
+
+// MARK: -
+// MARK: Member functions
+PointLight::PointLight(float distance)
+  : Entity()
+  , _linear(4.55f/distance)
+  , _quadratic(75.0f/(distance*distance))
+{}
 
 
 // MARK: -
@@ -922,8 +1041,8 @@ bool _linkProgram(GLuint program)
   return true;
 }
 
-maybe<GLuint> Core::CreateShaderProgram(string vertexShaderFileName,
-                                        string fragmentShaderFileName)
+maybe<GLuint> Core::CreateShaderProgram(const char * vertexShaderFileName,
+                                        const char * fragmentShaderFileName)
 {
   GLuint vertexShader   = glCreateShader(GL_VERTEX_SHADER);
   GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
@@ -1045,8 +1164,11 @@ bool Core::init(CoreOptions & options)
   glewInit();
   CHECK_GL_ERROR(false);
   
-  // 1 for v-sync
+  // enable v-sync
   SDL_GL_SetSwapInterval(1);
+  
+  // flip textures
+  stbi_set_flip_vertically_on_load(true);
   
   // clear and swap frame
   glClear(GL_COLOR_BUFFER_BIT);
@@ -1077,32 +1199,32 @@ bool Core::init(CoreOptions & options)
   
   // generate textures for geometry buffer
   const ivec2 d = viewDimensions();
-  glGenTextures(1, &_geometryPositionTexture);
-  glBindTexture(GL_TEXTURE_2D, _geometryPositionTexture);
+  glGenTextures(1, &_geometryPositionMap);
+  glBindTexture(GL_TEXTURE_2D, _geometryPositionMap);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, d.x, d.y, 0,
                GL_RGB, GL_FLOAT, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         _geometryPositionTexture, 0);
+                         _geometryPositionMap, 0);
   
-  glGenTextures(1, &_geometryNormalTexture);
-  glBindTexture(GL_TEXTURE_2D, _geometryNormalTexture);
+  glGenTextures(1, &_geometryNormalMap);
+  glBindTexture(GL_TEXTURE_2D, _geometryNormalMap);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, d.x, d.y, 0,
                GL_RGB, GL_FLOAT, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
-                         _geometryNormalTexture, 0);
+                         _geometryNormalMap, 0);
   
-  glGenTextures(1, &_geometryColorTexture);
-  glBindTexture(GL_TEXTURE_2D, _geometryColorTexture);
+  glGenTextures(1, &_geometryColorMap);
+  glBindTexture(GL_TEXTURE_2D, _geometryColorMap);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, d.x, d.y, 0,
                GL_RGB, GL_UNSIGNED_BYTE, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D,
-                         _geometryColorTexture, 0);
+                         _geometryColorMap, 0);
   
   GLuint attachments[3] =
   {
@@ -1395,13 +1517,12 @@ bool Core::update()
   glEnable(GL_CULL_FACE);
   
   // update view and projection matrix
-  mat4 cameraTranslation        = glm::translate(-_camera->worldPosition());
-  quat inverseCameraOrientation = glm::inverse(_camera->worldOrientation());
-  const mat4 cameraRotation     = glm::toMat4(inverseCameraOrientation);
-  _viewMatrix                   = cameraRotation * cameraTranslation;
-  _projectionMatrix             = glm::perspective(glm::radians(45.0f),
-                                                   float(d.x) / float(d.y),
-                                                   0.01f, 1000.0f);
+  mat4 cameraTranslation    = glm::translate(-_camera->worldPosition());
+  const mat4 cameraRotation = glm::inverse(_camera->worldRotation());
+  _viewMatrix               = cameraRotation * cameraTranslation;
+  _projectionMatrix         = glm::perspective(glm::radians(45.0f),
+                                               float(d.x) / float(d.y),
+                                               0.01f, 1000.0f);
   
   // clear default and geometry framebuffers
   glClearColor(_backgroundColor.r, _backgroundColor.g, _backgroundColor.b, 1.0);
@@ -1413,7 +1534,7 @@ bool Core::update()
   glViewport(0, 0, d.x, d.y);
   for (auto & entity : _entities)
   {
-    if (entity.enabled() && entity.graphics())
+    if (entity.enabled() && entity.graphics() && entity.type() != Light)
       entity.graphics()->render(*this);
   }
   
@@ -1421,36 +1542,35 @@ bool Core::update()
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
   glUseProgram(_lightingPass);
   glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, _geometryPositionTexture);
+  glBindTexture(GL_TEXTURE_2D, _geometryPositionMap);
   glActiveTexture(GL_TEXTURE1);
-  glBindTexture(GL_TEXTURE_2D, _geometryNormalTexture);
+  glBindTexture(GL_TEXTURE_2D, _geometryNormalMap);
   glActiveTexture(GL_TEXTURE2);
-  glBindTexture(GL_TEXTURE_2D, _geometryColorTexture);
+  glBindTexture(GL_TEXTURE_2D, _geometryColorMap);
   
   // update uniform data in shader
   for (int i = 0; i < _lights.size(); ++i)
   {
-    const vec3 position    = _lights[i]->worldPosition();
-    const vec3 color       = {0.8f, 0.8f, 1.0f};
-    const float constant   = 1.0f;
-    const float linear     = 0.7f;
-    const float quadratic  = 1.8f;
+    Entity * light         = _lights[i];
+    const vec3 position    = light->worldPosition();
+    const vec3 color       = light->graphics()
+      ? light->graphics()->diffuseColor()
+      : vec3(1.0f);
+    const float linear     = 0.22f;
+    const float quadratic  = 0.20f;
     
     const string prefix    = "lights[" + to_string(i) + "].";
     const char * posName   = (prefix + "position").c_str();
     const char * colName   = (prefix + "color").c_str();
-    const char * constName = (prefix + "constant").c_str();
     const char * linName   = (prefix + "linear").c_str();
     const char * quadName  = (prefix + "quadratic").c_str();
     const GLuint posLoc    = glGetUniformLocation(_lightingPass, posName);
     const GLuint colLoc    = glGetUniformLocation(_lightingPass, colName);
-    const GLuint constLoc  = glGetUniformLocation(_lightingPass, constName);
     const GLuint linLoc    = glGetUniformLocation(_lightingPass, linName);
     const GLuint quadLoc   = glGetUniformLocation(_lightingPass, quadName);
     
     glUniform3fv(posLoc, 1, &position.x);
     glUniform3fv(colLoc, 1, &color.x);
-    glUniform1f(constLoc, constant);
     glUniform1f(linLoc, linear);
     glUniform1f(quadLoc, quadratic);
   }
@@ -1466,6 +1586,13 @@ bool Core::update()
   glBlitFramebuffer(0, 0, d.x, d.y, 0, 0, d.x, d.y, GL_DEPTH_BUFFER_BIT,
                     GL_NEAREST);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  
+  // render light entities
+  for (auto light : _lights)
+  {
+    if (light->enabled() && light->graphics())
+      light->graphics()->render(*this);
+  }
 
   // swap buffers
   SDL_GL_SwapWindow(_window);
@@ -1511,7 +1638,9 @@ void Core::destroy()
   SDL_Quit();
 }
 
-Entity * Core::createEntity(string id, string parentId, EntityType type)
+Entity * Core::createEntity(const string & id,
+                            const string & parentId,
+                            EntityType type)
 {
   Entity * entity = nullptr;
   if (_entityCount < _maximumNumberOfEntities && !_root.findChild(id))
@@ -1520,13 +1649,23 @@ Entity * Core::createEntity(string id, string parentId, EntityType type)
     if (parentId.compare("root") == 0 || (parent = _root.findChild(parentId)))
     {
       entity = &_entities[_entityCount++];
+      if (type == Light) _lights.push_back(entity);
       entity->assignIdentifier(id);
       entity->type(type);
       parent->addChild(entity);
-      if (type == Light) _lights.push_back(entity);
     }
   }
   return entity;
+}
+
+const Entity * Core::findEntity(const string & id) const
+{
+  for (const Entity & entity : _entities)
+  {
+    if (entity.id().compare(id) == 0)
+      return &entity;
+  }
+  return nullptr;
 }
 
 void Core::createEffectiveTimer(double duration, function<void()> block)

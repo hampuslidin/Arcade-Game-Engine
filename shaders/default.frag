@@ -2,9 +2,11 @@
 
 precision highp float;
 
-layout(location = 0) out vec4 color;
+uniform vec3 diffuseColor;
+
+layout(location = 0) out vec3 color;
 
 void main()
 {
-  color = vec4(1.0f);
+  color = diffuseColor;
 }

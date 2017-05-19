@@ -2,7 +2,7 @@
 
 precision highp float;
 
-uniform sampler2D colorTexture;
+uniform sampler2D diffuseMap;
 
 in vec2 fTextureCoordinates;
 

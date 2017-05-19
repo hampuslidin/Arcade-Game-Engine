@@ -1,0 +1,3 @@
+newmtl desert
+  map_Ka desert_diffuse.png
+  map_Kd desert_diffuse.png

@@ -2,7 +2,7 @@
 
 precision highp float;
 
-uniform sampler2D colorTexture;
+uniform sampler2D diffuseMap;
 
 in vec3 fPosition;
 in vec3 fNormal;
@@ -16,5 +16,5 @@ void main()
 {
   gPosition = fPosition;
   gNormal   = normalize(fNormal);
-  gColor    = texture(colorTexture, fTextureCoordinates).rgb;
+  gColor    = texture(diffuseMap, fTextureCoordinates).rgb;
 }
