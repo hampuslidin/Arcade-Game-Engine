@@ -35,6 +35,8 @@
 
 /* Begin PBXFileReference section */
 		D215B0B11E59951C00846D94 /* animation.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = animation.cpp; path = engine/animation.cpp; sourceTree = "<group>"; };
+		D231F2381ED0CFFD00D14D4B /* particles.frag */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; name = particles.frag; path = shaders/particles.frag; sourceTree = SOURCE_ROOT; };
+		D231F2391ED0CFFD00D14D4B /* particles.vert */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; name = particles.vert; path = shaders/particles.vert; sourceTree = SOURCE_ROOT; };
 		D23716CD1E6C9EAB00C9D798 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
 		D2479B5E1E8301F70039DE28 /* deferred_geometry.frag */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; name = deferred_geometry.frag; path = ../shaders/deferred_geometry.frag; sourceTree = "<group>"; };
 		D2479B5F1E8301F70039DE28 /* deferred_geometry.vert */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; name = deferred_geometry.vert; path = ../shaders/deferred_geometry.vert; sourceTree = "<group>"; };
@@ -83,6 +85,8 @@
 				D2479B5F1E8301F70039DE28 /* deferred_geometry.vert */,
 				D2C3FCC21ECB444C00A3DCBD /* simple.frag */,
 				D2C3FCC31ECB444C00A3DCBD /* simple.vert */,
+				D231F2381ED0CFFD00D14D4B /* particles.frag */,
+				D231F2391ED0CFFD00D14D4B /* particles.vert */,
 				D2C3FCC01ECAFA2D00A3DCBD /* deferred_lighting.frag */,
 				D2C3FCC11ECAFAF100A3DCBD /* deferred_lighting.vert */,
 			);

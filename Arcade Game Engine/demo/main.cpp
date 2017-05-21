@@ -7,6 +7,16 @@
 #include <glm/gtx/transform.hpp>
 #include <random>
 
+#define FILE(d, f, e) (string() + d + f + e).c_str()
+#define OBJ(f)     FILE("objects/", f, ".obj")
+#define TEX(f, t)  FILE("textures/", f + "_" + t, ".png")
+#define SHAD(f, e) FILE("shaders/", f, e)
+#define DIFF(f)    TEX(f, "diffuse")
+#define SPEC(f)    TEX(f, "spec")
+#define PART(f)    TEX(f, "particles")
+#define VERT(f)    SHAD(f, ".vert")
+#define FRAG(f)    SHAD(f, ".frag")
+
 
 ////////////////////////////////////////
 // INPUT COMPONENTS
@@ -109,9 +119,34 @@ public:
   {
     const double t = core.effectiveElapsedTime();
     const double T = 5.0;
+    const float  p = 2*M_PI*t/T;
+    vec3 v = {_radius*cos(p), 0.0f, _radius*sin(p)};
+    entity()->reposition(v);
+    entity()->reorient({0.0f, -p, 0.0f});
+  }
+  
+private:
+  float _radius;
+  
+};
+
+class RandomOrbitInputController
+  : public InputComponent
+{
+  
+public:
+  RandomOrbitInputController(float radius)
+    : InputComponent()
+    , _radius(radius)
+  {}
+  
+  void handleInput(const Core & core)
+  {
+    const double t = core.effectiveElapsedTime();
+    const double T = 20.0;
     const float p = 2*M_PI*t/T;
-    vec3 v(_radius*cos(p), 0.0f, _radius*sin(p));
-    quat q(1.0f, 0.0f, 0.0f, 0.0f);
+    vec3 v = {_radius*cos(p), 0.0f, _radius*sin(p)};
+    quat q = {1.0f, 0.0f, 0.0f, 0.0f};
     q = glm::rotate(q, p/0.2718f, Core::WORLD_RIGHT);
     q = glm::rotate(q, p/0.3141f, Core::WORLD_BACKWARD);
     v = glm::rotate(q, v);
@@ -120,6 +155,37 @@ public:
   
 private:
   float _radius;
+  
+};
+
+////////////////////////////////////////
+// RIGID BODY COMPONENTS
+////////////////////////////////////////
+
+class CameraRigidBodyComponent
+  : public RigidBodyComponent
+{
+  
+public:
+  CameraRigidBodyComponent()
+    : RigidBodyComponent()
+  {
+    setThermalVelocity(10.0f);
+    setGravity(0.0f, 0.0f, 0.0f);
+    setKinematic(true);
+  }
+};
+
+class KinematicRigidBodyComponent
+  : public RigidBodyComponent
+{
+  
+public:
+  KinematicRigidBodyComponent()
+    : RigidBodyComponent()
+  {
+    setKinematic(true);
+  }
   
 };
 
@@ -189,10 +255,10 @@ public:
       g = interpolate(g, 1.0f, 2*l-1.0f);
       b = interpolate(b, 1.0f, 2*l-1.0f);
     }
-
+    
     diffuseColor({r, g, b});
-    loadShader("shaders/default.vert", "shaders/default.frag");
-    loadObject("objects/sphere.obj");
+    loadShader(VERT("default"), FRAG("default"));
+    loadObject(OBJ("sphere"));
   }
   
 };
@@ -213,10 +279,10 @@ public:
   {
     GraphicsComponent::init(entity);
     
-    loadShader("shaders/deferred_geometry.vert",
-               "shaders/deferred_geometry.frag");
+    loadShader(VERT("deferred_geometry"), FRAG("deferred_geometry"));
     loadObject(_objectFileName.c_str());
     loadTexture(_diffuseMapFileName.c_str(), Diffuse);
+    CHECK_GL_ERROR(true);
   }
   
 private:
@@ -226,32 +292,22 @@ private:
 };
 
 ////////////////////////////////////////
-// RIGID BODY COMPONENTS
+// PARTICLE SYSTEM COMPONENTS
 ////////////////////////////////////////
 
-class CameraRigidBodyComponent
-  : public RigidBodyComponent
+class GreenParticleSystemComponent
+  : public ParticleSystemComponent
 {
   
 public:
-  CameraRigidBodyComponent()
-    : RigidBodyComponent()
+  using ParticleSystemComponent::ParticleSystemComponent;
+  
+  void init(Entity * entity)
   {
-    setThermalVelocity(10.0f);
-    setGravity(0.0f, 0.0f, 0.0f);
-    setKinematic(true);
-  }
-};
-
-class KinematicRigidBodyComponent
-  : public RigidBodyComponent
-{
-
-public:
-  KinematicRigidBodyComponent()
-    : RigidBodyComponent()
-  {
-    setKinematic(true);
+    ParticleSystemComponent::init(entity);
+    
+    loadShader(VERT("particles"), FRAG("particles"));
+    loadTexture(PART("explosion"));
   }
   
 };
@@ -263,54 +319,54 @@ public:
 int main(int argc, char *  argv[])
 {
   // core settings
-  Core core(42);
+  Core core(43);
   CoreOptions options {"Demo", 1280, 756};
   core.changeBackgroundColor(0.2f, 0.2f, 0.2f);
   core.addControl("up",    SDLK_w);
   core.addControl("down",  SDLK_s);
   core.addControl("left",  SDLK_a);
   core.addControl("right", SDLK_d);
-  
+
   // desert
   Entity * desert = core.createEntity("desert");
-  desert->attachGraphicsComponent(new DeferredGraphicsComponent("objects/desert.obj", "textures/desert_diffuse.png"));
-  desert->translate({-50.0f, -25.0f, 10.0f});
+  desert->attachGraphicsComponent(new DeferredGraphicsComponent(OBJ("desert"), DIFF("desert")));
+  desert->translate({-50.0f, -20.0f, -10.0f});
   desert->rotate(M_PI/2, Core::WORLD_LEFT);
   desert->scale(100.0f);
   
   // high static cube
   Entity * highStaticCube = core.createEntity("highStaticCube");
-  highStaticCube->attachColliderComponent(new SphereColliderComponent(0.99f));
+  highStaticCube->attachColliderComponent(new SphereColliderComponent(1.99f));
   highStaticCube->attachRigidBodyComponent(new RigidBodyComponent);
-  highStaticCube->attachGraphicsComponent(new DeferredGraphicsComponent("objects/cube.obj", "textures/cube_diffuse.png"));
-  highStaticCube->translate({0.0f, 0.0f, -15.0f});
-  highStaticCube->scale(2.0f);
-  
+  highStaticCube->attachGraphicsComponent(new DeferredGraphicsComponent(OBJ("cube"), DIFF("cube")));
+  highStaticCube->translate({0.0f, -4.0f, -40.0f});
+  highStaticCube->scale(4.0f);
+
   // middle static cubes
   for (int i = 0; i < 2; ++i)
   {
     Entity * middleStaticCube = core.createEntity("middleStaticCube" + to_string(i));
-    middleStaticCube->attachColliderComponent(new SphereColliderComponent(0.99f));
+    middleStaticCube->attachColliderComponent(new SphereColliderComponent(1.99f));
     middleStaticCube->attachRigidBodyComponent(new RigidBodyComponent);
-    middleStaticCube->attachGraphicsComponent(new DeferredGraphicsComponent("objects/cube.obj", "textures/cube_diffuse.png"));
-    middleStaticCube->translate({2.0f*(2*i-1), -2.0f, -15.0f});
-    middleStaticCube->scale(2.0f);
+    middleStaticCube->attachGraphicsComponent(new DeferredGraphicsComponent(OBJ("cube"), DIFF("cube")));
+    middleStaticCube->translate({4.0f*(2*i-1), -8.0f, -40.0f});
+    middleStaticCube->scale(4.0f);
   }
   
   // low static cube
   Entity * lowStaticCube = core.createEntity("lowStaticCube");
-  lowStaticCube->attachColliderComponent(new SphereColliderComponent(0.99f));
+  lowStaticCube->attachColliderComponent(new SphereColliderComponent(1.99f));
   lowStaticCube->attachRigidBodyComponent(new RigidBodyComponent);
-  lowStaticCube->attachGraphicsComponent(new DeferredGraphicsComponent("objects/cube.obj", "textures/cube_diffuse.png"));
-  lowStaticCube->translate({0.0f, -4.0f, -13.0f});
-  lowStaticCube->scale(2.0f);
+  lowStaticCube->attachGraphicsComponent(new DeferredGraphicsComponent(OBJ("cube"), DIFF("cube")));
+  lowStaticCube->translate({0.0f, -12.0f, -36.0f});
+  lowStaticCube->scale(4.0f);
   
   // high bouncing light
   Entity * highBouncingLight = core.createEntity("highBouncingLight", "root", Light);
   highBouncingLight->attachColliderComponent(new SphereColliderComponent(0.99f));
   highBouncingLight->attachRigidBodyComponent(new KinematicRigidBodyComponent);
   highBouncingLight->attachGraphicsComponent(new LightGraphicsComponent);
-  highBouncingLight->translate({0.0f, 5.0f, -15.0f});
+  highBouncingLight->translate({0.0f, 5.0f, -40.0f});
   
   // middle bouncing lights
   for (int i = 0; i < 2; ++i)
@@ -319,7 +375,7 @@ int main(int argc, char *  argv[])
     middleBouncingLight->attachColliderComponent(new SphereColliderComponent(0.99f));
     middleBouncingLight->attachRigidBodyComponent(new KinematicRigidBodyComponent);
     middleBouncingLight->attachGraphicsComponent(new LightGraphicsComponent);
-    middleBouncingLight->translate({2.0f*(2*i-1), 5.0f, -15.0f});
+    middleBouncingLight->translate({4.0f*(2*i-1), 5.0f, -40.0f});
   }
   
   // low bouncing light
@@ -327,22 +383,29 @@ int main(int argc, char *  argv[])
   lowBouncingLight->attachColliderComponent(new SphereColliderComponent(0.99f));
   lowBouncingLight->attachRigidBodyComponent(new KinematicRigidBodyComponent);
   lowBouncingLight->attachGraphicsComponent(new LightGraphicsComponent);
-  lowBouncingLight->translate({0.0f, 5.0f, -13.0f});
-  
+  lowBouncingLight->translate({0.0f, 5.0f, -36.0f});
+
   // earth
   Entity * earth = core.createEntity("earth");
   earth->attachInputComponent(new SpinInputComponent);
-  earth->attachGraphicsComponent(new DeferredGraphicsComponent("objects/sphere.obj", "textures/earth_diffuse.png"));
-  earth->translate({0.0f, 0.0f, -50.0f});
+  earth->attachGraphicsComponent(new DeferredGraphicsComponent(OBJ("sphere"), DIFF("earth")));
+  earth->translate({0.0f, 10.0f, -50.0f});
   earth->rotate(M_PI/2, Core::WORLD_UP);
   earth->scale(5.0f);
+  
+  // random orbiting light
+  Entity * randomOrbitingLight = core.createEntity("randomOrbitingLight", "earth", Light);
+  randomOrbitingLight->scale(0.1f);
+  randomOrbitingLight->attachInputComponent(new RandomOrbitInputController(5.5f));
+  randomOrbitingLight->attachGraphicsComponent(new LightGraphicsComponent);
   
   // orbiting light
   Entity * orbitingLight = core.createEntity("orbitingLight", "earth", Light);
   orbitingLight->scale(0.1f);
-  orbitingLight->attachInputComponent(new OrbitInputController(5.5f));
+  orbitingLight->attachInputComponent(new OrbitInputController(7.0f));
   orbitingLight->attachGraphicsComponent(new LightGraphicsComponent);
-  
+  orbitingLight->attachParticleSystemComponent(new GreenParticleSystemComponent(100000));
+
   // desert lights
   default_random_engine generator;
   for (int i = 0; i < 30; ++i)
@@ -352,7 +415,7 @@ int main(int argc, char *  argv[])
     desertLight->attachInputComponent(new DesertLightInputComponent(&generator));
     desertLight->attachGraphicsComponent(new LightGraphicsComponent);
   }
-  
+
   // camera
   core.camera()->attachInputComponent(new CameraInputComponent);
   core.camera()->attachRigidBodyComponent(new CameraRigidBodyComponent);

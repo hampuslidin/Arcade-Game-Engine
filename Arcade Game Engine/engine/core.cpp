@@ -212,37 +212,28 @@ void GraphicsComponent::init(Entity * entity)
 
 void GraphicsComponent::render(const Core & core)
 {
-  // construct matrices
-  const mat4 viewMatrix           = core.viewMatrix();
-  const mat4 projectionMatrix     = core.projectionMatrix();
-  mat4 modelMatrix                = entity()->worldTransform();
-  mat4 modelViewProjectionMatrix  = projectionMatrix * viewMatrix * modelMatrix;
-  const mat3 modelMatrixInverse   = glm::inverse(mat3(modelMatrix));
+  // construct transforms
+  const mat4 view                = core.viewMatrix();
+  const mat4 projection          = core.projectionMatrix();
+  const mat4 model               = entity()->worldTransform();
+  const mat4 modelViewProjection = projection * view * model;
+  const mat3 normal              = glm::inverse(mat3(model)); // FIXME: why does this work? (should be inverse-transpose)
   
   // set shader uniforms
   glUseProgram(_shaderProgram);
-  glUniformMatrix4fv(_modelMatrixLocation, 1, false, &modelMatrix[0].x);
+  glUniformMatrix4fv(_modelMatrixLocation, 1, false, &model[0].x);
   glUniformMatrix4fv(_modelViewProjectionMatrixLocation, 1, false,
-                     &modelViewProjectionMatrix[0].x);
-  glUniformMatrix3fv(_normalMatrixLocation, 1, true, &modelMatrixInverse[0].x);
+                     &modelViewProjection[0].x);
+  glUniformMatrix3fv(_normalMatrixLocation, 1, true, &normal[0].x);
   glUniform3fv(_diffuseColorLocation, 1, &_diffuseColor.x);
   
-  // activate diffuse map
-  if (_diffuseMap)
-  {
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, _diffuseMap);
-  }
-  
-  if (false)
-  {
-    // activate other types of textures
-  }
+  // activate textures
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, _diffuseMap);
   
   // render
   glBindVertexArray(_vertexArrayObject);
   glDrawArrays(GL_TRIANGLES, 0, (int)_numberOfVertices);
-  
   glUseProgram(0);
 }
 
@@ -250,9 +241,8 @@ bool GraphicsComponent::loadObject(const char * objectFileName)
 {
   attrib_t           attrib;
   vector<shape_t>    shapes;
-//  vector<material_t> materials;
   string             error;
-  LoadObj(&attrib, &shapes, nullptr, &error, objectFileName); // TODO: test
+  LoadObj(&attrib, &shapes, nullptr, &error, objectFileName);
 
   if (shapes.size() >= 1 && !attrib.vertices.empty())
   {
@@ -349,7 +339,7 @@ bool GraphicsComponent::loadObject(const char * objectFileName)
     glGenBuffers(1, &verticesBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, verticesBuffer);
     glBufferData(GL_ARRAY_BUFFER, 3*_numberOfVertices*sizeof(float),
-                 &_vertices[0], GL_STATIC_DRAW);
+                 _vertices.data(), GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
     glEnableVertexAttribArray(0);
     
@@ -358,7 +348,7 @@ bool GraphicsComponent::loadObject(const char * objectFileName)
     glGenBuffers(1, &normalsBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, normalsBuffer);
     glBufferData(GL_ARRAY_BUFFER, 3*_numberOfVertices*sizeof(float),
-                 &normals[0], GL_STATIC_DRAW);
+                 normals.data(), GL_STATIC_DRAW);
     glVertexAttribPointer(1, 3, GL_FLOAT, false, 0, 0);
     glEnableVertexAttribArray(1);
     
@@ -367,7 +357,7 @@ bool GraphicsComponent::loadObject(const char * objectFileName)
     glGenBuffers(1, &textureCoordinatesBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, textureCoordinatesBuffer);
     glBufferData(GL_ARRAY_BUFFER, 2*_numberOfVertices*sizeof(float),
-                 &textureCoordinates[0], GL_STATIC_DRAW);
+                 textureCoordinates.data(), GL_STATIC_DRAW);
     glVertexAttribPointer(2, 2, GL_FLOAT, false, 0, 0);
     glEnableVertexAttribArray(2);
     
@@ -453,6 +443,174 @@ void GraphicsComponent::diffuseColor(const vec3 & color)
 
 // MARK: -
 // MARK: Properties
+int ParticleSystemComponent::numberOfParticles() const
+{
+  return (int)_particles.size();
+}
+
+// MARK: Member functions
+ParticleSystemComponent::ParticleSystemComponent(int maxNumberOfParticles)
+  : Component()
+  , _maxNumberOfParticles(maxNumberOfParticles)
+{}
+
+void ParticleSystemComponent::init(Entity * entity)
+{
+  Component::init(entity);
+  
+  // set flags
+  glEnable(GL_PROGRAM_POINT_SIZE);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  
+  // generate vertex array object
+  glGenVertexArrays(1, &_vertexArrayObject);
+  glBindVertexArray(_vertexArrayObject);
+  
+  // generate particle data buffer
+  glGenBuffers(1, &_particleDataBuffer);
+  glBindBuffer(GL_ARRAY_BUFFER, _particleDataBuffer);
+  glBufferData(GL_ARRAY_BUFFER, 4*_maxNumberOfParticles*sizeof(float), nullptr,
+               GL_STATIC_DRAW);
+  glVertexAttribPointer(0, 4, GL_FLOAT, false, 0, 0);
+  glEnableVertexAttribArray(0);
+}
+
+void ParticleSystemComponent::render(const Core & core)
+{
+  // spawn new particles
+  const mat4 model = entity()->worldTranslation() * entity()->worldRotation();
+  const int amount = std::min(_maxNumberOfParticles-(int)_particles.size(), 64);
+  for (int i = 0; i < amount; ++i)
+  {
+    const float theta = Core::uniformRandom(0.0f, 2.0f*M_PI);
+    const float u     = Core::uniformRandom(0.95f, 1.0f);
+    const float c     = sqrt(1.0f - u*u);
+    const vec4 p = model * vec4(0.0f, 0.0f, 0.0f, 1.0f);
+    const vec3 v = vec3(model * vec4(u, c*cosf(theta), c*sinf(theta), 0.0f));
+    _particles.push_back({0.0f, 5.0f, vec3(p)/p.w, 2.0f*v});
+  }
+  
+  // remove dead particles
+  for (int id = 0; id < _particles.size(); ++id)
+  {
+    auto & particle = _particles[id];
+    if (particle.age >= particle.lifeTime)
+    {
+      // kill particle
+      int lastId = (int)_particles.size()-1;
+      if (id < lastId)
+        particle = _particles[lastId];
+      _particles.pop_back();
+    }
+  }
+  
+  // update alive particles
+  for (auto & particle : _particles)
+  {
+    float dt           = core.deltaTime();
+    particle.age      += dt;
+    particle.position += particle.velocity * dt;
+  }
+  
+  // extract particle render data
+  // FIXME: fix view space graphical bug
+  const mat4 view = core.viewMatrix();
+  int numberOfParticles = (int)_particles.size();
+  _particleRenderData.resize(numberOfParticles);
+  for (int i = 0; i < numberOfParticles; ++i)
+  {
+    auto & particle           = _particles[i];
+    auto & particleRenderData = _particleRenderData[i];
+    const vec4 p              = view * vec4(particle.position, 1.0f);
+    particleRenderData.x      = p.x / p.w;
+    particleRenderData.y      = p.y / p.w;
+    particleRenderData.z      = p.z / p.w;
+    particleRenderData.w      = particle.age / particle.lifeTime;
+  }
+  
+  // sort particle render data
+  const auto sorter = [](const vec4 & a, const vec4 & b) { return a.z < b.z; };
+  const auto startIterator = _particleRenderData.begin();
+  const auto endIterator   = next(startIterator, numberOfParticles);
+  sort(startIterator, endIterator, sorter);
+  
+  // upload particle render data
+  glBindBuffer(GL_ARRAY_BUFFER, _particleDataBuffer);
+  glBufferSubData(GL_ARRAY_BUFFER, 0, 4*numberOfParticles*sizeof(float),
+                  &_particleRenderData[0].x);
+  
+  // set shader uniforms
+  const mat4 projection = core.projectionMatrix();
+  const ivec2 d         = core.viewDimensions();
+  glUseProgram(_shaderProgram);
+  glUniformMatrix4fv(_projectionMatrixLocation, 1, false, &projection[0].x);
+  glUniform1f(_screenWidthLocation, d.x);
+  glUniform1f(_screenHeightLocation, d.y);
+  
+  // activate color map
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, _colorMap);
+  
+  // render
+  glBindVertexArray(_vertexArrayObject);
+  glDrawArrays(GL_POINTS, 0, numberOfParticles);
+  glUseProgram(0);
+}
+
+bool ParticleSystemComponent::loadTexture(const char * textureFileName)
+{
+  // load image
+  int width, height, components;
+  auto image = stbi_load(textureFileName, &width, &height, &components,
+                         STBI_rgb_alpha);
+  if (image) {
+    // generate texture
+    glGenTextures(1, &_colorMap);
+    glBindTexture(GL_TEXTURE_2D, _colorMap);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
+                 GL_UNSIGNED_BYTE, image);
+    free(image);
+    
+    // set filtering options and attach texture to shader
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    
+    return true;
+  }
+  return false;
+}
+
+bool ParticleSystemComponent::loadShader(const char * vertexShaderFileName,
+                                         const char * fragmentShaderFileName)
+{
+  auto result = Core::CreateShaderProgram(vertexShaderFileName,
+                                          fragmentShaderFileName);
+  if (!result.isNothing())
+  {
+    _shaderProgram = result;
+    
+    // retrieve uniform locations
+    _projectionMatrixLocation =
+      glGetUniformLocation(_shaderProgram, "projectionMatrix");
+    _screenWidthLocation =
+      glGetUniformLocation(_shaderProgram, "screenWidth");
+    _screenHeightLocation =
+      glGetUniformLocation(_shaderProgram, "screenHeight");
+    return true;
+  }
+  return false;
+}
+
+
+string ParticleSystemComponent::trait() const
+{
+  return "ParticleSystem";
+}
+
+
+// MARK: -
+// MARK: Properties
 const Core * Entity::core() const                { return _core; }
 const Entity * Entity::parent() const            { return _parent; }
 const vector<Entity*> & Entity::children() const { return _children; }
@@ -463,6 +621,10 @@ ColliderComponent * Entity::collider() const   { return _collider; }
 RigidBodyComponent * Entity::rigidBody() const { return _rigidBody; }
 AudioComponent * Entity::audio() const         { return _audio; }
 GraphicsComponent * Entity::graphics() const   { return _graphics; }
+ParticleSystemComponent * Entity::particleSystem() const
+{
+  return _particleSystem;
+}
 
 const vec3 & Entity::localPosition() const    { return _localPosition; }
 const quat & Entity::localOrientation() const { return _localOrientation; }
@@ -484,6 +646,7 @@ Entity::Entity()
   , _rigidBody(nullptr)
   , _audio(nullptr)
   , _graphics(nullptr)
+  , _particleSystem(nullptr)
   , _localPosition(0.0f)
   , _localOrientation(1.0f, 0.0f, 0.0f, 0.0f)
   , _localScale(1.0f, 1.0f, 1.0f)
@@ -499,12 +662,13 @@ void Entity::init(Core * core)
   _core = core;
   _enabled = true;
   
-  if (_input)     _input->init(this);
-  if (_animation) _animation->init(this);
-  if (_collider)  _collider->init(this);
-  if (_rigidBody) _rigidBody->init(this);
-  if (_audio)     _audio->init(this);
-  if (_graphics)  _graphics->init(this);
+  if (_input)          _input->init(this);
+  if (_animation)      _animation->init(this);
+  if (_collider)       _collider->init(this);
+  if (_rigidBody)      _rigidBody->init(this);
+  if (_audio)          _audio->init(this);
+  if (_graphics)       _graphics->init(this);
+  if (_particleSystem) _particleSystem->init(this);
   
   if (_parent)
   {
@@ -521,12 +685,13 @@ void Entity::init(Core * core)
 
 void Entity::reset()
 {
-  if (_input)     _input->reset();
-  if (_animation) _animation->reset();
-  if (_collider)  _collider->reset();
-  if (_rigidBody) _rigidBody->reset();
-  if (_audio)     _audio->reset();
-  if (_graphics)  _graphics->reset();
+  if (_input)          _input->reset();
+  if (_animation)      _animation->reset();
+  if (_collider)       _collider->reset();
+  if (_rigidBody)      _rigidBody->reset();
+  if (_audio)          _audio->reset();
+  if (_graphics)       _graphics->reset();
+  if (_particleSystem) _particleSystem->reset();
   
   for (auto child : _children) child->reset();
 }
@@ -539,12 +704,13 @@ void Entity::destroy()
   }
   _children.clear();
   
-  if (_input)     delete _input;
-  if (_animation) delete _animation;
-  if (_collider)  delete _collider;
-  if (_rigidBody) delete _rigidBody;
-  if (_audio)     delete _audio;
-  if (_graphics)  delete _graphics;
+  if (_input)          delete _input;
+  if (_animation)      delete _animation;
+  if (_collider)       delete _collider;
+  if (_rigidBody)      delete _rigidBody;
+  if (_audio)          delete _audio;
+  if (_graphics)       delete _graphics;
+  if (_particleSystem) delete _particleSystem;
 }
 
 void Entity::addChild(Entity * child)
@@ -607,6 +773,12 @@ void Entity::attachAudioComponent(AudioComponent * audio)
 void Entity::attachGraphicsComponent(GraphicsComponent * graphics)
 {
   _graphics = graphics;
+}
+
+void Entity::attachParticleSystemComponent
+  (ParticleSystemComponent * particleSystem)
+{
+  _particleSystem = particleSystem;
 }
 
 mat4 Entity::localTransform() const
@@ -881,9 +1053,9 @@ void Entity::_updateTransform() const
 {
   if (_parent)
   {
-    _worldPosition    = _parent->worldPosition() + _localPosition;
-    _worldOrientation = _parent->worldOrientation() * _localOrientation;
-    _worldScale       = _parent->worldScale() * _localScale;
+    _worldPosition     = _parent->worldPosition() + _localPosition;
+    _worldOrientation  = _parent->worldOrientation() * _localOrientation;
+    _worldScale        = _parent->worldScale() * _localScale;
   }
   else
   {
@@ -930,6 +1102,11 @@ const vec3 Core::WORLD_FORWARD  { 0.0f,  0.0f, -1.0f};
 const vec3 Core::WORLD_BACKWARD { 0.0f,  0.0f,  1.0f};
 
 // MARK: Class functions
+float Core::uniformRandom(float from, float to)
+{
+  return from+(to-from)*rand()/RAND_MAX;
+}
+
 bool Core::AABBIntersect(const box & a, const box & b, box & intersection)
 {
   for (int i = 0; i < 3; i++)
@@ -1189,7 +1366,7 @@ bool Core::init(CoreOptions & options)
   glGenBuffers(1, &quadPositionsBuffer);
   glBindBuffer(GL_ARRAY_BUFFER, quadPositionsBuffer);
   glBufferData(GL_ARRAY_BUFFER, quadPositions.size()*sizeof(float),
-               &quadPositions[0], GL_STATIC_DRAW);
+               quadPositions.data(), GL_STATIC_DRAW);
   glVertexAttribPointer(0, 2, GL_FLOAT, false, 0, 0);
   glEnableVertexAttribArray(0);
   
@@ -1390,8 +1567,9 @@ bool Core::update()
   }
   
   // handle input for entities
-  for (auto & entity : _entities)
+  for (int i = 0; i < _entityCount; ++i)
   {
+    auto & entity = _entities[i];
     if (entity.enabled() && entity.input())
       entity.input()->handleInput(*this);
   }
@@ -1401,8 +1579,9 @@ bool Core::update()
   ////////////////////////////////////////
   
   // animate entities
-  for (auto & entity : _entities)
+  for (int i = 0; i < _entityCount; ++i)
   {
+    auto & entity = _entities[i];
     if (entity.enabled() && entity.animation())
       entity.animation()->animate(*this);
   }
@@ -1412,8 +1591,9 @@ bool Core::update()
   ////////////////////////////////////////
   
   // update colliders
-  for (auto & entity : _entities)
+  for (int i = 0; i < _entityCount; ++i)
   {
+    auto & entity = _entities[i];
     if (entity.enabled() && entity.collider())
       entity.collider()->update(*this);
   }
@@ -1499,18 +1679,20 @@ bool Core::update()
   ////////////////////////////////////////
   
   // update rigid bodies
-  for (auto & entity : _entities)
+  for (int i = 0; i < _entityCount; ++i)
   {
+    auto & entity = _entities[i];
     if (entity.enabled() && entity.rigidBody())
       entity.rigidBody()->update(*this);
   }
   
   ////////////////////////////////////////
-  // RENDERING
+  // PRE-RENDERING
   ////////////////////////////////////////
   
   // retrieve view frame dimensions
   ivec2 d = viewDimensions();
+  glViewport(0, 0, d.x, d.y);
   
   // enable depth test and face culling
   glEnable(GL_DEPTH_TEST);
@@ -1531,13 +1713,17 @@ bool Core::update()
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   
   // render entities to geometry buffer
-  glViewport(0, 0, d.x, d.y);
-  for (auto & entity : _entities)
+  for (int i = 0; i < _entityCount; ++i)
   {
+    auto & entity = _entities[i];
     if (entity.enabled() && entity.graphics() && entity.type() != Light)
       entity.graphics()->render(*this);
   }
   
+  ////////////////////////////////////////
+  // DEFERRED RENDERING
+  ////////////////////////////////////////
+
   // bind textures
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
   glUseProgram(_lightingPass);
@@ -1576,7 +1762,6 @@ bool Core::update()
   }
   
   // draw fullscreen quad
-  glViewport(0, 0, d.x, d.y);
   glBindVertexArray(_quadVertexArrayObject);
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
   
@@ -1586,7 +1771,7 @@ bool Core::update()
   glBlitFramebuffer(0, 0, d.x, d.y, 0, 0, d.x, d.y, GL_DEPTH_BUFFER_BIT,
                     GL_NEAREST);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  
+
   // render light entities
   for (auto light : _lights)
   {
@@ -1594,6 +1779,14 @@ bool Core::update()
       light->graphics()->render(*this);
   }
 
+  // render particles
+  for (int i = 0; i < _entityCount; ++i)
+  {
+    auto & entity = _entities[i];
+    if (entity.enabled() && entity.particleSystem())
+      entity.particleSystem()->render(*this);
+  }
+  
   // swap buffers
   SDL_GL_SwapWindow(_window);
   
@@ -1745,41 +1938,12 @@ double Core::effectiveElapsedTime() const
   {
     pauseToggle = true;
     lastPauseTime = elapsed;
-    
-#ifdef GAME_ENGINE_DEBUG
-    printf("/**************** PAUSED ****************/\n");
-#endif
-    
   }
   else if (!_pause && pauseToggle)
   {
     pauseToggle = false;
     totalPauseDuration += elapsed - lastPauseTime;
-    
-#ifdef GAME_ENGINE_DEBUG
-    printf("/**************** RESUMED ***************/\n");
-#endif
-    
   }
-  
-#ifdef GAME_ENGINE_DEBUG
-  static double last_print_time;
-  
-  if (elapsed - last_print_time >= 0.1)
-  {
-    printf("Elapsed: %f\t\t", elapsed);
-    printf("Effective elapsed: %f\t\t",
-           !_pause
-           ? elapsed - totalPauseDuration
-           : lastPauseTime - totalPauseDuration);
-    printf("Pause time: %f\t\t", lastPauseTime);
-    printf("Pause duration: %f\n",
-           !_pause
-           ? totalPauseDuration
-           : totalPauseDuration + elapsed - lastPauseTime);
-    last_print_time = elapsed;
-  }
-#endif
   
   return (!_pause ? elapsed : lastPauseTime) - totalPauseDuration;
 }

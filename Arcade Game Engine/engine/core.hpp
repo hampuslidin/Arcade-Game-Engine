@@ -50,6 +50,7 @@ class ColliderComponent;
 class SphereColliderComponent;
 class RigidBodyComponent;
 class AudioComponent;
+class ParticleSystemComponent;
 class GraphicsComponent;
 
 // MARK: Events
@@ -454,6 +455,7 @@ private:
 // MARK: -
 enum TextureType { Diffuse, Specular };
 
+
 // MARK: -
 /**
  *  GraphicsComponent is responsible for drawing an Entity to a SDL rendering
@@ -501,6 +503,48 @@ private:
 
 
 // MARK: -
+class ParticleSystemComponent
+  : public Component
+{
+  
+public:
+  // MARK: Properties
+  int numberOfParticles() const;
+  
+  // MARK: Member functions
+  ParticleSystemComponent(int numberOfParticles);
+  virtual void init(Entity * entity);
+  virtual void render(const Core & core);
+  bool loadTexture(const char * textureFileName);
+  bool loadShader(const char * vertexShaderFileName,
+                  const char * fragmentShaderFileName);
+  string trait() const;
+  
+private:
+  struct _Particle
+  {
+    float age;
+    float lifeTime;
+    vec3 position;
+    vec3 velocity;
+  };
+  
+  int               _maxNumberOfParticles;
+  vector<_Particle> _particles;
+  vector<vec4>      _particleRenderData;
+  
+  GLuint _vertexArrayObject;
+  GLuint _particleDataBuffer;
+  GLuint _shaderProgram;
+  GLuint _colorMap;
+  GLuint _projectionMatrixLocation;
+  GLuint _screenWidthLocation;
+  GLuint _screenHeightLocation;
+  
+};
+
+
+// MARK: -
 enum EntityType { Default, Camera, Light };
 
 // MARK: -
@@ -523,6 +567,7 @@ public:
   RigidBodyComponent * rigidBody() const;
   AudioComponent * audio() const;
   GraphicsComponent * graphics() const;
+  ParticleSystemComponent * particleSystem() const;
   
   const vec3 & localPosition() const;
   const quat & localOrientation() const;
@@ -574,6 +619,7 @@ public:
   void attachRigidBodyComponent(RigidBodyComponent * rigidBody);
   void attachAudioComponent(AudioComponent * audio);
   void attachGraphicsComponent(GraphicsComponent * graphics);
+  void attachParticleSystemComponent(ParticleSystemComponent * particleSystem);
   
   mat4 localTransform() const;
   mat4 localTranslation() const;
@@ -635,12 +681,13 @@ private:
   Entity *        _parent;
   vector<Entity*> _children;
   
-  InputComponent *     _input;
-  AnimationComponent * _animation;
-  ColliderComponent *  _collider;
-  RigidBodyComponent * _rigidBody;
-  AudioComponent *     _audio;
-  GraphicsComponent *  _graphics;
+  InputComponent *          _input;
+  AnimationComponent *      _animation;
+  ColliderComponent *       _collider;
+  RigidBodyComponent *      _rigidBody;
+  AudioComponent *          _audio;
+  ParticleSystemComponent * _particleSystem;
+  GraphicsComponent *       _graphics;
   
   vec3 _localPosition;
   quat _localOrientation;
@@ -722,6 +769,8 @@ public:
   static const vec3 WORLD_BACKWARD;
   
   // MARK: Class functions
+  static float uniformRandom(float from, float to);
+  
   /**
    *  Computes the intersection between two static AABBs.
    *

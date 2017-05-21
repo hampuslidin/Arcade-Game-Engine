@@ -15,7 +15,7 @@ struct Light
   float linear;
   float quadratic;
 };
-const int numberOfLights = 35;
+const int numberOfLights = 36;
 uniform Light lights[numberOfLights];
 
 void main()
@@ -24,7 +24,7 @@ void main()
   vec3 fNormal   = texture(gNormal,   fTextureCoordinates).rgb;
   vec3 fColor    = texture(gColor,    fTextureCoordinates).rgb;
   
-  vec3 lighting = fColor*0.1;
+  vec3 lighting = fColor*0.3;
   for (int i = 0; i < numberOfLights; ++i)
   {
     Light l = lights[i];
