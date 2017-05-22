@@ -488,7 +488,7 @@ void ParticleSystemComponent::render(const Core & core)
     const float c     = sqrt(1.0f - u*u);
     const vec4 p = model * vec4(0.0f, 0.0f, 0.0f, 1.0f);
     const vec3 v = vec3(model * vec4(u, c*cosf(theta), c*sinf(theta), 0.0f));
-    _particles.push_back({0.0f, 5.0f, vec3(p)/p.w, 2.0f*v});
+    _particles.push_back({0.0f, 1.0f, vec3(p)/p.w, 2.0f*v});
   }
   
   // remove dead particles
@@ -514,7 +514,6 @@ void ParticleSystemComponent::render(const Core & core)
   }
   
   // extract particle render data
-  // FIXME: fix view space graphical bug
   const mat4 view = core.viewMatrix();
   int numberOfParticles = (int)_particles.size();
   _particleRenderData.resize(numberOfParticles);
@@ -550,7 +549,7 @@ void ParticleSystemComponent::render(const Core & core)
   
   // activate color map
   glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, _colorMap);
+  glBindTexture(GL_TEXTURE_2D, _diffuseMap);
   
   // render
   glBindVertexArray(_vertexArrayObject);
@@ -560,23 +559,27 @@ void ParticleSystemComponent::render(const Core & core)
 
 bool ParticleSystemComponent::loadTexture(const char * textureFileName)
 {
-  // load image
-  int width, height, components;
-  auto image = stbi_load(textureFileName, &width, &height, &components,
-                         STBI_rgb_alpha);
-  if (image) {
-    // generate texture
-    glGenTextures(1, &_colorMap);
-    glBindTexture(GL_TEXTURE_2D, _colorMap);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
-                 GL_UNSIGNED_BYTE, image);
-    free(image);
-    
-    // set filtering options and attach texture to shader
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    
-    return true;
+  if (_shaderProgram)
+  {
+    // load image
+    int width, height, components;
+    auto image = stbi_load(textureFileName, &width, &height, &components,
+                           STBI_rgb_alpha);
+    if (image) {
+      // generate texture
+      glGenTextures(1, &_diffuseMap);
+      glBindTexture(GL_TEXTURE_2D, _diffuseMap);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
+                   GL_UNSIGNED_BYTE, image);
+      free(image);
+      
+      // set filtering options and attach texture to shader
+      glUseProgram(_shaderProgram);
+      glGenerateMipmap(GL_TEXTURE_2D);
+      glUniform1i(glGetUniformLocation(_shaderProgram, "diffuseMap"), 0);
+      
+      return true;
+    }
   }
   return false;
 }

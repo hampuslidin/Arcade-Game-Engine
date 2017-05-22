@@ -143,7 +143,7 @@ public:
   void handleInput(const Core & core)
   {
     const double t = core.effectiveElapsedTime();
-    const double T = 20.0;
+    const double T = 10.0;
     const float p = 2*M_PI*t/T;
     vec3 v = {_radius*cos(p), 0.0f, _radius*sin(p)};
     quat q = {1.0f, 0.0f, 0.0f, 0.0f};
@@ -387,7 +387,6 @@ int main(int argc, char *  argv[])
 
   // earth
   Entity * earth = core.createEntity("earth");
-  earth->attachInputComponent(new SpinInputComponent);
   earth->attachGraphicsComponent(new DeferredGraphicsComponent(OBJ("sphere"), DIFF("earth")));
   earth->translate({0.0f, 10.0f, -50.0f});
   earth->rotate(M_PI/2, Core::WORLD_UP);

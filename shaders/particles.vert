@@ -12,7 +12,11 @@ void main()
 {
   // TODO: proper scaling
   fLife             = vParticle.w;
-  gl_Position       = projectionMatrix * vec4(vParticle.xyz, 1.0);
-  gl_PointSize      = 1.0;
-  gl_PointSize      = 10.0 * mix(0.0, 5.0, pow(fLife, 0.25));
+  vec4 position     = vec4(vParticle.xyz, 1.0);
+  vec4 quad         = projectionMatrix * vec4(1.0, 1.0, position.z, position.w);
+  vec2 pixelSize    = vec2(screenWidth, screenHeight) * quad.xy / quad.w;
+  float scaleFactor = pixelSize.x + pixelSize.y;
+//  float scaleFactor = 25.0*inversesqrt(0.1*length(position.xyz));
+  gl_Position       = projectionMatrix * position;
+  gl_PointSize      = scaleFactor * mix(0.0, 0.5, pow(fLife, 0.25));
 }

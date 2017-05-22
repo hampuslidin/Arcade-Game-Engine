@@ -536,7 +536,7 @@ private:
   GLuint _vertexArrayObject;
   GLuint _particleDataBuffer;
   GLuint _shaderProgram;
-  GLuint _colorMap;
+  GLuint _diffuseMap;
   GLuint _projectionMatrixLocation;
   GLuint _screenWidthLocation;
   GLuint _screenHeightLocation;
