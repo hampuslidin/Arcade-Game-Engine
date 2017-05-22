@@ -33,21 +33,23 @@ public:
     static float pitch = 0.0f;
     yaw   -= 0.01f * core.mouseMovement().x;
     pitch -= 0.01f * core.mouseMovement().y;
-    float distance = 2500.0f * core.deltaTime();
+    float distance = 15.0f * core.deltaTime();
     
-//    const vec3 localUp       = entity()->localUp();
     const vec3 localRight    = entity()->localRight();
     const vec3 localBackward = entity()->localBackward();
     
-//    entity()->rotate(-0.01f * core.mouseMovement().x, localUp);
-//    entity()->rotate(-0.01f * core.mouseMovement().y, localRight);
+    if (core.checkKey("mouseLeft"))
+    {
+      entity()->rotate(-0.01f * core.mouseMovement().x, Core::WORLD_UP);
+      entity()->rotate(-0.01f * core.mouseMovement().y, localRight);
+    }
     
-    vec3 f(0.0f);
-    if (core.checkKey("up"))    f -= distance*localBackward;
-    if (core.checkKey("down"))  f += distance*localBackward;
-    if (core.checkKey("left"))  f -= distance*localRight;
-    if (core.checkKey("right")) f += distance*localRight;
-    entity()->applyForce(f);
+    vec3 d;
+    if (core.checkKey("up"))    d -= distance*localBackward;
+    if (core.checkKey("down"))  d += distance*localBackward;
+    if (core.checkKey("left"))  d -= distance*localRight;
+    if (core.checkKey("right")) d += distance*localRight;
+    entity()->translate(d);
   }
   
 };
@@ -88,8 +90,8 @@ public:
     {
       const Entity * desert = core.findEntity("desert");
       const vector<float> & desertVertices = desert->graphics()->vertices();
-      int numberOfDesertVertices = (int)desert->graphics()->numberOfVertices();
-      uniform_int_distribution<int> distribution(0, numberOfDesertVertices-1);
+      int numVerts = desert->graphics()->numberOfVertices();
+      uniform_int_distribution<int> distribution(0, numVerts-1);
       int r = distribution(*_generator);
       vec3 v = vec3(desert->worldTransform() * vec4(desertVertices[3*r],
                                                     desertVertices[3*r+1],
@@ -328,10 +330,11 @@ int main(int argc, char *  argv[])
   Core core(43);
   CoreOptions options {"Demo", 1280, 756};
   core.changeBackgroundColor(0.2f, 0.2f, 0.2f);
-  core.addControl("up",    SDLK_w);
-  core.addControl("down",  SDLK_s);
-  core.addControl("left",  SDLK_a);
-  core.addControl("right", SDLK_d);
+  core.addControl("up",        SDLK_w);
+  core.addControl("down",      SDLK_s);
+  core.addControl("left",      SDLK_a);
+  core.addControl("right",     SDLK_d);
+  core.addControl("mouseLeft", SDL_BUTTON_LEFT);
 
   // desert
   Entity * desert = core.createEntity("desert");

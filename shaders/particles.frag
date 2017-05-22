@@ -2,15 +2,15 @@
 
 precision highp float;
 
-uniform sampler2D diffuseMap;
+uniform sampler2D diffTexMap;
 
 in float fLife;
 
-layout(location = 0) out vec4 color;
+layout(location = 0) out vec4 col;
 
 void main()
 {
-  color      = texture(diffuseMap, gl_PointCoord);
-  color.xyz *= (1.0-fLife);
-  color.w    = color.w * (1.0-pow(fLife, 4.0)) * 0.05;
+  col      = texture(diffTexMap, gl_PointCoord);
+  col.xyz *= (1.0-fLife);
+  col.w    = col.w * (1.0-pow(fLife, 4.0)) * 0.05;
 }

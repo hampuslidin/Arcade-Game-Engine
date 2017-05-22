@@ -468,7 +468,7 @@ class GraphicsComponent
 public:
   // MARK: Properties
   const vector<float> & vertices() const;
-  long numberOfVertices() const;
+  int numberOfVertices() const;
   const vec3 & diffuseColor() const;
   
   // MARK: Member functions
@@ -486,18 +486,16 @@ public:
   void diffuseColor(const vec3 & color);
   
 private:
-  vector<float> _vertices;
-  long   _numberOfVertices;
+  vector<float> _verts;       // vertices array
   
-  vec3 _diffuseColor;
+  vec3 _diffCol;              // diffuse color
   
-  GLuint _vertexArrayObject;
-  GLuint _diffuseMap;
-  GLuint _shaderProgram;
-  GLint  _modelMatrixLocation;
-  GLint  _modelViewProjectionMatrixLocation;
-  GLint  _normalMatrixLocation;
-  GLuint _diffuseColorLocation;
+  GLuint _vao;                // vertex array object
+  GLuint _diffTexMap;         // diffuse texture map
+  GLuint _shaderProg;         // shader program
+  GLint  _prevMLoc, _MLoc;    // current and previous model matrix locations
+  GLuint _VLoc, _PLoc, _NLoc; // view, projection and normal matrix locations
+  GLuint _diffColLoc;         // diffuse color location
   
 };
 
@@ -569,6 +567,7 @@ public:
   GraphicsComponent * graphics() const;
   ParticleSystemComponent * particleSystem() const;
   
+  const mat4 & previousWorldTransform() const;
   const vec3 & localPosition() const;
   const quat & localOrientation() const;
   const vec3 & localScale() const;
@@ -603,6 +602,8 @@ public:
    *  method.
    */
   virtual void destroy();
+  
+  void nextFrame();
   
   /**
    *  Adds a child.
@@ -694,12 +695,13 @@ private:
   vec3 _localScale;
   vec3 _velocity;
   vec3 _force;
+  mat4 _previousWorldTransform;
   
   mutable vec3 _worldPosition;
   mutable quat _worldOrientation;
   mutable vec3 _worldScale;
   
-  mutable bool _transformNeedsUpdating;
+  mutable bool _transformInvalid;
   
   bool _enabled;
   EntityType _type;
@@ -748,6 +750,7 @@ public:
   Entity * camera() const;
   
   double deltaTime() const;
+  bool mouseClick() const;
   const ivec2 & mousePosition() const;
   const ivec2 & mouseMovement() const;
   
@@ -877,7 +880,7 @@ public:
   
   void createEffectiveTimer(double duration, function<void()> block);
   void createAccumulativeTimer(double duration, function<void()> block);
-  void addControl(string name, SDL_Keycode key);
+  void addControl(string name, int key);
   void removeControl(string name);
   maybe<bool> checkKey(string name) const;
   void reset(double after_duration = 0);
@@ -891,7 +894,7 @@ public:
   
 private:
   // MARK: Private types
-  typedef map<string, pair<SDL_Keycode, bool>> _KeyControls;
+  typedef map<string, pair<int, bool>> _KeyControls;
   struct _Timer
   {
     double endTime;
@@ -911,6 +914,7 @@ private:
   Entity * _camera;
   
   double _deltaTime;
+  bool   _mouseClick;
   ivec2  _mousePosition;
   ivec2  _mouseMovement;
   
@@ -923,6 +927,7 @@ private:
   GLuint _geometryPositionMap;
   GLuint _geometryNormalMap;
   GLuint _lightingPass;
+  GLuint _numLightsLoc;
   
   mat4 _viewMatrix;
   mat4 _projectionMatrix;
@@ -949,7 +954,9 @@ private:
   bool _reset;
   bool _pause;
   
+  bool _controlsEnabled;
   bool _deferredEnabled;
+  int _numLights;
   bool _particlesEnabled;
   int _particleSpawnRate;
   float _particleLifeTime;

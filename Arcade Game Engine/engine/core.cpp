@@ -188,76 +188,77 @@ string InputComponent::trait() const { return "Input"; }
 // MARK: Properties
 const vector<float> & GraphicsComponent::vertices() const
 {
-  return _vertices;
+  return _verts;
 }
-long GraphicsComponent::numberOfVertices() const
+int GraphicsComponent::numberOfVertices() const
 {
-  return _numberOfVertices;
+  return (int)_verts.size()/3;
 }
 const vec3 & GraphicsComponent::diffuseColor() const
 {
-  return _diffuseColor;
+  return _diffCol;
 }
 
 // MARK: Member functions
 GraphicsComponent::GraphicsComponent()
   : Component()
-  , _diffuseColor(0.8, 0.8, 0.8)
+  , _diffCol(0.8, 0.8, 0.8)
 {}
 
 void GraphicsComponent::init(Entity * entity)
 {
   Component::init(entity);
   
-  glGenVertexArrays(1, &_vertexArrayObject);
+  glGenVertexArrays(1, &_vao);
 }
 
 void GraphicsComponent::render(const Core & core)
 {
   // construct transforms
-  const mat4 view                = core.viewMatrix();
-  const mat4 projection          = core.projectionMatrix();
-  const mat4 model               = entity()->worldTransform();
-  const mat4 modelViewProjection = projection * view * model;
-  const mat3 normal              = glm::inverse(mat3(model)); // FIXME: why does this work? (should be inverse-transpose)
+  const mat4 prevM = entity()->previousWorldTransform();
+  const mat4 M     = entity()->worldTransform();
+  const mat4 V     = core.viewMatrix();
+  const mat4 P     = core.projectionMatrix();
+  const mat3 N     = glm::inverse(mat3(M));
   
   // set shader uniforms
-  glUseProgram(_shaderProgram);
-  glUniformMatrix4fv(_modelMatrixLocation, 1, false, &model[0].x);
-  glUniformMatrix4fv(_modelViewProjectionMatrixLocation, 1, false,
-                     &modelViewProjection[0].x);
-  glUniformMatrix3fv(_normalMatrixLocation, 1, true, &normal[0].x);
-  glUniform3fv(_diffuseColorLocation, 1, &_diffuseColor.x);
+  glUseProgram(_shaderProg);
+  glUniformMatrix4fv(_prevMLoc, 1, false, &prevM[0].x);
+  glUniformMatrix4fv(_MLoc,     1, false, &M[0].x);
+  glUniformMatrix4fv(_VLoc,     1, false, &V[0].x);
+  glUniformMatrix4fv(_PLoc,     1, false, &P[0].x);
+  glUniformMatrix3fv(_NLoc,     1, true,  &N[0].x);
+  glUniform3fv(_diffColLoc, 1, &_diffCol.x);
   
   // activate textures
   glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, _diffuseMap);
+  glBindTexture(GL_TEXTURE_2D, _diffTexMap);
   
   // render
-  glBindVertexArray(_vertexArrayObject);
-  glDrawArrays(GL_TRIANGLES, 0, (int)_numberOfVertices);
+  glBindVertexArray(_vao);
+  glDrawArrays(GL_TRIANGLES, 0, (int)_verts.size());
   glUseProgram(0);
 }
 
-bool GraphicsComponent::loadObject(const char * objectFileName)
+bool GraphicsComponent::loadObject(const char * fileName)
 {
   attrib_t           attrib;
   vector<shape_t>    shapes;
   string             error;
-  LoadObj(&attrib, &shapes, nullptr, &error, objectFileName);
+  LoadObj(&attrib, &shapes, nullptr, &error, fileName);
 
   if (shapes.size() >= 1 && !attrib.vertices.empty())
   {
     // initialize data collections
-    vector<float> normals, textureCoordinates;
-    auto shape = shapes[0];
-    _numberOfVertices = shape.mesh.indices.size();
-    _vertices.resize(3*_numberOfVertices);
-    normals.resize(3*_numberOfVertices);
-    textureCoordinates.resize(2*_numberOfVertices);
+    vector<float> normals, texCoords;
+    auto shape   = shapes[0];
+    int numVerts = (int)shape.mesh.indices.size();
+    _verts.resize(3*numVerts);
+    normals.resize(3*numVerts);
+    texCoords.resize(2*numVerts);
     
     // populate data collections
-    for (int face = 0; face < _numberOfVertices/3; ++face)
+    for (int face = 0; face < numVerts/3; ++face)
     {
       // indices
       const auto i0 = shape.mesh.indices[3*face];
@@ -284,15 +285,15 @@ bool GraphicsComponent::loadObject(const char * objectFileName)
         attrib.vertices[3*i2.vertex_index+2]
       };
       
-      _vertices[9*face]   = v0.x;
-      _vertices[9*face+1] = v0.y;
-      _vertices[9*face+2] = v0.z;
-      _vertices[9*face+3] = v1.x;
-      _vertices[9*face+4] = v1.y;
-      _vertices[9*face+5] = v1.z;
-      _vertices[9*face+6] = v2.x;
-      _vertices[9*face+7] = v2.y;
-      _vertices[9*face+8] = v2.z;
+      _verts[9*face]   = v0.x;
+      _verts[9*face+1] = v0.y;
+      _verts[9*face+2] = v0.z;
+      _verts[9*face+3] = v1.x;
+      _verts[9*face+4] = v1.y;
+      _verts[9*face+5] = v1.z;
+      _verts[9*face+6] = v2.x;
+      _verts[9*face+7] = v2.y;
+      _verts[9*face+8] = v2.z;
       
       // normals
       if (!attrib.normals.empty())
@@ -325,41 +326,41 @@ bool GraphicsComponent::loadObject(const char * objectFileName)
       }
       
       // texture coordinates
-      textureCoordinates[6*face]   = attrib.texcoords[2*i0.texcoord_index];
-      textureCoordinates[6*face+1] = attrib.texcoords[2*i0.texcoord_index+1];
-      textureCoordinates[6*face+2] = attrib.texcoords[2*i1.texcoord_index];
-      textureCoordinates[6*face+3] = attrib.texcoords[2*i1.texcoord_index+1];
-      textureCoordinates[6*face+4] = attrib.texcoords[2*i2.texcoord_index];
-      textureCoordinates[6*face+5] = attrib.texcoords[2*i2.texcoord_index+1];
+      texCoords[6*face]   = attrib.texcoords[2*i0.texcoord_index];
+      texCoords[6*face+1] = attrib.texcoords[2*i0.texcoord_index+1];
+      texCoords[6*face+2] = attrib.texcoords[2*i1.texcoord_index];
+      texCoords[6*face+3] = attrib.texcoords[2*i1.texcoord_index+1];
+      texCoords[6*face+4] = attrib.texcoords[2*i2.texcoord_index];
+      texCoords[6*face+5] = attrib.texcoords[2*i2.texcoord_index+1];
     }
     
     // bind vertex array object
-    glBindVertexArray(_vertexArrayObject);
+    glBindVertexArray(_vao);
     
     // generate vertices buffer
-    GLuint verticesBuffer;
-    glGenBuffers(1, &verticesBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, verticesBuffer);
-    glBufferData(GL_ARRAY_BUFFER, 3*_numberOfVertices*sizeof(float),
-                 _vertices.data(), GL_STATIC_DRAW);
+    GLuint vertsBuf;
+    glGenBuffers(1, &vertsBuf);
+    glBindBuffer(GL_ARRAY_BUFFER, vertsBuf);
+    glBufferData(GL_ARRAY_BUFFER, 3*numVerts*sizeof(float), &_verts[0],
+                 GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
     glEnableVertexAttribArray(0);
     
     // generate normals buffer
-    GLuint normalsBuffer;
-    glGenBuffers(1, &normalsBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, normalsBuffer);
-    glBufferData(GL_ARRAY_BUFFER, 3*_numberOfVertices*sizeof(float),
-                 normals.data(), GL_STATIC_DRAW);
+    GLuint normalsBuf;
+    glGenBuffers(1, &normalsBuf);
+    glBindBuffer(GL_ARRAY_BUFFER, normalsBuf);
+    glBufferData(GL_ARRAY_BUFFER, 3*numVerts*sizeof(float), &normals[0],
+                 GL_STATIC_DRAW);
     glVertexAttribPointer(1, 3, GL_FLOAT, false, 0, 0);
     glEnableVertexAttribArray(1);
     
     // generate texture coordinates buffer
-    GLuint textureCoordinatesBuffer;
-    glGenBuffers(1, &textureCoordinatesBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, textureCoordinatesBuffer);
-    glBufferData(GL_ARRAY_BUFFER, 2*_numberOfVertices*sizeof(float),
-                 textureCoordinates.data(), GL_STATIC_DRAW);
+    GLuint texCoordsBuf;
+    glGenBuffers(1, &texCoordsBuf);
+    glBindBuffer(GL_ARRAY_BUFFER, texCoordsBuf);
+    glBufferData(GL_ARRAY_BUFFER, 2*numVerts*sizeof(float), &texCoords[0],
+                 GL_STATIC_DRAW);
     glVertexAttribPointer(2, 2, GL_FLOAT, false, 0, 0);
     glEnableVertexAttribArray(2);
     
@@ -368,20 +369,18 @@ bool GraphicsComponent::loadObject(const char * objectFileName)
   return false;
 }
 
-bool GraphicsComponent::loadTexture(const char * textureFileName,
-                                    TextureType textureType)
+bool GraphicsComponent::loadTexture(const char * fileName, TextureType texType)
 {
-  if (_shaderProgram)
+  if (_shaderProg)
   {
     // load image
-    int width, height, components;
-    auto image = stbi_load(textureFileName, &width, &height, &components,
-                           STBI_rgb_alpha);
+    int w, h, comps;
+    auto image = stbi_load(fileName, &w, &h, &comps, STBI_rgb_alpha);
     if (image) {
       // determine texture type
       GLuint * texture = nullptr;
-      if (textureType == Diffuse)
-        texture = &_diffuseMap;
+      if (texType == Diffuse)
+        texture = &_diffTexMap;
       else
         // TODO: implement more texture types
         return nullptr;
@@ -389,16 +388,16 @@ bool GraphicsComponent::loadTexture(const char * textureFileName,
       // generate texture
       glGenTextures(1, texture);
       glBindTexture(GL_TEXTURE_2D, *texture);
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA,
                    GL_UNSIGNED_BYTE, image);
       free(image);
       
       // set filtering options and attach texture to shader
-      glUseProgram(_shaderProgram);
-      if (textureType == Diffuse)
+      glUseProgram(_shaderProg);
+      if (texType == Diffuse)
       {
         glGenerateMipmap(GL_TEXTURE_2D);
-        glUniform1i(glGetUniformLocation(_shaderProgram, "diffuseMap"), 0);
+        glUniform1i(glGetUniformLocation(_shaderProg, "diffTexMap"), 0);
       }
       else
       {
@@ -411,24 +410,23 @@ bool GraphicsComponent::loadTexture(const char * textureFileName,
   return false;
 }
 
-bool GraphicsComponent::loadShader(const char * vertexShaderFileName,
-                                   const char * fragmentShaderFileName)
+bool GraphicsComponent::loadShader(const char * vsfn, const char * fsfn)
 {
-  auto result = Core::CreateShaderProgram(vertexShaderFileName,
-                                          fragmentShaderFileName);
+  auto result = Core::CreateShaderProgram(vsfn, fsfn);
+  
+  // check if shader was created
   if (!result.isNothing())
   {
-    _shaderProgram = result;
+    // set shader program
+    _shaderProg = result;
     
     // retrieve uniform locations
-    _modelMatrixLocation =
-      glGetUniformLocation(_shaderProgram, "modelMatrix");
-    _modelViewProjectionMatrixLocation =
-      glGetUniformLocation(_shaderProgram, "modelViewProjectionMatrix");
-    _normalMatrixLocation =
-      glGetUniformLocation(_shaderProgram, "normalMatrix");
-    _diffuseColorLocation =
-      glGetUniformLocation(_shaderProgram, "diffuseColor");
+    _prevMLoc   = glGetUniformLocation(_shaderProg, "prevM");
+    _MLoc       = glGetUniformLocation(_shaderProg, "M");
+    _VLoc       = glGetUniformLocation(_shaderProg, "V");
+    _PLoc       = glGetUniformLocation(_shaderProg, "P");
+    _NLoc       = glGetUniformLocation(_shaderProg, "N");
+    _diffColLoc = glGetUniformLocation(_shaderProg, "diffCol");
     
     return true;
   }
@@ -437,10 +435,7 @@ bool GraphicsComponent::loadShader(const char * vertexShaderFileName,
 
 string GraphicsComponent::trait() const { return "Graphics"; }
 
-void GraphicsComponent::diffuseColor(const vec3 & color)
-{
-  _diffuseColor = color;
-}
+void GraphicsComponent::diffuseColor(const vec3 & col) { _diffCol = col; }
 
 
 // MARK: -
@@ -584,7 +579,7 @@ bool ParticleSystemComponent::loadTexture(const char * textureFileName)
       // set filtering options and attach texture to shader
       glUseProgram(_shaderProgram);
       glGenerateMipmap(GL_TEXTURE_2D);
-      glUniform1i(glGetUniformLocation(_shaderProgram, "diffuseMap"), 0);
+      glUniform1i(glGetUniformLocation(_shaderProgram, "diffTexMap"), 0);
       
       return true;
     }
@@ -637,6 +632,10 @@ ParticleSystemComponent * Entity::particleSystem() const
   return _particleSystem;
 }
 
+const mat4 & Entity::previousWorldTransform() const
+{
+  return _previousWorldTransform;
+}
 const vec3 & Entity::localPosition() const    { return _localPosition; }
 const quat & Entity::localOrientation() const { return _localOrientation; }
 const vec3 & Entity::localScale() const       { return _localScale; }
@@ -665,14 +664,16 @@ Entity::Entity()
   , _force(0.0f)
   , _enabled(false)
   , _type(Default)
-  , _transformNeedsUpdating(true)
+  , _transformInvalid(true)
 {}
 
 void Entity::init(Core * core)
 {
-  _core = core;
+  // initialize properties
+  _core    = core;
   _enabled = true;
   
+  // initialize components
   if (_input)          _input->init(this);
   if (_animation)      _animation->init(this);
   if (_collider)       _collider->init(this);
@@ -681,16 +682,21 @@ void Entity::init(Core * core)
   if (_graphics)       _graphics->init(this);
   if (_particleSystem) _particleSystem->init(this);
   
+  // initial frame
+  nextFrame();
+  
+  // set up notifications for when the transform of the entity changes
   if (_parent)
   {
     auto eventHandler = [this](Event)
     {
-      _transformNeedsUpdating = true;
+      _transformInvalid = true;
       NotificationCenter::notify(DidUpdateTransform, *this);
     };
     NotificationCenter::observe(eventHandler, DidUpdateTransform, _parent);
   }
   
+  // recurse initialization on children
   for (auto child : _children) child->init(core);
 }
 
@@ -722,6 +728,11 @@ void Entity::destroy()
   if (_audio)          delete _audio;
   if (_graphics)       delete _graphics;
   if (_particleSystem) delete _particleSystem;
+}
+
+void Entity::nextFrame()
+{
+  _previousWorldTransform = worldTransform();
 }
 
 void Entity::addChild(Entity * child)
@@ -839,19 +850,19 @@ vec3 Entity::localBackward() const
 
 const vec3 & Entity::worldPosition() const
 {
-  if (_transformNeedsUpdating) _updateTransform();
+  if (_transformInvalid) _updateTransform();
   return _worldPosition;
 }
 
 const quat & Entity::worldOrientation() const
 {
-  if (_transformNeedsUpdating) _updateTransform();
+  if (_transformInvalid) _updateTransform();
   return _worldOrientation;
 }
 
 const vec3 & Entity::worldScale() const
 {
-  if (_transformNeedsUpdating) _updateTransform();
+  if (_transformInvalid) _updateTransform();
   return _worldScale;
 }
 
@@ -878,7 +889,7 @@ mat4 Entity::worldScaling() const
 void Entity::translate(const vec3 & d)
 {
   _localPosition += d;
-  _transformNeedsUpdating = true;
+  _transformInvalid = true;
   NotificationCenter::notify(DidUpdateTransform, *this);
 }
 
@@ -886,7 +897,7 @@ void Entity::rotate(float angle, const vec3 & axis)
 {
   quat newQuat = glm::angleAxis(angle, axis) * _localOrientation;
   _localOrientation = glm::normalize(newQuat);
-  _transformNeedsUpdating = true;
+  _transformInvalid = true;
   NotificationCenter::notify(DidUpdateTransform, *this);
 }
 
@@ -898,7 +909,7 @@ void Entity::scale(float s)
 void Entity::scale(const vec3 & s)
 {
   _localScale *= s;
-  _transformNeedsUpdating = true;
+  _transformInvalid = true;
   NotificationCenter::notify(DidUpdateTransform, *this);
 }
 
@@ -944,7 +955,7 @@ void Entity::reorient(const vec3 & o)
   quat qY = glm::angleAxis(o.y, Core::WORLD_UP);
   quat qZ = glm::angleAxis(o.z, Core::WORLD_BACKWARD);
   _localOrientation = qZ * qY * qX;
-  _transformNeedsUpdating = true;
+  _transformInvalid = true;
   NotificationCenter::notify(DidUpdateTransform, *this);
 }
 
@@ -1074,7 +1085,7 @@ void Entity::_updateTransform() const
     _worldOrientation = _localOrientation;
     _worldScale       = _localScale;
   }
-  _transformNeedsUpdating = false;
+  _transformInvalid = false;
 }
 
 
@@ -1093,6 +1104,7 @@ const Entity & Core::root() const { return _root; };
 Entity * Core::camera() const     { return _camera; };
 
 double Core::deltaTime() const            { return _deltaTime; };
+bool Core::mouseClick() const             { return _mouseClick; };
 const ivec2 & Core::mousePosition() const { return _mousePosition; };
 const ivec2 & Core::mouseMovement() const { return _mouseMovement; };
 
@@ -1234,40 +1246,45 @@ bool _linkProgram(GLuint program)
   return true;
 }
 
-maybe<GLuint> Core::CreateShaderProgram(const char * vertexShaderFileName,
-                                        const char * fragmentShaderFileName)
+maybe<GLuint> Core::CreateShaderProgram(const char * vsfn, const char * fsfn)
 {
-  GLuint vertexShader   = glCreateShader(GL_VERTEX_SHADER);
-  GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+  // shaders
+  GLuint vs = glCreateShader(GL_VERTEX_SHADER);
+  GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
   
-  ifstream vertexShaderFile(vertexShaderFileName);
-  string vertexShaderSource((istreambuf_iterator<char>(vertexShaderFile)),
-                            istreambuf_iterator<char>());
+  // vertex shader source
+  ifstream vsf(vsfn);
+  string vss((istreambuf_iterator<char>(vsf)), istreambuf_iterator<char>());
   
-  ifstream fragmentShaderFile(fragmentShaderFileName);
-  string fragmentShaderSource((istreambuf_iterator<char>(fragmentShaderFile)),
-                              istreambuf_iterator<char>());
+  // fragment shader source
+  ifstream fsf(fsfn);
+  string fss((istreambuf_iterator<char>(fsf)), istreambuf_iterator<char>());
   
-  const char * vertexShaderSourceStr   = vertexShaderSource.c_str();
-  const char * fragmentShaderSourceStr = fragmentShaderSource.c_str();
+  // sources in c string format
+  const char * vssCStr = vss.c_str();
+  const char * fssCStr = fss.c_str();
   
-  glShaderSource(vertexShader, 1, &vertexShaderSourceStr, nullptr);
-  glShaderSource(fragmentShader, 1, &fragmentShaderSourceStr, nullptr);
+  // bind sources to shaders
+  glShaderSource(vs, 1, &vssCStr, nullptr);
+  glShaderSource(fs, 1, &fssCStr, nullptr);
   
-  if (!_compileShader(vertexShader,   vertexShaderFileName) ||
-      !_compileShader(fragmentShader, fragmentShaderFileName))
+  // compile and check if it succeeded
+  if (!_compileShader(vs, vsfn) || !_compileShader(fs, fsfn))
     return maybe<GLuint>::nothing();
   
-  GLuint shaderProgram = glCreateProgram();
-  glAttachShader(shaderProgram, fragmentShader);
-  glAttachShader(shaderProgram, vertexShader);
-  glDeleteShader(vertexShader);
-  glDeleteShader(fragmentShader);
+  // merge shaders into one program
+  GLuint shaderProg = glCreateProgram();
+  glAttachShader(shaderProg, fs);
+  glAttachShader(shaderProg, vs);
+  glDeleteShader(vs);
+  glDeleteShader(fs);
   CHECK_GL_ERROR(true);
-  if (!_linkProgram(shaderProgram))
+  
+  // link program
+  if (!_linkProgram(shaderProg))
     return maybe<GLuint>::nothing();
   
-  return maybe<GLuint>::just(shaderProgram);
+  return maybe<GLuint>::just(shaderProg);
 }
 
 bool Core::CheckGLError(bool fatal)
@@ -1284,7 +1301,8 @@ bool Core::CheckGLError(bool fatal)
 
 // MARK: Member functions
 Core::Core(int numberOfEntities)
-  : _mousePosition(0, 0)
+  : _mouseClick(false)
+  , _mousePosition(0, 0)
   , _mouseMovement(0, 0)
   , _sampleRate(44100)
   , _maxVolume(0.05)
@@ -1445,11 +1463,14 @@ bool Core::init(CoreOptions & options)
   if (result.isNothing()) return false;
   _lightingPass = result;
   
-  // set shader samplers
+  // set shader uniforms
   glUseProgram(_lightingPass);
-  glUniform1i(glGetUniformLocation(_lightingPass, "gPosition"), 0);
-  glUniform1i(glGetUniformLocation(_lightingPass, "gNormal"), 1);
-  glUniform1i(glGetUniformLocation(_lightingPass, "gColor"), 2);
+  glUniform1i(glGetUniformLocation(_lightingPass, "gCol"), 0);
+  glUniform1i(glGetUniformLocation(_lightingPass, "gPos"), 1);
+  glUniform1i(glGetUniformLocation(_lightingPass, "gNorm"), 2);
+  
+  // retrieve shader uniform location
+  _numLightsLoc = glGetUniformLocation(_lightingPass, "numLights");
   
   // initialize entities
   _root.init(this);
@@ -1520,8 +1541,10 @@ bool Core::init(CoreOptions & options)
   SDL_PauseAudio(0);
   
   // initialize GUI properties
-  _deferredEnabled   = true;
-  _particlesEnabled  = true;
+  _controlsEnabled   = true;
+  _deferredEnabled   = false;
+  _numLights         = (int)_lights.size();
+  _particlesEnabled  = false;
   _particleSpawnRate = 64;
   _particleLifeTime  = 1.0f;
   _particleConeSize  = 0.05f;
@@ -1549,31 +1572,43 @@ bool Core::update()
   ////////////////////////////////////////
   
   // check user input
-  _mouseMovement.x = 0;
-  _mouseMovement.y = 0;
   SDL_Event event;
   set<SDL_Keycode> keysToPress, keysToRelease;
+  _mouseMovement.x = 0;
+  _mouseMovement.y = 0;
   while (SDL_PollEvent(&event))
   {
     ImGui_ImplSdlGL3_ProcessEvent(&event);
     
     switch (event.type)
     {
-      case SDL_QUIT:
-        shouldContinue = false;
+      case SDL_MOUSEBUTTONDOWN:
+        keysToPress.insert(event.button.button);
         break;
-      case SDL_KEYDOWN:
-        keysToPress.insert(event.key.keysym.sym);
+      case SDL_MOUSEBUTTONUP:
+        keysToRelease.insert(event.button.button);
         break;
-      case SDL_KEYUP:
-        keysToRelease.insert(event.key.keysym.sym);
-        break;
-      case SDL_MOUSEMOTION:
-        _mousePosition.x = event.motion.x;
-        _mousePosition.y = event.motion.y;
-        _mouseMovement.x = event.motion.xrel;
-        _mouseMovement.y = event.motion.yrel;
-        break;
+    }
+    if (_controlsEnabled)
+    {
+      switch (event.type)
+      {
+        case SDL_QUIT:
+          shouldContinue = false;
+          break;
+        case SDL_KEYDOWN:
+          keysToPress.insert(event.key.keysym.sym);
+          break;
+        case SDL_KEYUP:
+          keysToRelease.insert(event.key.keysym.sym);
+          break;
+        case SDL_MOUSEMOTION:
+          _mousePosition.x = event.motion.x;
+          _mousePosition.y = event.motion.y;
+          _mouseMovement.x = event.motion.xrel;
+          _mouseMovement.y = event.motion.yrel;
+          break;
+      }
     }
   }
   
@@ -1762,38 +1797,39 @@ bool Core::update()
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glUseProgram(_lightingPass);
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, _geometryPositionMap);
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, _geometryNormalMap);
-    glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, _geometryColorMap);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, _geometryPositionMap);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, _geometryNormalMap);
     
     // update uniform data in shader
     for (int i = 0; i < _lights.size(); ++i)
     {
-      Entity * light         = _lights[i];
-      const vec3 position    = light->worldPosition();
-      const vec3 color       = light->graphics()
+      Entity * light        = _lights[i];
+      const vec3 pos        = light->worldPosition();
+      const vec3 col        = light->graphics()
         ? light->graphics()->diffuseColor()
         : vec3(1.0f);
-      const float linear     = 0.22f;
-      const float quadratic  = 0.20f;
+      const float lin       = 0.22f;
+      const float quad      = 0.20f;
       
-      const string prefix    = "lights[" + to_string(i) + "].";
-      const char * posName   = (prefix + "position").c_str();
-      const char * colName   = (prefix + "color").c_str();
-      const char * linName   = (prefix + "linear").c_str();
-      const char * quadName  = (prefix + "quadratic").c_str();
-      const GLuint posLoc    = glGetUniformLocation(_lightingPass, posName);
-      const GLuint colLoc    = glGetUniformLocation(_lightingPass, colName);
-      const GLuint linLoc    = glGetUniformLocation(_lightingPass, linName);
-      const GLuint quadLoc   = glGetUniformLocation(_lightingPass, quadName);
+      const string prefix   = "lights[" + to_string(i) + "].";
+      const char * posName  = (prefix + "pos").c_str();
+      const char * colName  = (prefix + "col").c_str();
+      const char * linName  = (prefix + "lin").c_str();
+      const char * quadName = (prefix + "quad").c_str();
+      const GLuint posLoc   = glGetUniformLocation(_lightingPass, posName);
+      const GLuint colLoc   = glGetUniformLocation(_lightingPass, colName);
+      const GLuint linLoc   = glGetUniformLocation(_lightingPass, linName);
+      const GLuint quadLoc  = glGetUniformLocation(_lightingPass, quadName);
       
-      glUniform3fv(posLoc, 1, &position.x);
-      glUniform3fv(colLoc, 1, &color.x);
-      glUniform1f(linLoc, linear);
-      glUniform1f(quadLoc, quadratic);
+      glUniform3fv(posLoc, 1, &pos.x);
+      glUniform3fv(colLoc, 1, &col.x);
+      glUniform1f(linLoc, lin);
+      glUniform1f(quadLoc, quad);
     }
+    glUniform1i(_numLightsLoc, _numLights);
     
     // draw fullscreen quad
     glBindVertexArray(_quadVertexArrayObject);
@@ -1848,17 +1884,19 @@ bool Core::update()
   }
   
   // set controls
-  ImGui::Text("Statistics");
-  ImGui::LabelText("Number of lights", "%lu", _lights.size());
-  ImGui::LabelText("Frame rate", "%0.1f", frameRate);
-  ImGui::Text("Shading");
-  ImGui::Checkbox("Deferred", &_deferredEnabled);
-  ImGui::Text("Particles");
-  ImGui::Checkbox("Enabled", &_particlesEnabled);
-  ImGui::SliderInt("Spawn rate", &_particleSpawnRate, 0, 256);
-  ImGui::SliderFloat("Life time", &_particleLifeTime, 0.0f, 10.0f);
-  ImGui::SliderFloat("Cone size", &_particleConeSize, 0.01f, 1.0f);
-  ImGui::SliderFloat("Velocity", &_particleVelocity, 0.1f, 10.0f);
+  ImGui::Text("%0.1f fps", frameRate);
+  ImGui::Checkbox("Controls", &_controlsEnabled);
+  ImGui::Checkbox("Deferred shading", &_deferredEnabled);
+  if (_deferredEnabled)
+    ImGui::SliderInt("Number of lights", &_numLights, 0, (int)_lights.size());
+  ImGui::Checkbox("Particles", &_particlesEnabled);
+  if (_particlesEnabled)
+  {
+    ImGui::SliderInt("Spawn rate", &_particleSpawnRate, 0, 256);
+    ImGui::SliderFloat("Life time", &_particleLifeTime, 0.0f, 10.0f);
+    ImGui::SliderFloat("Cone size", &_particleConeSize, 0.01f, 1.0f);
+    ImGui::SliderFloat("Velocity", &_particleVelocity, 0.1f, 10.0f);
+  }
   
   // render
   ImGui::Render();
@@ -1957,7 +1995,7 @@ void Core::createAccumulativeTimer(double duration, function<void()> block)
   });
 }
 
-void Core::addControl(string name, SDL_Keycode key)
+void Core::addControl(string name, int key)
 {
   _keyControls[name] = {key, false};
 }

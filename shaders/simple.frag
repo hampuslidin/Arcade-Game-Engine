@@ -2,13 +2,13 @@
 
 precision highp float;
 
-uniform sampler2D diffuseMap;
+uniform sampler2D diffTexMap;
 
-in vec2 fTextureCoordinates;
+in vec2 fTexCoords;
 
-layout(location = 0) out vec4 color;
+layout(location = 0) out vec4 col;
 
 void main() 
 {
-  color = texture(colorTexture, fTextureCoordinates);
+  col = texture(diffTexMap, fTexCoords);
 }

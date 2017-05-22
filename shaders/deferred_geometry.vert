@@ -1,21 +1,23 @@
 #version 410
 
-uniform mat4 modelMatrix;
-uniform mat4 modelViewProjectionMatrix;
-uniform mat3 normalMatrix;
+uniform mat4 prevM;  // previous model matrix
+uniform mat4 M;      // model matrix
+uniform mat4 V;      // view matrix
+uniform mat4 P;      // projection matrix
+uniform mat3 N;      // normal matrix
 
-layout(location = 0) in vec3 vPosition;
-layout(location = 1) in vec3 vNormal;
-layout(location = 2) in vec2 vTextureCoordinates;
+layout(location = 0) in vec3 vPos;
+layout(location = 1) in vec3 vNorm;
+layout(location = 2) in vec2 vTexCoords;
 
-out vec3 fPosition;
-out vec3 fNormal;
-out vec2 fTextureCoordinates;
+out vec3 fPos;
+out vec3 fNorm;
+out vec2 fTexCoords;
 
 void main() 
 {
-	gl_Position         = modelViewProjectionMatrix * vec4(vPosition, 1.0);
-  fPosition           = (modelMatrix * vec4(vPosition, 1.0)).xyz;
-  fNormal             = normalMatrix * vNormal;
-	fTextureCoordinates = vTextureCoordinates;
+	gl_Position = P * V * M * vec4(vPos, 1.0);
+  fPos        = (M * vec4(vPos, 1.0)).xyz;
+  fNorm       = N * vNorm;
+	fTexCoords  = vTexCoords;
 }

@@ -2,19 +2,19 @@
 
 precision highp float;
 
-uniform sampler2D diffuseMap;
+uniform sampler2D diffTexMap;
 
-in vec3 fPosition;
-in vec3 fNormal;
-in vec2 fTextureCoordinates;
+in vec3 fPos;
+in vec3 fNorm;
+in vec2 fTexCoords;
 
-layout(location = 0) out vec3 gColor;
-layout(location = 1) out vec3 gPosition;
-layout(location = 2) out vec3 gNormal;
+layout(location = 0) out vec3 gCol;
+layout(location = 1) out vec3 gPos;
+layout(location = 2) out vec3 gNorm;
 
 void main() 
 {
-  gColor    = texture(diffuseMap, fTextureCoordinates).rgb;
-  gPosition = fPosition;
-  gNormal   = normalize(fNormal);
+  gCol  = texture(diffTexMap, fTexCoords).rgb;
+  gPos  = fPos;
+  gNorm = normalize(fNorm);
 }
