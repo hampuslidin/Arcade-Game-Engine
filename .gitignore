@@ -38,6 +38,9 @@ Arcade Game Engine/external/
 *.out
 *.app
 
+# Other
+*.ini
+
 # macOS
 *.DS_Store
 

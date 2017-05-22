@@ -760,6 +760,11 @@ public:
   int scale() const;
   const vec3 & backgroundColor() const;
   
+  int particleSpawnRate() const;
+  float particleLifeTime() const;
+  float particleConeSize() const;
+  float particleVelocity() const;
+  
   static constexpr float UNITS_PER_METER = 1.0f;
   static const vec3 WORLD_UP;
   static const vec3 WORLD_DOWN;
@@ -914,9 +919,9 @@ private:
   
   GLuint _quadVertexArrayObject;
   GLuint _geometryBuffer;
+  GLuint _geometryColorMap;
   GLuint _geometryPositionMap;
   GLuint _geometryNormalMap;
-  GLuint _geometryColorMap;
   GLuint _lightingPass;
   
   mat4 _viewMatrix;
@@ -944,4 +949,10 @@ private:
   bool _reset;
   bool _pause;
   
+  bool _deferredEnabled;
+  bool _particlesEnabled;
+  int _particleSpawnRate;
+  float _particleLifeTime;
+  float _particleConeSize;
+  float _particleVelocity;
 };

@@ -35,12 +35,12 @@ public:
     pitch -= 0.01f * core.mouseMovement().y;
     float distance = 2500.0f * core.deltaTime();
     
-    const vec3 localUp       = entity()->localUp();
+//    const vec3 localUp       = entity()->localUp();
     const vec3 localRight    = entity()->localRight();
     const vec3 localBackward = entity()->localBackward();
     
-    entity()->rotate(-0.01f * core.mouseMovement().x, localUp);
-    entity()->rotate(-0.01f * core.mouseMovement().y, localRight);
+//    entity()->rotate(-0.01f * core.mouseMovement().x, localUp);
+//    entity()->rotate(-0.01f * core.mouseMovement().y, localRight);
     
     vec3 f(0.0f);
     if (core.checkKey("up"))    f -= distance*localBackward;
@@ -51,6 +51,7 @@ public:
   }
   
 };
+
 
 class SpinInputComponent
   : public InputComponent
@@ -68,6 +69,7 @@ public:
   }
   
 };
+
 
 class DesertLightInputComponent
   : public InputComponent
@@ -105,6 +107,7 @@ private:
   bool _initialized;
 };
 
+
 class OrbitInputController
   : public InputComponent
 {
@@ -129,6 +132,7 @@ private:
   float _radius;
   
 };
+
 
 class RandomOrbitInputController
   : public InputComponent
@@ -175,6 +179,7 @@ public:
     setKinematic(true);
   }
 };
+
 
 class KinematicRigidBodyComponent
   : public RigidBodyComponent
@@ -262,6 +267,7 @@ public:
   }
   
 };
+
 
 class DeferredGraphicsComponent
   : public GraphicsComponent

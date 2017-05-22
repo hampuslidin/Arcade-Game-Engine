@@ -10,6 +10,8 @@
 #include "stb_image.h"
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
+#include "imgui.h"
+#include "imgui_impl_sdl_gl3.h"
 
 using namespace tinyobj;
 
@@ -480,15 +482,21 @@ void ParticleSystemComponent::render(const Core & core)
 {
   // spawn new particles
   const mat4 model = entity()->worldTranslation() * entity()->worldRotation();
-  const int amount = std::min(_maxNumberOfParticles-(int)_particles.size(), 64);
+  const int amount = std::min(_maxNumberOfParticles-(int)_particles.size(),
+                              core.particleSpawnRate());
   for (int i = 0; i < amount; ++i)
   {
     const float theta = Core::uniformRandom(0.0f, 2.0f*M_PI);
-    const float u     = Core::uniformRandom(0.95f, 1.0f);
+    const float u     = Core::uniformRandom(1.0f-core.particleConeSize(), 1.0f);
     const float c     = sqrt(1.0f - u*u);
     const vec4 p = model * vec4(0.0f, 0.0f, 0.0f, 1.0f);
     const vec3 v = vec3(model * vec4(u, c*cosf(theta), c*sinf(theta), 0.0f));
-    _particles.push_back({0.0f, 1.0f, vec3(p)/p.w, 2.0f*v});
+    _particles.push_back
+    ({
+      0.0f,
+      core.particleLifeTime(),
+      vec3(p)/p.w,
+      core.particleVelocity()*v});
   }
   
   // remove dead particles
@@ -1097,6 +1105,11 @@ const mat4 & Core::projectionMatrix() const { return _projectionMatrix; };
 int Core::scale() const                    { return _scale; };
 const vec3 & Core::backgroundColor() const { return _backgroundColor; };
 
+int Core::particleSpawnRate() const  { return _particleSpawnRate; };
+float Core::particleLifeTime() const { return _particleLifeTime; };
+float Core::particleConeSize() const { return _particleConeSize; };
+float Core::particleVelocity() const { return _particleVelocity; };
+
 const vec3 Core::WORLD_UP       { 0.0f,  1.0f,  0.0f};
 const vec3 Core::WORLD_DOWN     { 0.0f, -1.0f,  0.0f};
 const vec3 Core::WORLD_LEFT     {-1.0f,  0.0f,  0.0f};
@@ -1328,7 +1341,7 @@ bool Core::init(CoreOptions & options)
     SDL_Log("SDL_CreateWindow: %s\n", SDL_GetError());
     return false;
   }
-  SDL_SetRelativeMouseMode(SDL_TRUE);
+//  SDL_SetRelativeMouseMode(SDL_TRUE);
   
   // create context for window
   _context = SDL_GL_CreateContext(_window);
@@ -1343,6 +1356,9 @@ bool Core::init(CoreOptions & options)
 #endif
   glewInit();
   CHECK_GL_ERROR(false);
+  
+  // initialize ImGUI
+  ImGui_ImplSdlGL3_Init(_window);
   
   // enable v-sync
   SDL_GL_SetSwapInterval(1);
@@ -1379,13 +1395,22 @@ bool Core::init(CoreOptions & options)
   
   // generate textures for geometry buffer
   const ivec2 d = viewDimensions();
+  glGenTextures(1, &_geometryColorMap);
+  glBindTexture(GL_TEXTURE_2D, _geometryColorMap);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, d.x, d.y, 0,
+               GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         _geometryColorMap, 0);
+  
   glGenTextures(1, &_geometryPositionMap);
   glBindTexture(GL_TEXTURE_2D, _geometryPositionMap);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, d.x, d.y, 0,
                GL_RGB, GL_FLOAT, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
                          _geometryPositionMap, 0);
   
   glGenTextures(1, &_geometryNormalMap);
@@ -1394,17 +1419,8 @@ bool Core::init(CoreOptions & options)
                GL_RGB, GL_FLOAT, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
-                         _geometryNormalMap, 0);
-  
-  glGenTextures(1, &_geometryColorMap);
-  glBindTexture(GL_TEXTURE_2D, _geometryColorMap);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, d.x, d.y, 0,
-               GL_RGB, GL_UNSIGNED_BYTE, nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D,
-                         _geometryColorMap, 0);
+                         _geometryNormalMap, 0);
   
   GLuint attachments[3] =
   {
@@ -1503,6 +1519,14 @@ bool Core::init(CoreOptions & options)
   
   SDL_PauseAudio(0);
   
+  // initialize GUI properties
+  _deferredEnabled   = true;
+  _particlesEnabled  = true;
+  _particleSpawnRate = 64;
+  _particleLifeTime  = 1.0f;
+  _particleConeSize  = 0.05f;
+  _particleVelocity  = 5.0f;
+  
   return true;
 }
 
@@ -1531,6 +1555,8 @@ bool Core::update()
   set<SDL_Keycode> keysToPress, keysToRelease;
   while (SDL_PollEvent(&event))
   {
+    ImGui_ImplSdlGL3_ProcessEvent(&event);
+    
     switch (event.type)
     {
       case SDL_QUIT:
@@ -1712,8 +1738,11 @@ bool Core::update()
   // clear default and geometry framebuffers
   glClearColor(_backgroundColor.r, _backgroundColor.g, _backgroundColor.b, 1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  glBindFramebuffer(GL_FRAMEBUFFER, _geometryBuffer);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  if (_deferredEnabled)
+  {
+    glBindFramebuffer(GL_FRAMEBUFFER, _geometryBuffer);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  }
   
   // render entities to geometry buffer
   for (int i = 0; i < _entityCount; ++i)
@@ -1727,53 +1756,56 @@ bool Core::update()
   // DEFERRED RENDERING
   ////////////////////////////////////////
 
-  // bind textures
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  glUseProgram(_lightingPass);
-  glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, _geometryPositionMap);
-  glActiveTexture(GL_TEXTURE1);
-  glBindTexture(GL_TEXTURE_2D, _geometryNormalMap);
-  glActiveTexture(GL_TEXTURE2);
-  glBindTexture(GL_TEXTURE_2D, _geometryColorMap);
-  
-  // update uniform data in shader
-  for (int i = 0; i < _lights.size(); ++i)
+  if (_deferredEnabled)
   {
-    Entity * light         = _lights[i];
-    const vec3 position    = light->worldPosition();
-    const vec3 color       = light->graphics()
-      ? light->graphics()->diffuseColor()
-      : vec3(1.0f);
-    const float linear     = 0.22f;
-    const float quadratic  = 0.20f;
+    // bind textures
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glUseProgram(_lightingPass);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, _geometryPositionMap);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, _geometryNormalMap);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, _geometryColorMap);
     
-    const string prefix    = "lights[" + to_string(i) + "].";
-    const char * posName   = (prefix + "position").c_str();
-    const char * colName   = (prefix + "color").c_str();
-    const char * linName   = (prefix + "linear").c_str();
-    const char * quadName  = (prefix + "quadratic").c_str();
-    const GLuint posLoc    = glGetUniformLocation(_lightingPass, posName);
-    const GLuint colLoc    = glGetUniformLocation(_lightingPass, colName);
-    const GLuint linLoc    = glGetUniformLocation(_lightingPass, linName);
-    const GLuint quadLoc   = glGetUniformLocation(_lightingPass, quadName);
+    // update uniform data in shader
+    for (int i = 0; i < _lights.size(); ++i)
+    {
+      Entity * light         = _lights[i];
+      const vec3 position    = light->worldPosition();
+      const vec3 color       = light->graphics()
+        ? light->graphics()->diffuseColor()
+        : vec3(1.0f);
+      const float linear     = 0.22f;
+      const float quadratic  = 0.20f;
+      
+      const string prefix    = "lights[" + to_string(i) + "].";
+      const char * posName   = (prefix + "position").c_str();
+      const char * colName   = (prefix + "color").c_str();
+      const char * linName   = (prefix + "linear").c_str();
+      const char * quadName  = (prefix + "quadratic").c_str();
+      const GLuint posLoc    = glGetUniformLocation(_lightingPass, posName);
+      const GLuint colLoc    = glGetUniformLocation(_lightingPass, colName);
+      const GLuint linLoc    = glGetUniformLocation(_lightingPass, linName);
+      const GLuint quadLoc   = glGetUniformLocation(_lightingPass, quadName);
+      
+      glUniform3fv(posLoc, 1, &position.x);
+      glUniform3fv(colLoc, 1, &color.x);
+      glUniform1f(linLoc, linear);
+      glUniform1f(quadLoc, quadratic);
+    }
     
-    glUniform3fv(posLoc, 1, &position.x);
-    glUniform3fv(colLoc, 1, &color.x);
-    glUniform1f(linLoc, linear);
-    glUniform1f(quadLoc, quadratic);
+    // draw fullscreen quad
+    glBindVertexArray(_quadVertexArrayObject);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    
+    // copy depth data to default framebuffer
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, _geometryBuffer);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    glBlitFramebuffer(0, 0, d.x, d.y, 0, 0, d.x, d.y, GL_DEPTH_BUFFER_BIT,
+                      GL_NEAREST);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
   }
-  
-  // draw fullscreen quad
-  glBindVertexArray(_quadVertexArrayObject);
-  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-  
-  // copy depth data to default framebuffer
-  glBindFramebuffer(GL_READ_FRAMEBUFFER, _geometryBuffer);
-  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-  glBlitFramebuffer(0, 0, d.x, d.y, 0, 0, d.x, d.y, GL_DEPTH_BUFFER_BIT,
-                    GL_NEAREST);
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
   // render light entities
   for (auto light : _lights)
@@ -1782,13 +1814,54 @@ bool Core::update()
       light->graphics()->render(*this);
   }
 
-  // render particles
-  for (int i = 0; i < _entityCount; ++i)
+  if (_particlesEnabled)
   {
-    auto & entity = _entities[i];
-    if (entity.enabled() && entity.particleSystem())
-      entity.particleSystem()->render(*this);
+    // render particles
+    for (int i = 0; i < _entityCount; ++i)
+    {
+      auto & entity = _entities[i];
+      if (entity.enabled() && entity.particleSystem())
+        entity.particleSystem()->render(*this);
+    }
   }
+  
+  ////////////////////////////////////////
+  // GUI
+  ////////////////////////////////////////
+  
+  // create frame
+  ImGui_ImplSdlGL3_NewFrame(_window);
+  
+  // calculate frame rate
+  static double       frameRate      = 0.0;
+  static int          frameCount     = 0;
+  static double       timeStamp      = 0.0;
+  static const double updateInterval = 0.25;
+  const double        elapsed        = elapsedTime();
+  ++frameCount;
+  if (elapsed > timeStamp+updateInterval)
+  {
+    const double diff = elapsed-timeStamp;
+    frameRate         = frameCount / diff;
+    timeStamp        += int(diff/updateInterval)*updateInterval;
+    frameCount        = 0;
+  }
+  
+  // set controls
+  ImGui::Text("Statistics");
+  ImGui::LabelText("Number of lights", "%lu", _lights.size());
+  ImGui::LabelText("Frame rate", "%0.1f", frameRate);
+  ImGui::Text("Shading");
+  ImGui::Checkbox("Deferred", &_deferredEnabled);
+  ImGui::Text("Particles");
+  ImGui::Checkbox("Enabled", &_particlesEnabled);
+  ImGui::SliderInt("Spawn rate", &_particleSpawnRate, 0, 256);
+  ImGui::SliderFloat("Life time", &_particleLifeTime, 0.0f, 10.0f);
+  ImGui::SliderFloat("Cone size", &_particleConeSize, 0.01f, 1.0f);
+  ImGui::SliderFloat("Velocity", &_particleVelocity, 0.1f, 10.0f);
+  
+  // render
+  ImGui::Render();
   
   // swap buffers
   SDL_GL_SwapWindow(_window);
@@ -1829,6 +1902,8 @@ void Core::destroy()
 {
   _root.destroy();
   
+  ImGui_ImplSdlGL3_NewFrame(_window);
+  ImGui_ImplSdlGL3_Shutdown();
   SDL_CloseAudio();
   SDL_DestroyWindow(_window);
   SDL_Quit();
