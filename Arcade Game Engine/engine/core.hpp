@@ -469,7 +469,9 @@ public:
   // MARK: Properties
   const vector<float> & vertices() const;
   int numberOfVertices() const;
+  bool hasDiffuseTexture() const;
   const vec3 & diffuseColor() const;
+  bool deferredShading() const;
   
   // MARK: Member functions
   GraphicsComponent();
@@ -484,15 +486,18 @@ public:
   string trait() const;
   
   void diffuseColor(const vec3 & color);
+  void deferredShading(bool enabled);
   
 private:
   vector<float> _verts;       // vertices array
   
+  bool _hasDiffTex;           // diffuse texture flag
   vec3 _diffCol;              // diffuse color
+  
+  bool _deferShading;         // deferred shading flag
   
   GLuint _vao;                // vertex array object
   GLuint _diffTexMap;         // diffuse texture map
-  GLuint _shaderProg;         // shader program
   GLint  _prevMLoc, _MLoc;    // current and previous model matrix locations
   GLuint _VLoc, _PLoc, _NLoc; // view, projection and normal matrix locations
   GLuint _diffColLoc;         // diffuse color location
@@ -535,7 +540,7 @@ private:
   GLuint _particleDataBuffer;
   GLuint _shaderProgram;
   GLuint _diffuseMap;
-  GLuint _projectionMatrixLocation;
+  GLuint _projMatrixLocation;
   GLuint _screenWidthLocation;
   GLuint _screenHeightLocation;
   
@@ -854,7 +859,7 @@ public:
   
   // MARK: Member functions
   Core(int numberOfEntities);
-  bool init(CoreOptions & options);
+  bool init(const CoreOptions & options);
   bool update();
   void destroy();
   
@@ -909,6 +914,11 @@ private:
     int i;
     const float * v;
   };
+  struct _Shader
+  {
+    GLuint              prog;
+    map<string, GLuint> locs;
+  };
   
   Entity   _root;
   Entity * _camera;
@@ -921,19 +931,16 @@ private:
   int    _sampleRate;
   double _maxVolume;
   
-  GLuint _quadVertexArrayObject;
-  GLuint _geometryBuffer;
-  GLuint _geometryColorMap;
-  GLuint _geometryPositionMap;
-  GLuint _geometryNormalMap;
-  GLuint _lightingPass;
-  GLuint _numLightsLoc;
+  _Shader _defaultSh, _deferSh, _lightSh;
+  GLuint  _quadVAO;
+  GLuint  _geomBuf;
+  GLuint  _geomPosMap, _geomNormMap, _geomColMap;
   
   mat4 _viewMatrix;
-  mat4 _projectionMatrix;
+  mat4 _projMatrix;
   
   int  _scale;
-  vec3 _backgroundColor;
+  vec3 _bgColor;
   
   SDL_Window *  _window;
   SDL_GLContext _context;
@@ -962,4 +969,12 @@ private:
   float _particleLifeTime;
   float _particleConeSize;
   float _particleVelocity;
+  
+  bool _initFrameworks(const char * title, int scrnW, int scrnH);
+  void _generateBuffers();
+  bool _createShader(_Shader & sh, const char * vsfn, const char * fsfn,
+                     const vector<string> & ids);
+  bool _createDefaultShader();
+  bool _createDeferredShader();
+  bool _createLightShader();
 };

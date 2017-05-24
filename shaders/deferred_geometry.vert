@@ -1,10 +1,9 @@
 #version 410
 
-uniform mat4 prevM;  // previous model matrix
-uniform mat4 M;      // model matrix
-uniform mat4 V;      // view matrix
-uniform mat4 P;      // projection matrix
-uniform mat3 N;      // normal matrix
+uniform mat4 M; // model matrix
+uniform mat4 V; // view matrix
+uniform mat4 P; // projection matrix
+uniform mat3 N; // normal matrix
 
 layout(location = 0) in vec3 vPos;
 layout(location = 1) in vec3 vNorm;

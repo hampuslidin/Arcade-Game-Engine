@@ -46,6 +46,8 @@
 		D2479B5F1E8301F70039DE28 /* deferred_geometry.vert */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; name = deferred_geometry.vert; path = ../shaders/deferred_geometry.vert; sourceTree = "<group>"; };
 		D2569F8A1E6AE1D100637699 /* tinyxml2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 2; name = tinyxml2.h; path = external/tinyxml2/tinyxml2.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		D2569F8B1E6AE1D100637699 /* tinyxml2.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 2; name = tinyxml2.cpp; path = external/tinyxml2/tinyxml2.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		D280597B1ED5C2D80020E358 /* motion_blur.vert */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = motion_blur.vert; path = shaders/motion_blur.vert; sourceTree = SOURCE_ROOT; };
+		D280597C1ED5C2EC0020E358 /* motion_blur.frag */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = motion_blur.frag; path = shaders/motion_blur.frag; sourceTree = SOURCE_ROOT; };
 		D282A1B61EC4D2A200C3E747 /* default.frag */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = default.frag; path = shaders/default.frag; sourceTree = SOURCE_ROOT; };
 		D28DB7F81EC33E170066391E /* stb_image.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = stb_image.h; sourceTree = "<group>"; };
 		D29D666F1E80175100CA60AC /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = main.cpp; path = demo/main.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
@@ -59,8 +61,6 @@
 		D2C3FCBE1ECAD45200A3DCBD /* default.vert */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = default.vert; path = ../shaders/default.vert; sourceTree = "<group>"; };
 		D2C3FCC01ECAFA2D00A3DCBD /* deferred_lighting.frag */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = deferred_lighting.frag; path = shaders/deferred_lighting.frag; sourceTree = SOURCE_ROOT; };
 		D2C3FCC11ECAFAF100A3DCBD /* deferred_lighting.vert */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = deferred_lighting.vert; path = shaders/deferred_lighting.vert; sourceTree = SOURCE_ROOT; };
-		D2C3FCC21ECB444C00A3DCBD /* simple.frag */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; name = simple.frag; path = shaders/simple.frag; sourceTree = SOURCE_ROOT; };
-		D2C3FCC31ECB444C00A3DCBD /* simple.vert */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; name = simple.vert; path = shaders/simple.vert; sourceTree = SOURCE_ROOT; };
 		D2C4E8B41ED3011200F36B60 /* imconfig.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = imconfig.h; path = external/imgui/imconfig.h; sourceTree = "<group>"; };
 		D2C4E8B51ED3011200F36B60 /* imgui_internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = imgui_internal.h; path = external/imgui/imgui_internal.h; sourceTree = "<group>"; };
 		D2C4E8B61ED3011200F36B60 /* imgui.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = imgui.h; path = external/imgui/imgui.h; sourceTree = "<group>"; };
@@ -98,12 +98,12 @@
 				D2C3FCBE1ECAD45200A3DCBD /* default.vert */,
 				D2479B5E1E8301F70039DE28 /* deferred_geometry.frag */,
 				D2479B5F1E8301F70039DE28 /* deferred_geometry.vert */,
-				D2C3FCC21ECB444C00A3DCBD /* simple.frag */,
-				D2C3FCC31ECB444C00A3DCBD /* simple.vert */,
-				D231F2381ED0CFFD00D14D4B /* particles.frag */,
-				D231F2391ED0CFFD00D14D4B /* particles.vert */,
 				D2C3FCC01ECAFA2D00A3DCBD /* deferred_lighting.frag */,
 				D2C3FCC11ECAFAF100A3DCBD /* deferred_lighting.vert */,
+				D280597C1ED5C2EC0020E358 /* motion_blur.frag */,
+				D280597B1ED5C2D80020E358 /* motion_blur.vert */,
+				D231F2381ED0CFFD00D14D4B /* particles.frag */,
+				D231F2391ED0CFFD00D14D4B /* particles.vert */,
 			);
 			name = shaders;
 			sourceTree = "<group>";

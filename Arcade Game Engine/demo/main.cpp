@@ -264,7 +264,6 @@ public:
     }
     
     diffuseColor({r, g, b});
-    loadShader(VERT("default"), FRAG("default"));
     loadObject(OBJ("sphere"));
   }
   
@@ -280,22 +279,22 @@ public:
                             const string & diffuseMapFileName)
     : GraphicsComponent()
     , _objectFileName(objectFileName)
-    , _diffuseMapFileName(diffuseMapFileName)
-  {}
+    , _diffTexMapFileName(diffuseMapFileName)
+  {
+    deferredShading(true);
+  }
   
   void init(Entity * entity)
   {
     GraphicsComponent::init(entity);
     
-    loadShader(VERT("deferred_geometry"), FRAG("deferred_geometry"));
     loadObject(_objectFileName.c_str());
-    loadTexture(_diffuseMapFileName.c_str(), Diffuse);
-    CHECK_GL_ERROR(true);
+    loadTexture(_diffTexMapFileName.c_str(), Diffuse);
   }
   
 private:
   string _objectFileName;
-  string _diffuseMapFileName;
+  string _diffTexMapFileName;
   
 };
 
@@ -372,27 +371,30 @@ int main(int argc, char *  argv[])
   
   // high bouncing light
   Entity * highBouncingLight = core.createEntity("highBouncingLight", "root", Light);
-  highBouncingLight->attachColliderComponent(new SphereColliderComponent(0.99f));
+  highBouncingLight->attachColliderComponent(new SphereColliderComponent(1.99f));
   highBouncingLight->attachRigidBodyComponent(new KinematicRigidBodyComponent);
   highBouncingLight->attachGraphicsComponent(new LightGraphicsComponent);
   highBouncingLight->translate({0.0f, 5.0f, -40.0f});
+  highBouncingLight->scale(2.0f);
   
   // middle bouncing lights
   for (int i = 0; i < 2; ++i)
   {
     Entity * middleBouncingLight = core.createEntity("middleBouncingLight" + to_string(i), "root", Light);
-    middleBouncingLight->attachColliderComponent(new SphereColliderComponent(0.99f));
+    middleBouncingLight->attachColliderComponent(new SphereColliderComponent(1.99f));
     middleBouncingLight->attachRigidBodyComponent(new KinematicRigidBodyComponent);
     middleBouncingLight->attachGraphicsComponent(new LightGraphicsComponent);
     middleBouncingLight->translate({4.0f*(2*i-1), 5.0f, -40.0f});
+    middleBouncingLight->scale(2.0f);
   }
   
   // low bouncing light
   Entity * lowBouncingLight = core.createEntity("lowBouncingLight", "root", Light);
-  lowBouncingLight->attachColliderComponent(new SphereColliderComponent(0.99f));
+  lowBouncingLight->attachColliderComponent(new SphereColliderComponent(1.99f));
   lowBouncingLight->attachRigidBodyComponent(new KinematicRigidBodyComponent);
   lowBouncingLight->attachGraphicsComponent(new LightGraphicsComponent);
   lowBouncingLight->translate({0.0f, 5.0f, -36.0f});
+  lowBouncingLight->scale(2.0f);
 
   // earth
   Entity * earth = core.createEntity("earth");

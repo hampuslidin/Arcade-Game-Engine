@@ -1,8 +1,8 @@
 #version 410
 
-uniform sampler2D gCol;
 uniform sampler2D gPos;
 uniform sampler2D gNorm;
+uniform sampler2D gCol;
 uniform int numLights;
 
 in vec2 fTexCoords;
@@ -21,9 +21,9 @@ uniform Light lights[maxNumLights];
 
 void main()
 {
-  vec3 fCol  = texture(gCol,  fTexCoords).rgb;
   vec3 fPos  = texture(gPos,  fTexCoords).rgb;
   vec3 fNorm = texture(gNorm, fTexCoords).rgb;
+  vec3 fCol  = texture(gCol,  fTexCoords).rgb;
   
   vec3 lighting = fCol*0.3;
   int amount = min(max(numLights, 0), maxNumLights);
