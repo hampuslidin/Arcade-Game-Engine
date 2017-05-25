@@ -117,7 +117,6 @@ void RigidBodyComponent::update(const Core & core)
     entity()->resetVelocity(v);
     entity()->translate(v*float(core.deltaTime()));
     entity()->resetForce();
-    entity()->nextFrame();
   }
 }
 

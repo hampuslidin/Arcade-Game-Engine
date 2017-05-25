@@ -135,7 +135,7 @@ public:
   void handleInput(const Core & core)
   {
     const double t = core.effectiveElapsedTime();
-    const double T = 5.0;
+    const double T = 2.5;
     const float  p = 2*M_PI*t/T;
     vec3 v = {_radius*cos(p), 0.0f, _radius*sin(p)};
     entity()->reposition(v);

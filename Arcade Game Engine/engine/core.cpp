@@ -1257,7 +1257,6 @@ maybe<GLuint> Core::CreateShaderProgram(const char * vsfn, const char * fsfn)
   glAttachShader(shaderProg, vs);
   glDeleteShader(vs);
   glDeleteShader(fs);
-  CHECK_GL_ERROR(true);
   
   // link program
   if (!_linkProgram(shaderProg))
@@ -1437,10 +1436,6 @@ bool Core::_generateBuffers()
   // DEFERRED SHADING
   ////////////////////////////////////////
   
-  // generate frame buffer object
-  glGenFramebuffers(1, &_deferFBO);
-  glBindFramebuffer(GL_FRAMEBUFFER, _deferFBO);
-  
   // generate position texture
   glGenTextures(1, &_deferPosMap);
   glBindTexture(GL_TEXTURE_2D, _deferPosMap);
@@ -1448,8 +1443,6 @@ bool Core::_generateBuffers()
                nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         _deferPosMap, 0);
   
   // generate normal texture
   glGenTextures(1, &_deferNormMap);
@@ -1458,8 +1451,6 @@ bool Core::_generateBuffers()
                nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
-                         _deferNormMap, 0);
   
   // generate color texture
   glGenTextures(1, &_deferColMap);
@@ -1468,17 +1459,25 @@ bool Core::_generateBuffers()
                GL_RGB, GL_UNSIGNED_BYTE, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  
+  // generate frame buffer object
+  glGenFramebuffers(1, &_deferFBO);
+  glBindFramebuffer(GL_FRAMEBUFFER, _deferFBO);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         _deferPosMap, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
+                         _deferNormMap, 0);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D,
                          _deferColMap, 0);
   
   // attach textures
-  GLuint attachments[3] =
+  GLuint deferAttach[3] =
   {
     GL_COLOR_ATTACHMENT0,
     GL_COLOR_ATTACHMENT1,
     GL_COLOR_ATTACHMENT2
   };
-  glDrawBuffers(3, attachments);
+  glDrawBuffers(3, deferAttach);
   
   // generate render buffer object
   GLuint deferRBO;
@@ -1504,12 +1503,20 @@ bool Core::_generateBuffers()
   // generate color texture
   glGenTextures(1, &_postColMap);
   glBindTexture(GL_TEXTURE_2D, _postColMap);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, d.x, d.y, 0,
-               GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, d.x, d.y, 0, GL_RGBA,
+               GL_UNSIGNED_BYTE, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  
+  // generate velocity texture
+  glGenTextures(1, &_postVelMap);
+  glBindTexture(GL_TEXTURE_2D, _postVelMap);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16F, d.x, d.y, 0, GL_RG, GL_FLOAT,
+               nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   
   // generate depth texture
   glGenTextures(1, &_postDepthMap);
@@ -1526,11 +1533,17 @@ bool Core::_generateBuffers()
   glBindFramebuffer(GL_FRAMEBUFFER, _postFBO);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
                          _postColMap, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
+                         _postVelMap, 0);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
                          _postDepthMap, 0);
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  
+  // attach textures
+  GLuint postAttach[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
+  glDrawBuffers(2, postAttach);
   
   // check frame buffer status
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
   status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
   if (status != GL_FRAMEBUFFER_COMPLETE)
   {
@@ -1559,14 +1572,19 @@ bool Core::_createShader(_Shader & sh, const char * vsfn, const char * fsfn,
 
 bool Core::_createDefaultShader()
 {
-  return _createShader(_defaultSh, "shaders/default.vert", "shaders/default.frag",
-                       {"PVM", "diffTexMap", "hasDiffTexMap", "diffCol"});
+  const vector<string> ids =
+  {
+    "PVM", "prevPVM", "diffTexMap", "hasDiffTexMap", "diffCol"
+  };
+  return _createShader(_defaultSh, "shaders/default.vert",
+                       "shaders/default.frag", ids);
 }
 
 bool Core::_createDeferredShader()
 {
+  const vector<string> ids = {"M", "V", "P", "N"};
   return _createShader(_deferSh, "shaders/deferred_geometry.vert",
-                       "shaders/deferred_geometry.frag", {"M", "V", "P", "N"});
+                       "shaders/deferred_geometry.frag", ids);
 }
 
 bool Core::_createLightShader()
@@ -1601,16 +1619,20 @@ bool Core::_createLightShader()
 
 bool Core::_createMotionBlurShader()
 {
+  const vector<string> ids =
+  {
+    "diffTexMap", "velTexMap", "depthTexMap", "currToPrev", "fps", "mode",
+    "velScaling", "adaptVarFPS", "adaptNumSamples", "prefNumSamples"
+  };
   bool success = _createShader(_motionSh, "shaders/motion_blur.vert",
-                               "shaders/motion_blur.frag",
-                               {"diffTexMap", "depthTexMap", "currToPrev",
-                                 "fps"});
+                               "shaders/motion_blur.frag", ids);
   if (success)
   {
     // set texture uniforms
     glUseProgram(_motionSh.prog);
     glUniform1i(_motionSh.locs["diffTexMap"],  0);
-    glUniform1i(_motionSh.locs["depthTexMap"], 1);
+    glUniform1i(_motionSh.locs["velTexMap"],   1);
+    glUniform1i(_motionSh.locs["depthTexMap"], 2);
   }
   
   return success;
@@ -1707,15 +1729,20 @@ bool Core::init(const CoreOptions & options)
   SDL_PauseAudio(0);
   
   // initialize GUI properties
-  _controlsEnabled   = true;
-  _motionBlurEnabled = false;
-  _deferredEnabled   = false;
-  _numLights         = (int)_lights.size();
-  _particlesEnabled  = false;
-  _particleSpawnRate = 64;
-  _particleLifeTime  = 1.0f;
-  _particleConeSize  = 0.05f;
-  _particleVelocity  = 5.0f;
+  _controlsEnabled       = true;
+  _motionBlurEnabled     = false;
+  _motionBlurMode        = 0;
+  _motionVelScaling      = 1.0f;
+  _motionAdaptVarFPS     = true;
+  _motionAdaptNumSamples = true;
+  _motionPrefNumSamples  = 16;
+  _deferredEnabled       = false;
+  _numLights             = (int)_lights.size();
+  _particlesEnabled      = false;
+  _particleSpawnRate     = 64;
+  _particleLifeTime      = 1.0f;
+  _particleConeSize      = 0.05f;
+  _particleVelocity      = 5.0f;
   
   return true;
 }
@@ -1942,11 +1969,20 @@ bool Core::update()
                                                float(d.x) / float(d.y),
                                                0.01f, 1000.0f);
   
+  // define clear colors
+  const GLfloat bgClear[]    = {_bgColor.r, _bgColor.g, _bgColor.b, 1.0f};
+  const GLfloat blackClear[] = {0.0f,       0.0f,       0.0f,       1.0f};
+  
   // clear frame buffers
-  glClearColor(_bgColor.r, _bgColor.g, _bgColor.b, 1.0);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  glBindFramebuffer(GL_FRAMEBUFFER, _postFBO);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glClearBufferfv(GL_COLOR, 0, bgClear);
+  glClear(GL_DEPTH_BUFFER_BIT);
+  if (_motionBlurEnabled)
+  {
+    glBindFramebuffer(GL_FRAMEBUFFER, _postFBO);
+    glClearBufferfv(GL_COLOR, 0, bgClear);
+    glClearBufferfv(GL_COLOR, 1, blackClear);
+    glClear(GL_DEPTH_BUFFER_BIT);
+  }
   
   ////////////////////////////////////////
   // RENDERING - GEOMETRY PASS
@@ -1956,7 +1992,10 @@ bool Core::update()
   {
     // clear deferred shader frame buffer
     glBindFramebuffer(GL_FRAMEBUFFER, _deferFBO);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClearBufferfv(GL_COLOR, 0, blackClear);
+    glClearBufferfv(GL_COLOR, 1, blackClear);
+    glClearBufferfv(GL_COLOR, 2, bgClear);
+    glClear(GL_DEPTH_BUFFER_BIT);
     
     // render entities to geometry buffer
     for (int i = 0; i < _entityCount; ++i)
@@ -1990,7 +2029,8 @@ bool Core::update()
   if (_deferredEnabled)
   {
     // bind shader program
-    glBindFramebuffer(GL_FRAMEBUFFER, _postFBO);
+    GLuint frameBufferTarget = _motionBlurEnabled ? _postFBO : 0;
+    glBindFramebuffer(GL_FRAMEBUFFER, frameBufferTarget);
     glUseProgram(_lightSh.prog);
     
     // bind textures
@@ -2029,10 +2069,10 @@ bool Core::update()
     
     // copy depth data to post processing frame buffer object
     glBindFramebuffer(GL_READ_FRAMEBUFFER, _deferFBO);
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, _postFBO);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, frameBufferTarget);
     glBlitFramebuffer(0, 0, d.x, d.y, 0, 0, d.x, d.y, GL_DEPTH_BUFFER_BIT,
                       GL_NEAREST);
-    glBindFramebuffer(GL_FRAMEBUFFER, _postFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, frameBufferTarget);
   }
   
   ////////////////////////////////////////
@@ -2040,22 +2080,25 @@ bool Core::update()
   ////////////////////////////////////////
 
   // render entities using default shading
-  const mat4 projView = _projMatrix * _viewMatrix;
+  const mat4 PV     = _projMatrix * _viewMatrix;
+  const mat4 prevPV = _prevProjMatrix * _prevViewMatrix;
   for (int i = 0; i < _entityCount; ++i)
   {
     auto & entity = _entities[i];
     auto graphics = entity.graphics();
     if (entity.enabled() && graphics &&
-        (!graphics->deferredShading() || !_deferredEnabled ||
+        (!_deferredEnabled || !graphics->deferredShading() ||
          entity.type() == Light))
     {
       // construct transform
-      const mat4 PVM = projView * entity.worldTransform();
+      const mat4 PVM     = PV * entity.worldTransform();
+      const mat4 prevPVM = prevPV * entity.previousWorldTransform();
       
       // set shader uniforms
       int diffTexFlag = graphics->hasDiffuseTexture();
       glUseProgram(_defaultSh.prog);
-      glUniformMatrix4fv(_defaultSh.locs["PVM"], 1, false, &PVM[0].x);
+      glUniformMatrix4fv(_defaultSh.locs["PVM"],     1, false, &PVM[0].x);
+      glUniformMatrix4fv(_defaultSh.locs["prevPVM"], 1, false, &prevPVM[0].x);
       glUniform1i(_defaultSh.locs["hasDiffTexMap"], diffTexFlag);
       if (!diffTexFlag)
       {
@@ -2073,45 +2116,56 @@ bool Core::update()
   // RENDERING - PARTICLES
   ////////////////////////////////////////
 
-  if (_particlesEnabled)
+
+  // render particles
+  for (int i = 0; i < _entityCount; ++i)
   {
-    // render particles
-    for (int i = 0; i < _entityCount; ++i)
-    {
-      auto & entity = _entities[i];
-      if (entity.enabled() && entity.particleSystem())
-        entity.particleSystem()->render(*this);
-    }
+    auto & entity = _entities[i];
+    if (_particlesEnabled && entity.enabled() && entity.particleSystem())
+      entity.particleSystem()->render(*this);
+    
+    // last rendering pass using models, so advance to next frame
+    entity.nextFrame();
   }
   
   ////////////////////////////////////////
   // RENDERING - MOTION BLUR
   ////////////////////////////////////////
   
-  // bind frame buffer object and shader program
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  glUseProgram(_motionSh.prog);
-  
-  // bind color textore
-  glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, _postColMap);
-  glActiveTexture(GL_TEXTURE1);
-  glBindTexture(GL_TEXTURE_2D, _postDepthMap);
-  
-  // construct transforms
-  const mat4 prevPV     = _prevProjMatrix * _prevViewMatrix;
-  const mat4 currToPrev = prevPV * glm::inverse(projView);
-  
-  // set shader uniforms
-  glUseProgram(_motionSh.prog);
-  glUniformMatrix4fv(_motionSh.locs["currToPrev"], 1, false, &currToPrev[0].x);
-  glUniform1f(_motionSh.locs["fps"], 1.0f / _deltaTime);
-  
-  // draw fullscreen quad
-  glDisable(GL_BLEND);
-  glBindVertexArray(_quadVAO);
-  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-  glEnable(GL_BLEND);
+  if (_motionBlurEnabled)
+  {
+    // bind frame buffer object and shader program
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glUseProgram(_motionSh.prog);
+    
+    // bind color textore
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, _postColMap);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, _postVelMap);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, _postDepthMap);
+    
+    // construct transforms
+    const mat4 currToPrev = prevPV * glm::inverse(PV);
+    
+    // set shader uniforms
+    glUseProgram(_motionSh.prog);
+    glUniformMatrix4fv(_motionSh.locs["currToPrev"], 1, false,
+                       &currToPrev[0].x);
+    glUniform1f(_motionSh.locs["fps"], 1.0f / _deltaTime);
+    glUniform1i(_motionSh.locs["mode"], _motionBlurMode);
+    glUniform1f(_motionSh.locs["velScaling"], _motionVelScaling);
+    glUniform1i(_motionSh.locs["adaptVarFPS"], _motionAdaptVarFPS);
+    glUniform1i(_motionSh.locs["adaptNumSamples"], _motionAdaptNumSamples);
+    glUniform1i(_motionSh.locs["prefNumSamples"], _motionPrefNumSamples);
+    
+    // draw fullscreen quad
+    glDisable(GL_BLEND);
+    glBindVertexArray(_quadVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glEnable(GL_BLEND);
+  }
   
   ////////////////////////////////////////
   // GUI
@@ -2137,19 +2191,44 @@ bool Core::update()
   
   // set controls
   ImGui::Text("%0.1f fps", frameRate);
+  ImGui::Separator();
   ImGui::Checkbox("Controls", &_controlsEnabled);
+  ImGui::Separator();
   ImGui::Checkbox("Motion blur", &_motionBlurEnabled);
+  if (_motionBlurEnabled)
+  {
+    ImGui::Indent();
+    ImGui::RadioButton("Camera only", &_motionBlurMode, 0);
+    ImGui::SameLine();
+    ImGui::RadioButton("Per object", &_motionBlurMode, 1);
+    ImGui::Spacing();
+    ImGui::SliderFloat("Velocity scaling", &_motionVelScaling, 0.0f, 10.0f);
+    ImGui::Checkbox("Adapting to variable framerate", &_motionAdaptVarFPS);
+    ImGui::Checkbox("Adaptive number of samples", &_motionAdaptNumSamples);
+    ImGui::SliderInt("Max / preferred number of samples",
+                     &_motionPrefNumSamples, 1, 32);
+    ImGui::Unindent();
+  }
+  ImGui::Separator();
   ImGui::Checkbox("Deferred shading", &_deferredEnabled);
   if (_deferredEnabled)
+  {
+    ImGui::Indent();
     ImGui::SliderInt("Number of lights", &_numLights, 0, (int)_lights.size());
+    ImGui::Unindent();
+  }
+  ImGui::Separator();
   ImGui::Checkbox("Particles", &_particlesEnabled);
   if (_particlesEnabled)
   {
+    ImGui::Indent();
     ImGui::SliderInt("Spawn rate", &_particleSpawnRate, 0, 256);
     ImGui::SliderFloat("Life time", &_particleLifeTime, 0.0f, 10.0f);
     ImGui::SliderFloat("Cone size", &_particleConeSize, 0.01f, 1.0f);
     ImGui::SliderFloat("Velocity", &_particleVelocity, 0.1f, 10.0f);
+    ImGui::Unindent();
   }
+  ImGui::Separator();
   
   // render
   ImGui::Render();

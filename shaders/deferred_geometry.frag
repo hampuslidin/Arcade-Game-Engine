@@ -1,7 +1,5 @@
 #version 410
 
-precision highp float;
-
 uniform sampler2D diffTexMap;
 
 in vec3 fPos;

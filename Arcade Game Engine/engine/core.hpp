@@ -937,7 +937,7 @@ private:
   GLuint  _quadVAO;
   GLuint  _deferFBO, _postFBO;
   GLuint  _deferPosMap, _deferNormMap, _deferColMap;
-  GLuint  _postColMap, _postDepthMap;
+  GLuint  _postColMap, _postVelMap, _postDepthMap;
   
   mat4 _prevViewMatrix, _viewMatrix;
   mat4 _prevProjMatrix, _projMatrix;
@@ -966,6 +966,11 @@ private:
   
   bool _controlsEnabled;
   bool _motionBlurEnabled;
+  int _motionBlurMode;
+  float _motionVelScaling;
+  bool _motionAdaptVarFPS;
+  bool _motionAdaptNumSamples;
+  int _motionPrefNumSamples;
   bool _deferredEnabled;
   int _numLights;
   bool _particlesEnabled;
