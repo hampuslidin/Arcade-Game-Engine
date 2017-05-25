@@ -762,6 +762,8 @@ public:
   int sampleRate() const;
   double maxVolume() const;
   
+  const mat4 & previousViewMatrix() const;
+  const mat4 & previousProjectionMatrix() const;
   const mat4 & viewMatrix() const;
   const mat4 & projectionMatrix() const;
 
@@ -931,13 +933,14 @@ private:
   int    _sampleRate;
   double _maxVolume;
   
-  _Shader _defaultSh, _deferSh, _lightSh;
+  _Shader _defaultSh, _deferSh, _lightSh, _motionSh;
   GLuint  _quadVAO;
-  GLuint  _geomBuf;
-  GLuint  _geomPosMap, _geomNormMap, _geomColMap;
+  GLuint  _deferFBO, _postFBO;
+  GLuint  _deferPosMap, _deferNormMap, _deferColMap;
+  GLuint  _postColMap, _postDepthMap;
   
-  mat4 _viewMatrix;
-  mat4 _projMatrix;
+  mat4 _prevViewMatrix, _viewMatrix;
+  mat4 _prevProjMatrix, _projMatrix;
   
   int  _scale;
   vec3 _bgColor;
@@ -962,6 +965,7 @@ private:
   bool _pause;
   
   bool _controlsEnabled;
+  bool _motionBlurEnabled;
   bool _deferredEnabled;
   int _numLights;
   bool _particlesEnabled;
@@ -971,10 +975,11 @@ private:
   float _particleVelocity;
   
   bool _initFrameworks(const char * title, int scrnW, int scrnH);
-  void _generateBuffers();
+  bool _generateBuffers();
   bool _createShader(_Shader & sh, const char * vsfn, const char * fsfn,
                      const vector<string> & ids);
   bool _createDefaultShader();
   bool _createDeferredShader();
   bool _createLightShader();
+  bool _createMotionBlurShader();
 };

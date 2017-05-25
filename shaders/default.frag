@@ -8,9 +8,9 @@ uniform vec3 diffCol;         // diffuse color
 
 in vec2 fTexCoords;
 
-layout(location = 0) out vec4 col;
+layout(location = 0) out vec4 oCol;
 
 void main()
 {
-  col = hasDiffTexMap ? texture(diffTexMap, fTexCoords) : vec4(diffCol, 1.0);
+  oCol = hasDiffTexMap ? texture(diffTexMap, fTexCoords) : vec4(diffCol, 1.0);
 }

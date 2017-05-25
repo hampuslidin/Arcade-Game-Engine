@@ -225,13 +225,15 @@ void GraphicsComponent::init(Entity * entity)
 void GraphicsComponent::render(const Core & core)
 {
   // activate textures
-  glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, _diffTexMap);
+  if (_hasDiffTex)
+  {
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, _diffTexMap);
+  }
   
   // render
   glBindVertexArray(_vao);
   glDrawArrays(GL_TRIANGLES, 0, (int)_verts.size());
-  glUseProgram(0);
 }
 
 bool GraphicsComponent::loadObject(const char * fileName)
@@ -436,11 +438,6 @@ void ParticleSystemComponent::init(Entity * entity)
 {
   Component::init(entity);
   
-  // set flags
-  glEnable(GL_PROGRAM_POINT_SIZE);
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-  
   // generate vertex array object
   glGenVertexArrays(1, &_vertexArrayObject);
   glBindVertexArray(_vertexArrayObject);
@@ -560,7 +557,6 @@ bool ParticleSystemComponent::loadTexture(const char * textureFileName)
       // set filtering options and attach texture to shader
       glUseProgram(_shaderProgram);
       glGenerateMipmap(GL_TEXTURE_2D);
-      glUniform1i(glGetUniformLocation(_shaderProgram, "diffTexMap"), 0);
       
       return true;
     }
@@ -1092,8 +1088,10 @@ const ivec2 & Core::mouseMovement() const { return _mouseMovement; };
 int Core::sampleRate() const   { return _sampleRate; };
 double Core::maxVolume() const { return _maxVolume; };
 
-const mat4 & Core::viewMatrix() const       { return _viewMatrix; };
-const mat4 & Core::projectionMatrix() const { return _projMatrix; };
+const mat4 & Core::previousViewMatrix() const       { return _prevViewMatrix; }
+const mat4 & Core::previousProjectionMatrix() const { return _prevProjMatrix; }
+const mat4 & Core::viewMatrix() const               { return _viewMatrix; };
+const mat4 & Core::projectionMatrix() const         { return _projMatrix; };
 
 int Core::scale() const                    { return _scale; };
 const vec3 & Core::backgroundColor() const { return _bgColor; };
@@ -1310,17 +1308,18 @@ bool Core::_initFrameworks(const char * title, int scrnW, int scrnH)
   SDL_GL_LoadLibrary(nullptr);
   
   // initialize OpenGL
-  SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-#ifdef __APPLE__
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
-                      SDL_GL_CONTEXT_PROFILE_CORE);
-#elif defined _WIN32
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
-                      SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+  const int majorVer = 4;
+#if defined(__APPLE__)
+  const int minorVer = 1;
+  const auto profile = SDL_GL_CONTEXT_PROFILE_CORE;
+#elif defined(_WIN32)
+  const int minorVer = 3;
+  const auto profile = SDL_GL_CONTEXT_PROFILE_COMPATIBILITY;
 #endif
+  SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, majorVer);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, minorVer);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, profile);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
   SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
@@ -1340,7 +1339,7 @@ bool Core::_initFrameworks(const char * title, int scrnW, int scrnH)
   // create context for window
   _context = SDL_GL_CreateContext(_window);
   if (_context == nullptr) {
-    SDL_Log("SDL_GL_CreateContext: %s\n", SDL_GetError());
+    cerr << "SDL error: " << SDL_GetError();
     return false;
   }
   
@@ -1352,7 +1351,11 @@ bool Core::_initFrameworks(const char * title, int scrnW, int scrnH)
   CHECK_GL_ERROR(false);
   
   // initialize ImGUI
-  ImGui_ImplSdlGL3_Init(_window);
+  if (!ImGui_ImplSdlGL3_Init(_window))
+  {
+    cerr << "ImGui error: failed to initialize.";
+    return false;
+  };
   
   // enable v-sync
   SDL_GL_SetSwapInterval(1);
@@ -1367,12 +1370,54 @@ bool Core::_initFrameworks(const char * title, int scrnW, int scrnH)
   return true;
 }
 
-void Core::_generateBuffers()
+void _fboError(int status, const string & name)
 {
-  // generate vertex array object for fullscreen quad
+  cerr << "OpenGL error: frame buffer object for " << name << " has status ";
+  switch (status) {
+    case GL_FRAMEBUFFER_UNDEFINED:
+      cerr << "GL_FRAMEBUFFER_UNDEFINED.";
+      break;
+    case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+      cerr << "GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT.";
+      break;
+    case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+      cerr << "GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT.";
+      break;
+    case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
+      cerr << "GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER.";
+      break;
+    case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
+      cerr << "GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER.";
+      break;
+    case GL_FRAMEBUFFER_UNSUPPORTED:
+      cerr << "GL_FRAMEBUFFER_UNSUPPORTED.";
+      break;
+    case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
+      cerr << "GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE.";
+      break;
+    case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:
+      cerr << "GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS.";
+      break;
+    default:
+      cerr << "0.";
+      break;
+  }
+  cerr << endl;
+}
+
+bool Core::_generateBuffers()
+{
+  const ivec2 d = viewDimensions();
+  
+  ////////////////////////////////////////
+  // FULLSCREEN QUAD
+  ////////////////////////////////////////
+  
+  // generate vertex array object
   glGenVertexArrays(1, &_quadVAO);
   glBindVertexArray(_quadVAO);
   
+  // submit vertices to GPU
   vector<float> quadPos =
   {
     -1.0f, -1.0f,
@@ -1388,39 +1433,45 @@ void Core::_generateBuffers()
   glVertexAttribPointer(0, 2, GL_FLOAT, false, 0, 0);
   glEnableVertexAttribArray(0);
   
-  // generate geometry buffer
-  glGenFramebuffers(1, &_geomBuf);
-  glBindFramebuffer(GL_FRAMEBUFFER, _geomBuf);
+  ////////////////////////////////////////
+  // DEFERRED SHADING
+  ////////////////////////////////////////
   
-  // generate textures for geometry buffer
-  const ivec2 d = viewDimensions();
-  glGenTextures(1, &_geomPosMap);
-  glBindTexture(GL_TEXTURE_2D, _geomPosMap);
+  // generate frame buffer object
+  glGenFramebuffers(1, &_deferFBO);
+  glBindFramebuffer(GL_FRAMEBUFFER, _deferFBO);
+  
+  // generate position texture
+  glGenTextures(1, &_deferPosMap);
+  glBindTexture(GL_TEXTURE_2D, _deferPosMap);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, d.x, d.y, 0, GL_RGB, GL_FLOAT,
                nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         _geomPosMap, 0);
+                         _deferPosMap, 0);
   
-  glGenTextures(1, &_geomNormMap);
-  glBindTexture(GL_TEXTURE_2D, _geomNormMap);
+  // generate normal texture
+  glGenTextures(1, &_deferNormMap);
+  glBindTexture(GL_TEXTURE_2D, _deferNormMap);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, d.x, d.y, 0, GL_RGB, GL_FLOAT,
                nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
-                         _geomNormMap, 0);
+                         _deferNormMap, 0);
   
-  glGenTextures(1, &_geomColMap);
-  glBindTexture(GL_TEXTURE_2D, _geomColMap);
+  // generate color texture
+  glGenTextures(1, &_deferColMap);
+  glBindTexture(GL_TEXTURE_2D, _deferColMap);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, d.x, d.y, 0,
                GL_RGB, GL_UNSIGNED_BYTE, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D,
-                         _geomColMap, 0);
+                         _deferColMap, 0);
   
+  // attach textures
   GLuint attachments[3] =
   {
     GL_COLOR_ATTACHMENT0,
@@ -1429,16 +1480,65 @@ void Core::_generateBuffers()
   };
   glDrawBuffers(3, attachments);
   
-  // generate render buffer
-  GLuint renderBuf;
-  glGenRenderbuffers(1, &renderBuf);
-  glBindRenderbuffer(GL_RENDERBUFFER, renderBuf);
+  // generate render buffer object
+  GLuint deferRBO;
+  glGenRenderbuffers(1, &deferRBO);
+  glBindRenderbuffer(GL_RENDERBUFFER, deferRBO);
   glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, d.x, d.y);
   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                            GL_RENDERBUFFER, renderBuf);
+                            GL_RENDERBUFFER, deferRBO);
+  
+  // check frame buffer status
+  int status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+  if (status != GL_FRAMEBUFFER_COMPLETE)
+  {
+    _fboError(status, "deferred shading");
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    return false;
+  }
+  
+  ////////////////////////////////////////
+  // POST PROCESSING
+  ////////////////////////////////////////
+  
+  // generate color texture
+  glGenTextures(1, &_postColMap);
+  glBindTexture(GL_TEXTURE_2D, _postColMap);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, d.x, d.y, 0,
+               GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  
+  // generate depth texture
+  glGenTextures(1, &_postDepthMap);
+  glBindTexture(GL_TEXTURE_2D, _postDepthMap);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, d.x, d.y, 0,
+               GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  
+  // generate frame buffer object
+  glGenFramebuffers(1, &_postFBO);
+  glBindFramebuffer(GL_FRAMEBUFFER, _postFBO);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         _postColMap, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
+                         _postDepthMap, 0);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
   
+  // check frame buffer status
+  status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+  if (status != GL_FRAMEBUFFER_COMPLETE)
+  {
+    _fboError(status, "post processing");
+    return false;
+  }
   
+  return true;
 }
 
 bool Core::_createShader(_Shader & sh, const char * vsfn, const char * fsfn,
@@ -1480,9 +1580,9 @@ bool Core::_createLightShader()
     ids[4*i+2] = (prefix + "lin").c_str();
     ids[4*i+3] = (prefix + "quad").c_str();
   }
-  ids[144] = "gPos";
-  ids[145] = "gNorm";
-  ids[146] = "gCol";
+  ids[144] = "posTexMap";
+  ids[145] = "normTexMap";
+  ids[146] = "diffTexMap";
   ids[147] = "numLights";
   
   bool success = _createShader(_lightSh, "shaders/deferred_lighting.vert",
@@ -1491,9 +1591,26 @@ bool Core::_createLightShader()
   {
     // set texture uniforms
     glUseProgram(_lightSh.prog);
-    glUniform1i(_lightSh.locs["gPos"],  0);
-    glUniform1i(_lightSh.locs["gNorm"], 1);
-    glUniform1i(_lightSh.locs["gCol"],  2);
+    glUniform1i(_lightSh.locs["posTexMap"],  0);
+    glUniform1i(_lightSh.locs["normTexMap"], 1);
+    glUniform1i(_lightSh.locs["diffTexMap"], 2);
+  }
+  
+  return success;
+}
+
+bool Core::_createMotionBlurShader()
+{
+  bool success = _createShader(_motionSh, "shaders/motion_blur.vert",
+                               "shaders/motion_blur.frag",
+                               {"diffTexMap", "depthTexMap", "currToPrev",
+                                 "fps"});
+  if (success)
+  {
+    // set texture uniforms
+    glUseProgram(_motionSh.prog);
+    glUniform1i(_motionSh.locs["diffTexMap"],  0);
+    glUniform1i(_motionSh.locs["depthTexMap"], 1);
   }
   
   return success;
@@ -1504,15 +1621,22 @@ bool Core::init(const CoreOptions & options)
   // TODO: make more secure, i.e. handle errors better
   
   // initialize frameworks
-  _initFrameworks(options.title, options.width, options.height);
+  if (!_initFrameworks(options.title, options.width, options.height))
+    return false;
   
   // generate buffers
-  _generateBuffers();
+  if (!_generateBuffers())
+    return false;
   
   // create shaders
-  _createDefaultShader();
-  _createDeferredShader();
-  _createLightShader();
+  if (!_createDefaultShader())
+    return false;
+  if (!_createDeferredShader())
+    return false;
+  if (!_createLightShader())
+    return false;
+  if (!_createMotionBlurShader())
+    return false;
   
   // initialize entities
   _root.init(this);
@@ -1584,6 +1708,7 @@ bool Core::init(const CoreOptions & options)
   
   // initialize GUI properties
   _controlsEnabled   = true;
+  _motionBlurEnabled = false;
   _deferredEnabled   = false;
   _numLights         = (int)_lights.size();
   _particlesEnabled  = false;
@@ -1800,11 +1925,16 @@ bool Core::update()
   ivec2 d = viewDimensions();
   glViewport(0, 0, d.x, d.y);
   
-  // enable depth test and face culling
+  // flags
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_CULL_FACE);
+  glEnable(GL_PROGRAM_POINT_SIZE);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   
   // update view and projection matrix
+  _prevViewMatrix           = _viewMatrix;
+  _prevProjMatrix           = _projMatrix;
   mat4 cameraTranslation    = glm::translate(-_camera->worldPosition());
   const mat4 cameraRotation = glm::inverse(_camera->worldRotation());
   _viewMatrix               = cameraRotation * cameraTranslation;
@@ -1812,8 +1942,10 @@ bool Core::update()
                                                float(d.x) / float(d.y),
                                                0.01f, 1000.0f);
   
-  // clear framebuffer
+  // clear frame buffers
   glClearColor(_bgColor.r, _bgColor.g, _bgColor.b, 1.0);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glBindFramebuffer(GL_FRAMEBUFFER, _postFBO);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   
   ////////////////////////////////////////
@@ -1822,8 +1954,8 @@ bool Core::update()
   
   if (_deferredEnabled)
   {
-    // clear geometry framebuffer
-    glBindFramebuffer(GL_FRAMEBUFFER, _geomBuf);
+    // clear deferred shader frame buffer
+    glBindFramebuffer(GL_FRAMEBUFFER, _deferFBO);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
     // render entities to geometry buffer
@@ -1857,15 +1989,17 @@ bool Core::update()
 
   if (_deferredEnabled)
   {
-    // bind textures
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    // bind shader program
+    glBindFramebuffer(GL_FRAMEBUFFER, _postFBO);
     glUseProgram(_lightSh.prog);
+    
+    // bind textures
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, _geomPosMap);
+    glBindTexture(GL_TEXTURE_2D, _deferPosMap);
     glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, _geomNormMap);
+    glBindTexture(GL_TEXTURE_2D, _deferNormMap);
     glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, _geomColMap);
+    glBindTexture(GL_TEXTURE_2D, _deferColMap);
     
     // update uniform data in shader
     const float lin  = 0.22f;
@@ -1893,12 +2027,12 @@ bool Core::update()
     glBindVertexArray(_quadVAO);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     
-    // copy depth data to default framebuffer
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, _geomBuf);
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    // copy depth data to post processing frame buffer object
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, _deferFBO);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, _postFBO);
     glBlitFramebuffer(0, 0, d.x, d.y, 0, 0, d.x, d.y, GL_DEPTH_BUFFER_BIT,
                       GL_NEAREST);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, _postFBO);
   }
   
   ////////////////////////////////////////
@@ -1906,6 +2040,7 @@ bool Core::update()
   ////////////////////////////////////////
 
   // render entities using default shading
+  const mat4 projView = _projMatrix * _viewMatrix;
   for (int i = 0; i < _entityCount; ++i)
   {
     auto & entity = _entities[i];
@@ -1915,7 +2050,7 @@ bool Core::update()
          entity.type() == Light))
     {
       // construct transform
-      const mat4 PVM = _projMatrix * _viewMatrix * entity.worldTransform();
+      const mat4 PVM = projView * entity.worldTransform();
       
       // set shader uniforms
       int diffTexFlag = graphics->hasDiffuseTexture();
@@ -1930,6 +2065,7 @@ bool Core::update()
       
       // render
       graphics->render(*this);
+
     }
   }
   
@@ -1947,6 +2083,35 @@ bool Core::update()
         entity.particleSystem()->render(*this);
     }
   }
+  
+  ////////////////////////////////////////
+  // RENDERING - MOTION BLUR
+  ////////////////////////////////////////
+  
+  // bind frame buffer object and shader program
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glUseProgram(_motionSh.prog);
+  
+  // bind color textore
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, _postColMap);
+  glActiveTexture(GL_TEXTURE1);
+  glBindTexture(GL_TEXTURE_2D, _postDepthMap);
+  
+  // construct transforms
+  const mat4 prevPV     = _prevProjMatrix * _prevViewMatrix;
+  const mat4 currToPrev = prevPV * glm::inverse(projView);
+  
+  // set shader uniforms
+  glUseProgram(_motionSh.prog);
+  glUniformMatrix4fv(_motionSh.locs["currToPrev"], 1, false, &currToPrev[0].x);
+  glUniform1f(_motionSh.locs["fps"], 1.0f / _deltaTime);
+  
+  // draw fullscreen quad
+  glDisable(GL_BLEND);
+  glBindVertexArray(_quadVAO);
+  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+  glEnable(GL_BLEND);
   
   ////////////////////////////////////////
   // GUI
@@ -1973,6 +2138,7 @@ bool Core::update()
   // set controls
   ImGui::Text("%0.1f fps", frameRate);
   ImGui::Checkbox("Controls", &_controlsEnabled);
+  ImGui::Checkbox("Motion blur", &_motionBlurEnabled);
   ImGui::Checkbox("Deferred shading", &_deferredEnabled);
   if (_deferredEnabled)
     ImGui::SliderInt("Number of lights", &_numLights, 0, (int)_lights.size());

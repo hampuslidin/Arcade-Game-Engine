@@ -31,8 +31,9 @@ public:
   {
     static float yaw   = 0.0f;
     static float pitch = 0.0f;
-    yaw   -= 0.01f * core.mouseMovement().x;
-    pitch -= 0.01f * core.mouseMovement().y;
+    static float prevX;
+    static float prevY;
+    static bool didClick = false;
     float distance = 15.0f * core.deltaTime();
     
     const vec3 localRight    = entity()->localRight();
@@ -40,9 +41,20 @@ public:
     
     if (core.checkKey("mouseLeft"))
     {
-      entity()->rotate(-0.01f * core.mouseMovement().x, Core::WORLD_UP);
-      entity()->rotate(-0.01f * core.mouseMovement().y, localRight);
+      if (!didClick)
+      {
+        prevX = core.mousePosition().x;
+        prevY = core.mousePosition().y;
+      }
+      didClick = true;
+      yaw   -= 0.01f * (core.mousePosition().x - prevX);
+      pitch -= 0.01f * (core.mousePosition().y - prevY);
+      prevX = core.mousePosition().x;
+      prevY = core.mousePosition().y;
+      entity()->reorient({pitch, yaw, 0.0f});
     }
+    else
+      didClick = false;
     
     vec3 d;
     if (core.checkKey("up"))    d -= distance*localBackward;
