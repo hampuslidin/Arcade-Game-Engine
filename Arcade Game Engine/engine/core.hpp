@@ -934,12 +934,13 @@ private:
   double _maxVolume;
   
   _Shader _defaultSh;
-  _Shader _deferSh, _ambSh, _lightSh;
+  _Shader _deferSh, _ambSh, _stencilSh, _lightSh;
   _Shader _motionSh, _postOutputSh;
-  GLuint  _quadVAO;
+  int     _numSphereVerts;
+  GLuint  _quadVAO, _sphereVAO;
   GLuint  _deferFBO, _postFBO;
   GLuint  _deferPosMap, _deferNormMap, _deferColMap;
-  GLuint  _postColMap[2], _postVelMap, _postDepthMap;
+  GLuint  _postColMap[2], _postVelMap, _postDepthStencilMap;
 #define POST_IN  0
 #define POST_OUT 1
   
@@ -975,7 +976,7 @@ private:
   bool  _motionAdaptNumSamples;
   int   _motionPrefNumSamples;
   bool  _deferredEnabled;
-  bool  _deferShowQuads;
+  bool  _deferShowLightArea;
   vec3  _deferAmbCol;
   int   _deferNumLights;
   float _deferAttDist;
@@ -993,11 +994,14 @@ private:
                      const vector<string> & ids);
   bool _createDefaultShader();
   bool _createDeferredGeometryShader();
-  bool _createDeferredLightShader();
   bool _createDeferredAmbientShader();
+  bool _createDeferredNullShader();
+  bool _createDeferredLightShader();
   bool _createPostMotionBlurShader();
   bool _createPostOutputShader();
   inline bool _swapPostProcessing();
   inline bool _clearPostProcessing(const GLfloat * bgClear,
                                    const GLfloat * blackClear);
+  inline void _deferredStencilPass(const Entity * light, const mat4 & PVM);
+  inline void _deferredLightingPass(const Entity * light, const mat4 & PVM);
 };

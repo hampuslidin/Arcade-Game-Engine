@@ -34,7 +34,7 @@ public:
     static float prevX;
     static float prevY;
     static bool didClick = false;
-    float distance = 15.0f * core.deltaTime();
+    float distance = 45.0f * core.deltaTime();
     
     const vec3 localRight    = entity()->localRight();
     const vec3 localBackward = entity()->localBackward();
@@ -338,7 +338,7 @@ public:
 int main(int argc, char *  argv[])
 {
   // core settings
-  Core core(43);
+  Core core(107);
   CoreOptions options {"Demo", 1280, 756};
   core.changeBackgroundColor(0.2f, 0.2f, 0.2f);
   core.addControl("up",        SDLK_w);
@@ -350,9 +350,9 @@ int main(int argc, char *  argv[])
   // desert
   Entity * desert = core.createEntity("desert");
   desert->attachGraphicsComponent(new DeferredGraphicsComponent(OBJ("desert"), DIFF("desert")));
-  desert->translate({-50.0f, -20.0f, -10.0f});
+  desert->translate({-200.0f, -60.0f, -40.0f});
   desert->rotate(M_PI/2, Core::WORLD_LEFT);
-  desert->scale(100.0f);
+  desert->scale({400.0f, 400.0f, 200.0f});
   
   // high static cube
   Entity * highStaticCube = core.createEntity("highStaticCube");
@@ -430,10 +430,9 @@ int main(int argc, char *  argv[])
 
   // desert lights
   default_random_engine generator;
-  for (int i = 0; i < 30; ++i)
+  for (int i = 0; i < 94; ++i)
   {
     Entity * desertLight = core.createEntity("desertLight" + to_string(i), "root", Light);
-    desertLight->scale(0.5f);
     desertLight->attachInputComponent(new DesertLightInputComponent(&generator));
     desertLight->attachGraphicsComponent(new LightGraphicsComponent);
   }

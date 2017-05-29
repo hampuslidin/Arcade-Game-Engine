@@ -3,10 +3,9 @@
 uniform sampler2D posTexMap;
 uniform sampler2D normTexMap;
 uniform sampler2D diffTexMap;
-uniform int showQuad;
+uniform int showLightArea;
 uniform vec3 lightPos;
 uniform vec3 lightCol;
-uniform float attDist;
 uniform float attLin;
 uniform float attQuad;
 
@@ -24,14 +23,11 @@ void main()
   vec3 lightDir = lightPos-pos;
   float dist    = length(lightDir);
   
-  // perform lighting calculations if fragment is within light volume
-  vec3 lighting = vec3(0.05*showQuad);
-  if (dist <= attDist)
-  {
-    vec3 diffuse = max(dot(norm, normalize(lightDir)), 0.0) * col * lightCol;
-    float att    = 1.0/(1.0 + attLin*dist + attQuad*dist*dist);
-    diffuse     *= att;
-    lighting    += diffuse;
-  }
+  // perform lighting calculations
+  vec3 lighting = vec3(0.05*showLightArea);
+  vec3 diffuse  = max(dot(norm, normalize(lightDir)), 0.0) * col * lightCol;
+  float att     = 1.0/(1.0 + attLin*dist + attQuad*dist*dist);
+  diffuse      *= att;
+  lighting     += diffuse;
   oCol = vec4(lighting, 1.0);
 }

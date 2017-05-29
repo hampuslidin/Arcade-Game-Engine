@@ -60,9 +60,10 @@
 		D29DC53B1E509D780005EC95 /* core.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = core.cpp; path = engine/core.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		D29DC53C1E509D780005EC95 /* physics.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = physics.cpp; path = engine/physics.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		D29DC5491E509F5E0005EC95 /* SDL2.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SDL2.framework; path = "Arcade Game Engine/external/SDL2.framework"; sourceTree = "<group>"; };
+		D2B41EEF1EDCD0CB0044B824 /* null.frag */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = null.frag; path = shaders/null.frag; sourceTree = SOURCE_ROOT; };
 		D2C3FCBE1ECAD45200A3DCBD /* default.vert */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = default.vert; path = ../shaders/default.vert; sourceTree = "<group>"; };
 		D2C3FCC01ECAFA2D00A3DCBD /* deferred_lighting.frag */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = deferred_lighting.frag; path = shaders/deferred_lighting.frag; sourceTree = SOURCE_ROOT; };
-		D2C3FCC11ECAFAF100A3DCBD /* deferred_lighting.vert */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = deferred_lighting.vert; path = shaders/deferred_lighting.vert; sourceTree = SOURCE_ROOT; };
+		D2C3FCC11ECAFAF100A3DCBD /* PVM.vert */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = PVM.vert; path = shaders/PVM.vert; sourceTree = SOURCE_ROOT; };
 		D2C4E8B41ED3011200F36B60 /* imconfig.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = imconfig.h; path = external/imgui/imconfig.h; sourceTree = "<group>"; };
 		D2C4E8B51ED3011200F36B60 /* imgui_internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = imgui_internal.h; path = external/imgui/imgui_internal.h; sourceTree = "<group>"; };
 		D2C4E8B61ED3011200F36B60 /* imgui.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = imgui.h; path = external/imgui/imgui.h; sourceTree = "<group>"; };
@@ -97,16 +98,17 @@
 			isa = PBXGroup;
 			children = (
 				D282A1B61EC4D2A200C3E747 /* default.frag */,
-				D2C3FCBE1ECAD45200A3DCBD /* default.vert */,
 				D26E3ABC1EDAEC040030F0A3 /* deferred_ambient.frag */,
 				D2479B5E1E8301F70039DE28 /* deferred_geometry.frag */,
-				D2479B5F1E8301F70039DE28 /* deferred_geometry.vert */,
 				D2C3FCC01ECAFA2D00A3DCBD /* deferred_lighting.frag */,
-				D2C3FCC11ECAFAF100A3DCBD /* deferred_lighting.vert */,
+				D2B41EEF1EDCD0CB0044B824 /* null.frag */,
 				D231F2381ED0CFFD00D14D4B /* particles.frag */,
-				D231F2391ED0CFFD00D14D4B /* particles.vert */,
 				D280597D1ED6A45D0020E358 /* post_motion_blur.frag */,
 				D26E3ABF1EDB0D2C0030F0A3 /* post_output.frag */,
+				D2C3FCBE1ECAD45200A3DCBD /* default.vert */,
+				D2479B5F1E8301F70039DE28 /* deferred_geometry.vert */,
+				D231F2391ED0CFFD00D14D4B /* particles.vert */,
+				D2C3FCC11ECAFAF100A3DCBD /* PVM.vert */,
 				D26E3AC01EDB67820030F0A3 /* quad.vert */,
 			);
 			name = shaders;

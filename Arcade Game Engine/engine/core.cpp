@@ -1308,8 +1308,9 @@ bool Core::init(const CoreOptions & options)
   
   // create shaders
   if (!_createDefaultShader() || !_createDeferredGeometryShader() ||
-      !_createDeferredLightShader() || !_createDeferredAmbientShader() ||
-      !_createPostMotionBlurShader() || !_createPostOutputShader())
+      !_createDeferredAmbientShader() || !_createDeferredNullShader() ||
+      !_createDeferredLightShader() || !_createPostMotionBlurShader() ||
+      !_createPostOutputShader())
     return false;
   
   // initialize entities
@@ -1383,12 +1384,12 @@ bool Core::init(const CoreOptions & options)
   // initialize GUI properties
   _motionBlurEnabled     = false;
   _motionBlurMode        = 0;
-  _motionVelScaling      = 1.0f;
+  _motionVelScaling      = 0.1f;
   _motionAdaptVarFPS     = true;
   _motionAdaptNumSamples = true;
   _motionPrefNumSamples  = 16;
   _deferredEnabled       = false;
-  _deferShowQuads        = false;
+  _deferShowLightArea    = false;
   _deferAmbCol           = {0.3f, 0.3f, 0.3f};
   _deferNumLights        = (int)_lights.size();
   _deferAttDist          = 7.0f;
@@ -1609,15 +1610,18 @@ bool Core::update()
   ivec2 d = viewDimensions();
   glViewport(0, 0, d.x, d.y);
   
+  // deferred shading data
+  const int numLights = std::min((int)_lights.size(), _deferNumLights);
+  const mat4 S        = glm::scale(vec3(_deferAttDist));
+  
   // update view and projection matrix
   _prevViewMatrix           = _viewMatrix;
   _prevProjMatrix           = _projMatrix;
   mat4 cameraTranslation    = glm::translate(-_camera->worldPosition());
   const mat4 cameraRotation = glm::inverse(_camera->worldRotation());
   _viewMatrix               = cameraRotation * cameraTranslation;
-  _projMatrix               = glm::perspective(glm::radians(45.0f),
-                                               float(d.x) / float(d.y),
-                                               0.01f, 300.0f);
+  _projMatrix               = glm::perspective((float)M_PI/4.0f, (float)d.x/d.y,
+                                               0.01f, 1000.0f);
   const mat4 PV             = _projMatrix * _viewMatrix;
   const mat4 prevPV         = _prevProjMatrix * _prevViewMatrix;
   
@@ -1625,13 +1629,9 @@ bool Core::update()
   const GLfloat bgClear[]    = {_bgColor.r, _bgColor.g, _bgColor.b, 1.0f};
   const GLfloat blackClear[] = {0.0f,       0.0f,       0.0f,       1.0f};
   
-  // clear frame buffers
+  // clear post-processing FBO
   // FIXME: why is clearing so slow?
-  CHECK_GL_ERROR(true);
-  glClearBufferfv(GL_COLOR, 0, bgClear);
-  glClear(GL_DEPTH_BUFFER_BIT);
   glBindFramebuffer(GL_FRAMEBUFFER, _postFBO);
-  CHECK_GL_ERROR(true);
   if (!_clearPostProcessing(bgClear, blackClear))
     return false;
   
@@ -1681,114 +1681,88 @@ bool Core::update()
   }
   
   ////////////////////////////////////////
-  // RENDERING - (DEFERRED) AMBIENT PASS
-  ////////////////////////////////////////
-  
-  if (_deferredEnabled)
-  {
-    // disable depth testing
-    glDisable(GL_DEPTH_TEST);
-    
-    // bind shader program
-    glBindFramebuffer(GL_FRAMEBUFFER, _postFBO);
-    glUseProgram(_ambSh.prog);
-    CHECK_GL_ERROR(true);
-    
-    // bind texture
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, _deferColMap);
-    CHECK_GL_ERROR(true);
-    
-    // update shader uniforms
-    glUniform3fv(_ambSh.locs["ambCol"], 1, &_deferAmbCol.x);
-    CHECK_GL_ERROR(true);
-    
-    // draw fullscreen quad
-    glBindVertexArray(_quadVAO);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    CHECK_GL_ERROR(true);
-  }
-  
-  ////////////////////////////////////////
   // RENDERING - (DEFERRED) LIGHTING PASS
   ////////////////////////////////////////
   
   if (_deferredEnabled)
   {
+    // disable depth testing and writing
+    glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
+    
+    // use ambient shader
+    glBindFramebuffer(GL_FRAMEBUFFER, _postFBO);
+    glUseProgram(_ambSh.prog);
+    CHECK_GL_ERROR(true);
+    
+    // bind color texture
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, _deferColMap);
+    CHECK_GL_ERROR(true);
+    
+    // update shader uniform
+    glUniform3fv(_ambSh.locs["ambCol"], 1, &_deferAmbCol.x);
+    CHECK_GL_ERROR(true);
+    
+    // render ambient lighting
+    glBindVertexArray(_quadVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    CHECK_GL_ERROR(true);
+    
     // enable additive blending
     glEnable(GL_BLEND);
     glBlendFunc(GL_ONE, GL_ONE);
-    
-    // enable depth testing, but disable writing
-    glEnable(GL_DEPTH_TEST);
-    glDepthMask(GL_FALSE);
-    
-    // bind textures
-    glUseProgram(_lightSh.prog);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, _deferPosMap);
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, _deferNormMap);
-    glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, _deferColMap);
     CHECK_GL_ERROR(true);
-
-    // update attenuation uniforms
-    glUniform1i(_lightSh.locs["showQuad"], _deferShowQuads);
-    glUniform1f(_lightSh.locs["attDist"],  _deferAttDist);
-    glUniform1f(_lightSh.locs["attLin"],   _deferAttLin);
-    glUniform1f(_lightSh.locs["attQuad"],  _deferAttQuad);
-    CHECK_GL_ERROR(true);
-
-    // render lighting
-    const mat4 S        = glm::scale(vec3(_deferAttDist));
-    const int numLights = std::min((int)_lights.size(), _deferNumLights);
+    
+    // enable stencil testing
+    glEnable(GL_STENCIL_TEST);
+    glStencilOpSeparate(GL_BACK, GL_KEEP, GL_INCR_WRAP, GL_KEEP);
+    glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_DECR_WRAP, GL_KEEP);
+    
+    // set front-face for culling
+    glCullFace(GL_FRONT);
+    
+    // render deferred lighting
     for (int i = 0; i < numLights; ++i)
     {
-      
-      // retrieve light data
       Entity * light = _lights[i];
-      auto graphics  = light->graphics();
-      const vec3 pos = light->worldPosition();
-      const vec3 col = graphics ? graphics->diffuseColor() : vec3(1.0f);
-     
-      // compute quad transform
-      const vec3 cameraDir = normalize(_camera->worldPosition()-pos);
-      const mat4 T         = glm::translate(pos + _deferAttDist*cameraDir);
-      const mat4 R         = glm::toMat4(_camera->worldOrientation());
-      const mat4 PVM       = PV * T * R * S;
-      
-      // update shader uniforms
-      glUniformMatrix4fv(_lightSh.locs["PVM"], 1, false, &PVM[0].x);
-      glUniform3fv(_lightSh.locs["lightPos"], 1, &pos.x);
-      glUniform3fv(_lightSh.locs["lightCol"], 1, &col.x);
-      CHECK_GL_ERROR(true);
-
-      // draw quad covering the light volume
-      glBindVertexArray(_quadVAO);
-      glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-      CHECK_GL_ERROR(true);
+      const mat4 PVM = PV * light->worldTranslation() * S;
+      _deferredStencilPass(light, PVM);
+      _deferredLightingPass(light, PVM);
     }
+    
+    // revert to back-face for culling
+    glCullFace(GL_BACK);
+    CHECK_GL_ERROR(true);
   }
   
   ////////////////////////////////////////
   // RENDERING - ENTITIES
   ////////////////////////////////////////
 
-  // disable blending and enable depth testing
+  // disable blending and stencil testing
   glDisable(GL_BLEND);
+  glDisable(GL_STENCIL_TEST);
+  CHECK_GL_ERROR(true);
+  
+  // enable depth testing
   glEnable(GL_DEPTH_TEST);
   glDepthMask(GL_TRUE);
+  CHECK_GL_ERROR(true);
   
   // render entities using default shading
+  int lightCount = 0;
   for (int i = 0; i < _entityCount; ++i)
   {
     auto & entity = _entities[i];
     auto graphics = entity.graphics();
-    if (entity.enabled() && graphics &&
+    if (entity.enabled() && graphics && lightCount < numLights &&
         (!_deferredEnabled || !graphics->deferredShading() ||
          entity.type() == Light))
     {
+      if (entity.type() == Light)
+        ++lightCount;
+      
       // construct transform
       const mat4 PVM     = PV * entity.worldTransform();
       const mat4 prevPVM = prevPV * entity.previousWorldTransform();
@@ -1815,11 +1789,11 @@ bool Core::update()
   ////////////////////////////////////////
   // RENDERING - PARTICLES
   ////////////////////////////////////////
-  // TODO: render particles after motion blur, with correct depth testing
 
   // enable transparecy blending
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  CHECK_GL_ERROR(true);
   
   // render particles
   for (int i = 0; i < _entityCount; ++i)
@@ -1841,6 +1815,7 @@ bool Core::update()
   // disable blending and depth testing
   glDisable(GL_BLEND);
   glDisable(GL_DEPTH_TEST);
+  CHECK_GL_ERROR(true);
   
   if (_motionBlurEnabled)
   {
@@ -1853,7 +1828,7 @@ bool Core::update()
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, _postVelMap);
     glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, _postDepthMap);
+    glBindTexture(GL_TEXTURE_2D, _postDepthStencilMap);
     CHECK_GL_ERROR(true);
     
     // construct transforms
@@ -1882,12 +1857,14 @@ bool Core::update()
   // POST-PROCESSING - OUTPUT
   ////////////////////////////////////////
   
-  // bind shader program
+  // clear default frame buffer
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  glUseProgram(_postOutputSh.prog);
+  glClearBufferfv(GL_COLOR, 0, bgClear);
+  glClear(GL_DEPTH_BUFFER_BIT);
   CHECK_GL_ERROR(true);
   
   // bind textures
+  glUseProgram(_postOutputSh.prog);
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, _postColMap[POST_IN]);
   CHECK_GL_ERROR(true);
@@ -1927,7 +1904,7 @@ bool Core::update()
     ImGui::SameLine();
     ImGui::RadioButton("Per object", &_motionBlurMode, 1);
     ImGui::Spacing();
-    ImGui::SliderFloat("Velocity scaling", &_motionVelScaling, 0.0f, 10.0f);
+    ImGui::SliderFloat("Velocity scaling", &_motionVelScaling, 0.0f, 2.0f);
     ImGui::Checkbox("Adapting to variable framerate", &_motionAdaptVarFPS);
     ImGui::Checkbox("Adaptive number of samples", &_motionAdaptNumSamples);
     ImGui::SliderInt("Max / preferred number of samples",
@@ -1939,14 +1916,14 @@ bool Core::update()
   if (_deferredEnabled)
   {
     ImGui::Indent();
-    ImGui::Checkbox("Show quads", &_deferShowQuads);
+    ImGui::Checkbox("Show light effect area", &_deferShowLightArea);
     ImGui::ColorEdit3("Ambient color", &_deferAmbCol.r);
     ImGui::SliderInt("Number of lights", &_deferNumLights, 0,
                      (int)_lights.size());
     ImGui::Text("Light attenuation");
-    ImGui::SliderFloat("Distance", &_deferAttDist, 0.0f, 10.0f);
-    ImGui::SliderFloat("Linear term", &_deferAttLin, 0.0f, 5.0f);
-    ImGui::SliderFloat("Quadratic term", &_deferAttQuad, 0.0f, 5.0f);
+    ImGui::SliderFloat("Distance", &_deferAttDist, 0.0f, 50.0f);
+    ImGui::SliderFloat("Linear term", &_deferAttLin, 0.0f, 1.0f);
+    ImGui::SliderFloat("Quadratic term", &_deferAttQuad, 0.0f, 1.0f);
     ImGui::Unindent();
   }
   ImGui::Separator();
@@ -2203,7 +2180,6 @@ bool Core::_initFrameworks(const char * title, int scrnW, int scrnH)
   stbi_set_flip_vertically_on_load(true);
   
   // set flags
-  glEnable(GL_CULL_FACE);
   glEnable(GL_PROGRAM_POINT_SIZE);
   glBlendEquation(GL_FUNC_ADD);
   
@@ -2254,6 +2230,117 @@ bool _isFBOComplete(const string & name)
   return false;
 }
 
+void _createUnitSphere(vector<float> & verts, int phiDiv = 12,
+                       int thetaDiv = 24)
+{
+  // resize vertices vector
+  verts.resize(18*thetaDiv*(phiDiv-1));
+  int i = 0;
+  
+  // compute constant step values
+  const float ps     = M_PI/phiDiv;
+  const float ts     = 2.0f*M_PI/thetaDiv;
+  const float tsHalf = ts*0.5f;
+  
+  // declare variables
+  float a, aNext;
+  float u, uNext;
+  float t, offs;
+  
+  // create bottom cap
+  aNext = sinf(ps);
+  uNext = -cosf(ps);
+  for (int n = 0; n < thetaDiv; ++n, i += 9)
+  {
+    t = n*ts;
+    
+    // v1
+    verts[i]   = 0.0f;
+    verts[i+1] = -1.0f;
+    verts[i+2] = 0.0f;
+    
+    // v2
+    verts[i+3] = aNext*cosf(t-tsHalf);
+    verts[i+4] = uNext;
+    verts[i+5] = aNext*sinf(t-tsHalf);
+    
+    // v2
+    verts[i+6] = aNext*cosf(t+tsHalf);
+    verts[i+7] = uNext;
+    verts[i+8] = aNext*sinf(t+tsHalf);
+  }
+  
+  // create middle
+  offs = tsHalf;
+  for (int n = 1; n < phiDiv-1; ++n)
+  {
+    a     = aNext;
+    u     = uNext;
+    aNext =  sinf((n+1)*ps);
+    uNext = -cosf((n+1)*ps);
+    offs  = tsHalf * (n % 2);
+    for (int m = 0; m < thetaDiv; ++m, i += 18)
+    {
+      t = m*ts + offs;
+      
+      // triangle 1
+      // v1
+      verts[i]    = a*cosf(t);
+      verts[i+1]  = u;
+      verts[i+2]  = a*sinf(t);
+      
+      // v2
+      verts[i+3]  = aNext*cosf(t-tsHalf);
+      verts[i+4]  = uNext;
+      verts[i+5]  = aNext*sinf(t-tsHalf);
+      
+      // v2
+      verts[i+6]  = aNext*cosf(t+tsHalf);
+      verts[i+7]  = uNext;
+      verts[i+8]  = aNext*sinf(t+tsHalf);
+      
+      // triangle 2
+      // v1
+      verts[i+9]  = a*cosf(t);
+      verts[i+10] = u;
+      verts[i+11] = a*sinf(t);
+      
+      // v2
+      verts[i+12] = a*cosf(t-ts);
+      verts[i+13] = u;
+      verts[i+14] = a*sinf(t-ts);
+      
+      // v2
+      verts[i+15] = aNext*cosf(t-tsHalf);
+      verts[i+16] = uNext;
+      verts[i+17] = aNext*sinf(t-tsHalf);
+    }
+  }
+  
+  // create top cap
+  a =  sinf(M_PI-ps);
+  u = -cosf(M_PI-ps);
+  for (int m = 0; m < thetaDiv; ++m, i += 9)
+  {
+    t = m*ts + offs;
+    
+    // v1
+    verts[i]   = a*cosf(t-tsHalf);
+    verts[i+1] = u;
+    verts[i+2] = a*sinf(t-tsHalf);
+    
+    // v2
+    verts[i+3] = 0.0f;
+    verts[i+4] = 1.0f;
+    verts[i+5] = 0.0f;
+    
+    // v2
+    verts[i+6] = a*cosf(t+tsHalf);
+    verts[i+7] = u;
+    verts[i+8] = a*sinf(t+tsHalf);
+  }
+}
+
 bool Core::_generateBuffers()
 {
   const ivec2 d = viewDimensions();
@@ -2274,19 +2361,43 @@ bool Core::_generateBuffers()
   CHECK_GL_ERROR(true);
   
   // submit vertices to GPU
-  vector<float> quadPos =
+  vector<float> quadVerts =
   {
     -1.0f, -1.0f,
     1.0f, -1.0f,
     -1.0f,  1.0f,
     1.0f,  1.0f
   };
-  GLuint quadPosBuf;
-  glGenBuffers(1, &quadPosBuf);
-  glBindBuffer(GL_ARRAY_BUFFER, quadPosBuf);
-  glBufferData(GL_ARRAY_BUFFER, quadPos.size()*sizeof(float),
-               &quadPos[0], GL_STATIC_DRAW);
+  GLuint quadVertsBuf;
+  glGenBuffers(1, &quadVertsBuf);
+  glBindBuffer(GL_ARRAY_BUFFER, quadVertsBuf);
+  glBufferData(GL_ARRAY_BUFFER, quadVerts.size()*sizeof(float),
+               &quadVerts[0], GL_STATIC_DRAW);
   glVertexAttribPointer(0, 2, GL_FLOAT, false, 0, 0);
+  glEnableVertexAttribArray(0);
+  CHECK_GL_ERROR(true);
+  
+  ////////////////////////////////////////
+  // SPHERE VERTEX ARRAY OBJECT
+  ////////////////////////////////////////
+  
+  // generate vertex array object
+  glGenVertexArrays(1, &_sphereVAO);
+  glBindVertexArray(_sphereVAO);
+  CHECK_GL_ERROR(true);
+  
+  // create sphere
+  vector<float> sphereVerts;
+  _createUnitSphere(sphereVerts);
+  _numSphereVerts = (int)sphereVerts.size()/3;
+  
+  // submit vertices to GPU
+  GLuint sphereVertssBuf;
+  glGenBuffers(1, &sphereVertssBuf);
+  glBindBuffer(GL_ARRAY_BUFFER, sphereVertssBuf);
+  glBufferData(GL_ARRAY_BUFFER, sphereVerts.size()*sizeof(float),
+               &sphereVerts[0], GL_STATIC_DRAW);
+  glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
   glEnableVertexAttribArray(0);
   CHECK_GL_ERROR(true);
   
@@ -2317,11 +2428,11 @@ bool Core::_generateBuffers()
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   CHECK_GL_ERROR(true);
 
-  // generate depth texture
-  glGenTextures(1, &_postDepthMap);
-  glBindTexture(GL_TEXTURE_2D, _postDepthMap);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, d.x, d.y, 0,
-               GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+  // generate depth-stencil texture
+  glGenTextures(1, &_postDepthStencilMap);
+  glBindTexture(GL_TEXTURE_2D, _postDepthStencilMap);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, d.x, d.y, 0,
+               GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -2335,8 +2446,8 @@ bool Core::_generateBuffers()
                          _postColMap[POST_OUT], 0);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
                          _postVelMap, 0);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
-                         _postDepthMap, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
+                         GL_TEXTURE_2D, _postDepthStencilMap, 0);
   CHECK_GL_ERROR(true);
     
   // attach textures
@@ -2390,8 +2501,8 @@ bool Core::_generateBuffers()
                          _deferNormMap, 0);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D,
                          _deferColMap, 0);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
-                         _postDepthMap, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
+                         GL_TEXTURE_2D, _postDepthStencilMap, 0);
   CHECK_GL_ERROR(true);
   
   // attach textures
@@ -2443,14 +2554,27 @@ bool Core::_createDeferredGeometryShader()
                        "shaders/deferred_geometry.frag", ids);
 }
 
+bool Core::_createDeferredAmbientShader()
+{
+  return _createShader(_ambSh, "shaders/quad.vert",
+                       "shaders/deferred_ambient.frag",
+                       {"diffTexMap", "ambCol"});
+}
+
+bool Core::_createDeferredNullShader()
+{
+  return _createShader(_stencilSh, "shaders/PVM.vert", "shaders/null.frag",
+                       {"PVM"});
+}
+
 bool Core::_createDeferredLightShader()
 {
   const vector<string> ids =
   {
-    "PVM", "posTexMap", "normTexMap", "diffTexMap", "showLightQuad", "lightPos",
-    "lightCol", "attDist", "attLin", "attQuad"
+    "PVM", "posTexMap", "normTexMap", "diffTexMap", "showLightArea", "lightPos",
+    "lightCol", "attLin", "attQuad"
   };
-  bool success = _createShader(_lightSh, "shaders/deferred_lighting.vert",
+  bool success = _createShader(_lightSh, "shaders/PVM.vert",
                                "shaders/deferred_lighting.frag", ids);
   if (success)
   {
@@ -2463,13 +2587,6 @@ bool Core::_createDeferredLightShader()
   }
   
   return success;
-}
-
-bool Core::_createDeferredAmbientShader()
-{
-  return _createShader(_ambSh, "shaders/quad.vert",
-                       "shaders/deferred_ambient.frag",
-                       {"diffTexMap", "ambCol"});
 }
 
 bool Core::_createPostMotionBlurShader()
@@ -2530,4 +2647,75 @@ inline bool Core::_clearPostProcessing(const GLfloat * bgClear,
   glClearBufferfv(GL_COLOR, 1, blackClear);
   glClear(GL_DEPTH_BUFFER_BIT);
   return true;
+}
+
+inline void Core::_deferredStencilPass(const Entity * light, const mat4 & PVM)
+{
+  // enable depth testing
+  glEnable(GL_DEPTH_TEST);
+  
+  // disable face culling
+  glDisable(GL_CULL_FACE);
+  
+  // all fragments succeed, only depth test is relevant
+  glStencilFunc(GL_ALWAYS, 0, 0);
+  glClear(GL_STENCIL_BUFFER_BIT);
+  
+  // use stencil shader
+  glUseProgram(_stencilSh.prog);
+  
+  // update shader uniform
+  glUniformMatrix4fv(_stencilSh.locs["PVM"], 1, false, &PVM[0].x);
+    
+  // render
+  glBindVertexArray(_sphereVAO);
+  glDrawArrays(GL_TRIANGLES, 0, _numSphereVerts);
+  
+  CHECK_GL_ERROR(true);
+}
+
+inline void Core::_deferredLightingPass(const Entity * light, const mat4 & PVM)
+{
+  // disable depth testing
+  glDisable(GL_DEPTH_TEST);
+  CHECK_GL_ERROR(true);
+  
+  // enable face culling
+  glEnable(GL_CULL_FACE);
+  CHECK_GL_ERROR(true);
+  
+  // only allow fragments with a non-zero stencil value
+  glStencilFunc(GL_NOTEQUAL, 0, 0xFF);
+  
+  // bind textures
+  glUseProgram(_lightSh.prog);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, _deferPosMap);
+  glActiveTexture(GL_TEXTURE1);
+  glBindTexture(GL_TEXTURE_2D, _deferNormMap);
+  glActiveTexture(GL_TEXTURE2);
+  glBindTexture(GL_TEXTURE_2D, _deferColMap);
+  CHECK_GL_ERROR(true);
+  
+  // update attenuation uniforms
+  glUniform1i(_lightSh.locs["showLightArea"], _deferShowLightArea);
+  glUniform1f(_lightSh.locs["attLin"],   _deferAttLin);
+  glUniform1f(_lightSh.locs["attQuad"],  _deferAttQuad);
+  CHECK_GL_ERROR(true);
+  
+  // retrieve light data
+  auto graphics  = light->graphics();
+  const vec3 pos = light->worldPosition();
+  const vec3 col = graphics ? graphics->diffuseColor() : vec3(1.0f);
+    
+  // update shader uniforms
+  glUniformMatrix4fv(_lightSh.locs["PVM"], 1, false, &PVM[0].x);
+  glUniform3fv(_lightSh.locs["lightPos"], 1, &pos.x);
+  glUniform3fv(_lightSh.locs["lightCol"], 1, &col.x);
+  CHECK_GL_ERROR(true);
+    
+  // render
+  glBindVertexArray(_sphereVAO);
+  glDrawArrays(GL_TRIANGLES, 0, _numSphereVerts);
+  CHECK_GL_ERROR(true);
 }
