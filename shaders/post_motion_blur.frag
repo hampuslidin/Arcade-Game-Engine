@@ -22,7 +22,7 @@ void main()
   vec2 texCoords = gl_FragCoord.xy * texelSize;
   
   vec2 vel;
-  if (mode == 0) // Camera only
+  if (mode == 0) // Camera
   {
     // calculate current screen space position
     float zOverW    = texture(depthTexMap, texCoords).x;

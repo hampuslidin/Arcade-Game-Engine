@@ -1088,8 +1088,8 @@ const ivec2 & Core::mouseMovement() const { return _mouseMovement; };
 int Core::sampleRate() const   { return _sampleRate; };
 double Core::maxVolume() const { return _maxVolume; };
 
-const mat4 & Core::previousViewMatrix() const       { return _prevViewMatrix; }
-const mat4 & Core::previousProjectionMatrix() const { return _prevProjMatrix; }
+const mat4 & Core::previousViewMatrix() const       { return _prevViewMatrix; };
+const mat4 & Core::previousProjectionMatrix() const { return _prevProjMatrix; };
 const mat4 & Core::viewMatrix() const               { return _viewMatrix; };
 const mat4 & Core::projectionMatrix() const         { return _projMatrix; };
 
@@ -1201,24 +1201,10 @@ bool _compileShader(GLuint shader, string shaderFileName)
   cout << "Compiling '" << shaderFileName << "'... ";
   glCompileShader(shader);
   glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+  CHECK_GL_ERROR(true);
   if (!success)
   {
     cout << endl << "└─> " << _shaderInfoLog(shader) << endl;
-    return false;
-  }
-  cout << "ok" << endl;
-  return true;
-}
-
-bool _linkProgram(GLuint program)
-{
-  int success;
-  cout << "Linking... ";
-  glLinkProgram(program);
-  glGetProgramiv(program, GL_LINK_STATUS, &success);
-  if (!success)
-  {
-    cout << endl << "└─> " << _shaderInfoLog(program) << endl;
     return false;
   }
   cout << "ok" << endl;
@@ -1230,6 +1216,7 @@ maybe<GLuint> Core::CreateShaderProgram(const char * vsfn, const char * fsfn)
   // shaders
   GLuint vs = glCreateShader(GL_VERTEX_SHADER);
   GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
+  CHECK_GL_ERROR(true);
   
   // vertex shader source
   ifstream vsf(vsfn);
@@ -1246,6 +1233,7 @@ maybe<GLuint> Core::CreateShaderProgram(const char * vsfn, const char * fsfn)
   // bind sources to shaders
   glShaderSource(vs, 1, &vssCStr, nullptr);
   glShaderSource(fs, 1, &fssCStr, nullptr);
+  CHECK_GL_ERROR(true);
   
   // compile and check if it succeeded
   if (!_compileShader(vs, vsfn) || !_compileShader(fs, fsfn))
@@ -1257,10 +1245,20 @@ maybe<GLuint> Core::CreateShaderProgram(const char * vsfn, const char * fsfn)
   glAttachShader(shaderProg, vs);
   glDeleteShader(vs);
   glDeleteShader(fs);
+  CHECK_GL_ERROR(true);
   
   // link program
-  if (!_linkProgram(shaderProg))
+  int success;
+  cout << "Linking... ";
+  glLinkProgram(shaderProg);
+  glGetProgramiv(shaderProg, GL_LINK_STATUS, &success);
+  CHECK_GL_ERROR(true);
+  if (!success)
+  {
+    cout << endl << "└─> " << _shaderInfoLog(shaderProg) << endl;
     return maybe<GLuint>::nothing();
+  }
+  cout << "ok" << endl;
   
   return maybe<GLuint>::just(shaderProg);
 }
@@ -1271,8 +1269,8 @@ bool Core::CheckGLError(bool fatal)
   for (GLenum err = glGetError(); err != GL_NO_ERROR; err = glGetError())
   {
     error = fatal;
-    cout << "OpenGL " << (fatal ? "error: " : "warning: ");
-    cout << gluErrorString(err) << endl;
+    cout << "(OpenGL) " << (fatal ? "Error: " : "Warning: ") <<
+      gluErrorString(err) << endl;
   }
   return error;
 }
@@ -1296,348 +1294,6 @@ Core::Core(int numberOfEntities)
   _camera = createEntity("camera");
 }
 
-bool Core::_initFrameworks(const char * title, int scrnW, int scrnH)
-{
-  // initialize SDL
-  if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
-  {
-    SDL_Log("SDL_Init: %s\n", SDL_GetError());
-    return false;
-  }
-  SDL_GL_LoadLibrary(nullptr);
-  
-  // initialize OpenGL
-  const int majorVer = 4;
-#if defined(__APPLE__)
-  const int minorVer = 1;
-  const auto profile = SDL_GL_CONTEXT_PROFILE_CORE;
-#elif defined(_WIN32)
-  const int minorVer = 3;
-  const auto profile = SDL_GL_CONTEXT_PROFILE_COMPATIBILITY;
-#endif
-  SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, majorVer);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, minorVer);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, profile);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
-  SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-  SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-  
-  // create window
-  auto windowOptions = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;
-  _window = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED,
-                             SDL_WINDOWPOS_UNDEFINED, scrnW, scrnH,
-                             windowOptions);
-  if (_window == nullptr)
-  {
-    SDL_Log("SDL_CreateWindow: %s\n", SDL_GetError());
-    return false;
-  }
-  //  SDL_SetRelativeMouseMode(SDL_TRUE);
-  
-  // create context for window
-  _context = SDL_GL_CreateContext(_window);
-  if (_context == nullptr) {
-    cerr << "SDL error: " << SDL_GetError();
-    return false;
-  }
-  
-  // initialize glew
-#ifdef __APPLE__
-  glewExperimental = true;
-#endif
-  glewInit();
-  CHECK_GL_ERROR(false);
-  
-  // initialize ImGUI
-  if (!ImGui_ImplSdlGL3_Init(_window))
-  {
-    cerr << "ImGui error: failed to initialize.";
-    return false;
-  };
-  
-  // enable v-sync
-  SDL_GL_SetSwapInterval(1);
-  
-  // flip textures
-  stbi_set_flip_vertically_on_load(true);
-  
-  // clear and swap frame
-  glClear(GL_COLOR_BUFFER_BIT);
-  SDL_GL_SwapWindow(_window);
-  
-  return true;
-}
-
-void _fboError(int status, const string & name)
-{
-  cerr << "OpenGL error: frame buffer object for " << name << " has status ";
-  switch (status) {
-    case GL_FRAMEBUFFER_UNDEFINED:
-      cerr << "GL_FRAMEBUFFER_UNDEFINED.";
-      break;
-    case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
-      cerr << "GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT.";
-      break;
-    case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
-      cerr << "GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT.";
-      break;
-    case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
-      cerr << "GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER.";
-      break;
-    case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
-      cerr << "GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER.";
-      break;
-    case GL_FRAMEBUFFER_UNSUPPORTED:
-      cerr << "GL_FRAMEBUFFER_UNSUPPORTED.";
-      break;
-    case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
-      cerr << "GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE.";
-      break;
-    case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:
-      cerr << "GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS.";
-      break;
-    default:
-      cerr << "0.";
-      break;
-  }
-  cerr << endl;
-}
-
-bool Core::_generateBuffers()
-{
-  const ivec2 d = viewDimensions();
-  
-  ////////////////////////////////////////
-  // FULLSCREEN QUAD
-  ////////////////////////////////////////
-  
-  // generate vertex array object
-  glGenVertexArrays(1, &_quadVAO);
-  glBindVertexArray(_quadVAO);
-  
-  // submit vertices to GPU
-  vector<float> quadPos =
-  {
-    -1.0f, -1.0f,
-     1.0f, -1.0f,
-    -1.0f,  1.0f,
-     1.0f,  1.0f
-  };
-  GLuint quadPosBuf;
-  glGenBuffers(1, &quadPosBuf);
-  glBindBuffer(GL_ARRAY_BUFFER, quadPosBuf);
-  glBufferData(GL_ARRAY_BUFFER, quadPos.size()*sizeof(float),
-               &quadPos[0], GL_STATIC_DRAW);
-  glVertexAttribPointer(0, 2, GL_FLOAT, false, 0, 0);
-  glEnableVertexAttribArray(0);
-  
-  ////////////////////////////////////////
-  // DEFERRED SHADING
-  ////////////////////////////////////////
-  
-  // generate position texture
-  glGenTextures(1, &_deferPosMap);
-  glBindTexture(GL_TEXTURE_2D, _deferPosMap);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, d.x, d.y, 0, GL_RGB, GL_FLOAT,
-               nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  
-  // generate normal texture
-  glGenTextures(1, &_deferNormMap);
-  glBindTexture(GL_TEXTURE_2D, _deferNormMap);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, d.x, d.y, 0, GL_RGB, GL_FLOAT,
-               nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  
-  // generate color texture
-  glGenTextures(1, &_deferColMap);
-  glBindTexture(GL_TEXTURE_2D, _deferColMap);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, d.x, d.y, 0,
-               GL_RGB, GL_UNSIGNED_BYTE, nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  
-  // generate frame buffer object
-  glGenFramebuffers(1, &_deferFBO);
-  glBindFramebuffer(GL_FRAMEBUFFER, _deferFBO);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         _deferPosMap, 0);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
-                         _deferNormMap, 0);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D,
-                         _deferColMap, 0);
-  
-  // attach textures
-  GLuint deferAttach[3] =
-  {
-    GL_COLOR_ATTACHMENT0,
-    GL_COLOR_ATTACHMENT1,
-    GL_COLOR_ATTACHMENT2
-  };
-  glDrawBuffers(3, deferAttach);
-  
-  // generate render buffer object
-  GLuint deferRBO;
-  glGenRenderbuffers(1, &deferRBO);
-  glBindRenderbuffer(GL_RENDERBUFFER, deferRBO);
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, d.x, d.y);
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                            GL_RENDERBUFFER, deferRBO);
-  
-  // check frame buffer status
-  int status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-  if (status != GL_FRAMEBUFFER_COMPLETE)
-  {
-    _fboError(status, "deferred shading");
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    return false;
-  }
-  
-  ////////////////////////////////////////
-  // POST PROCESSING
-  ////////////////////////////////////////
-  
-  // generate color texture
-  glGenTextures(1, &_postColMap);
-  glBindTexture(GL_TEXTURE_2D, _postColMap);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, d.x, d.y, 0, GL_RGBA,
-               GL_UNSIGNED_BYTE, nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  
-  // generate velocity texture
-  glGenTextures(1, &_postVelMap);
-  glBindTexture(GL_TEXTURE_2D, _postVelMap);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16F, d.x, d.y, 0, GL_RG, GL_FLOAT,
-               nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  
-  // generate depth texture
-  glGenTextures(1, &_postDepthMap);
-  glBindTexture(GL_TEXTURE_2D, _postDepthMap);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, d.x, d.y, 0,
-               GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  
-  // generate frame buffer object
-  glGenFramebuffers(1, &_postFBO);
-  glBindFramebuffer(GL_FRAMEBUFFER, _postFBO);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         _postColMap, 0);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
-                         _postVelMap, 0);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
-                         _postDepthMap, 0);
-  
-  // attach textures
-  GLuint postAttach[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
-  glDrawBuffers(2, postAttach);
-  
-  // check frame buffer status
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-  if (status != GL_FRAMEBUFFER_COMPLETE)
-  {
-    _fboError(status, "post processing");
-    return false;
-  }
-  
-  return true;
-}
-
-bool Core::_createShader(_Shader & sh, const char * vsfn, const char * fsfn,
-                         const vector<string> & ids)
-{
-  auto result = CreateShaderProgram(vsfn, fsfn);
-  
-  if (!result.isNothing())
-  {
-    sh.prog = result;
-    for (string id : ids)
-      sh.locs[id] = glGetUniformLocation(sh.prog, id.c_str());
-    return true;
-  }
-  
-  return false;
-}
-
-bool Core::_createDefaultShader()
-{
-  const vector<string> ids =
-  {
-    "PVM", "prevPVM", "diffTexMap", "hasDiffTexMap", "diffCol"
-  };
-  return _createShader(_defaultSh, "shaders/default.vert",
-                       "shaders/default.frag", ids);
-}
-
-bool Core::_createDeferredShader()
-{
-  const vector<string> ids = {"M", "V", "P", "N"};
-  return _createShader(_deferSh, "shaders/deferred_geometry.vert",
-                       "shaders/deferred_geometry.frag", ids);
-}
-
-bool Core::_createLightShader()
-{
-  vector<string> ids(148);
-  for (int i = 0; i < 36; ++i)
-  {
-    const string prefix = "lights[" + to_string(i) + "].";
-    ids[4*i]   = (prefix + "pos").c_str();
-    ids[4*i+1] = (prefix + "col").c_str();
-    ids[4*i+2] = (prefix + "lin").c_str();
-    ids[4*i+3] = (prefix + "quad").c_str();
-  }
-  ids[144] = "posTexMap";
-  ids[145] = "normTexMap";
-  ids[146] = "diffTexMap";
-  ids[147] = "numLights";
-  
-  bool success = _createShader(_lightSh, "shaders/deferred_lighting.vert",
-                               "shaders/deferred_lighting.frag", ids);
-  if (success)
-  {
-    // set texture uniforms
-    glUseProgram(_lightSh.prog);
-    glUniform1i(_lightSh.locs["posTexMap"],  0);
-    glUniform1i(_lightSh.locs["normTexMap"], 1);
-    glUniform1i(_lightSh.locs["diffTexMap"], 2);
-  }
-  
-  return success;
-}
-
-bool Core::_createMotionBlurShader()
-{
-  const vector<string> ids =
-  {
-    "diffTexMap", "velTexMap", "depthTexMap", "currToPrev", "fps", "mode",
-    "velScaling", "adaptVarFPS", "adaptNumSamples", "prefNumSamples"
-  };
-  bool success = _createShader(_motionSh, "shaders/motion_blur.vert",
-                               "shaders/motion_blur.frag", ids);
-  if (success)
-  {
-    // set texture uniforms
-    glUseProgram(_motionSh.prog);
-    glUniform1i(_motionSh.locs["diffTexMap"],  0);
-    glUniform1i(_motionSh.locs["velTexMap"],   1);
-    glUniform1i(_motionSh.locs["depthTexMap"], 2);
-  }
-  
-  return success;
-}
-
 bool Core::init(const CoreOptions & options)
 {
   // TODO: make more secure, i.e. handle errors better
@@ -1651,13 +1307,9 @@ bool Core::init(const CoreOptions & options)
     return false;
   
   // create shaders
-  if (!_createDefaultShader())
-    return false;
-  if (!_createDeferredShader())
-    return false;
-  if (!_createLightShader())
-    return false;
-  if (!_createMotionBlurShader())
+  if (!_createDefaultShader() || !_createDeferredGeometryShader() ||
+      !_createDeferredLightShader() || !_createDeferredAmbientShader() ||
+      !_createPostMotionBlurShader() || !_createPostOutputShader())
     return false;
   
   // initialize entities
@@ -1729,7 +1381,6 @@ bool Core::init(const CoreOptions & options)
   SDL_PauseAudio(0);
   
   // initialize GUI properties
-  _controlsEnabled       = true;
   _motionBlurEnabled     = false;
   _motionBlurMode        = 0;
   _motionVelScaling      = 1.0f;
@@ -1737,7 +1388,12 @@ bool Core::init(const CoreOptions & options)
   _motionAdaptNumSamples = true;
   _motionPrefNumSamples  = 16;
   _deferredEnabled       = false;
-  _numLights             = (int)_lights.size();
+  _deferShowQuads        = false;
+  _deferAmbCol           = {0.3f, 0.3f, 0.3f};
+  _deferNumLights        = (int)_lights.size();
+  _deferAttDist          = 7.0f;
+  _deferAttLin           = 0.12f;
+  _deferAttQuad          = 0.58f;
   _particlesEnabled      = false;
   _particleSpawnRate     = 64;
   _particleLifeTime      = 1.0f;
@@ -1749,10 +1405,9 @@ bool Core::init(const CoreOptions & options)
 
 bool Core::update()
 {
-  bool shouldContinue = true;
   
   ////////////////////////////////////////
-  // FRAME TIME SETUP
+  // SETUP
   ////////////////////////////////////////
   
   // record time
@@ -1760,6 +1415,9 @@ bool Core::update()
   double startTime = elapsedTime();
   _deltaTime = startTime - prevTime;
   prevTime = startTime;
+  
+  // create GUI frame
+  ImGui_ImplSdlGL3_NewFrame(_window);
   
   ////////////////////////////////////////
   // INPUT
@@ -1782,20 +1440,19 @@ bool Core::update()
       case SDL_MOUSEBUTTONUP:
         keysToRelease.insert(event.button.button);
         break;
+      case SDL_KEYDOWN:
+        keysToPress.insert(event.key.keysym.sym);
+        break;
+      case SDL_KEYUP:
+        keysToRelease.insert(event.key.keysym.sym);
+        break;
+      case SDL_QUIT:
+        return false;
     }
-    if (_controlsEnabled)
+    if (!ImGui::IsMouseHoveringWindow())
     {
       switch (event.type)
       {
-        case SDL_QUIT:
-          shouldContinue = false;
-          break;
-        case SDL_KEYDOWN:
-          keysToPress.insert(event.key.keysym.sym);
-          break;
-        case SDL_KEYUP:
-          keysToRelease.insert(event.key.keysym.sym);
-          break;
         case SDL_MOUSEMOTION:
           _mousePosition.x = event.motion.x;
           _mousePosition.y = event.motion.y;
@@ -1952,13 +1609,6 @@ bool Core::update()
   ivec2 d = viewDimensions();
   glViewport(0, 0, d.x, d.y);
   
-  // flags
-  glEnable(GL_DEPTH_TEST);
-  glEnable(GL_CULL_FACE);
-  glEnable(GL_PROGRAM_POINT_SIZE);
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-  
   // update view and projection matrix
   _prevViewMatrix           = _viewMatrix;
   _prevProjMatrix           = _projMatrix;
@@ -1967,35 +1617,41 @@ bool Core::update()
   _viewMatrix               = cameraRotation * cameraTranslation;
   _projMatrix               = glm::perspective(glm::radians(45.0f),
                                                float(d.x) / float(d.y),
-                                               0.01f, 1000.0f);
+                                               0.01f, 300.0f);
+  const mat4 PV             = _projMatrix * _viewMatrix;
+  const mat4 prevPV         = _prevProjMatrix * _prevViewMatrix;
   
   // define clear colors
   const GLfloat bgClear[]    = {_bgColor.r, _bgColor.g, _bgColor.b, 1.0f};
   const GLfloat blackClear[] = {0.0f,       0.0f,       0.0f,       1.0f};
   
   // clear frame buffers
+  // FIXME: why is clearing so slow?
+  CHECK_GL_ERROR(true);
   glClearBufferfv(GL_COLOR, 0, bgClear);
   glClear(GL_DEPTH_BUFFER_BIT);
-  if (_motionBlurEnabled)
-  {
-    glBindFramebuffer(GL_FRAMEBUFFER, _postFBO);
-    glClearBufferfv(GL_COLOR, 0, bgClear);
-    glClearBufferfv(GL_COLOR, 1, blackClear);
-    glClear(GL_DEPTH_BUFFER_BIT);
-  }
+  glBindFramebuffer(GL_FRAMEBUFFER, _postFBO);
+  CHECK_GL_ERROR(true);
+  if (!_clearPostProcessing(bgClear, blackClear))
+    return false;
   
   ////////////////////////////////////////
-  // RENDERING - GEOMETRY PASS
+  // RENDERING - (DEFERRED) GEOMETRY PASS
   ////////////////////////////////////////
   
   if (_deferredEnabled)
   {
+    // disable blending and enable depth testing
+    glDisable(GL_BLEND);
+    glEnable(GL_DEPTH_TEST);
+    
     // clear deferred shader frame buffer
     glBindFramebuffer(GL_FRAMEBUFFER, _deferFBO);
     glClearBufferfv(GL_COLOR, 0, blackClear);
     glClearBufferfv(GL_COLOR, 1, blackClear);
     glClearBufferfv(GL_COLOR, 2, bgClear);
     glClear(GL_DEPTH_BUFFER_BIT);
+    CHECK_GL_ERROR(true);
     
     // render entities to geometry buffer
     for (int i = 0; i < _entityCount; ++i)
@@ -2006,82 +1662,125 @@ bool Core::update()
           graphics->deferredShading())
       {
         // construct transforms
-        const mat4 M = entity.worldTransform();
-        const mat3 N = glm::inverse(mat3(M));
+        const mat4 M   = entity.worldTransform();
+        const mat4 PVM = PV * M;
+        const mat3 N   = glm::inverse(mat3(M));
         
         // set shader uniforms
         glUseProgram(_deferSh.prog);
-        glUniformMatrix4fv(_deferSh.locs["M"], 1, false, &M[0].x);
-        glUniformMatrix4fv(_deferSh.locs["V"], 1, false, &_viewMatrix[0].x);
-        glUniformMatrix4fv(_deferSh.locs["P"], 1, false, &_projMatrix[0].x);
-        glUniformMatrix3fv(_deferSh.locs["N"], 1, true,  &N[0].x);
+        glUniformMatrix4fv(_deferSh.locs["M"],   1, false, &M[0].x);
+        glUniformMatrix4fv(_deferSh.locs["PVM"], 1, false, &PVM[0].x);
+        glUniformMatrix3fv(_deferSh.locs["N"],   1, true,  &N[0].x);
+        CHECK_GL_ERROR(true);
         
         // render
         graphics->render(*this);
+        CHECK_GL_ERROR(true);
       }
     }
   }
   
   ////////////////////////////////////////
-  // RENDERING - LIGHTING PASS
+  // RENDERING - (DEFERRED) AMBIENT PASS
   ////////////////////////////////////////
-
+  
   if (_deferredEnabled)
   {
+    // disable depth testing
+    glDisable(GL_DEPTH_TEST);
+    
     // bind shader program
-    GLuint frameBufferTarget = _motionBlurEnabled ? _postFBO : 0;
-    glBindFramebuffer(GL_FRAMEBUFFER, frameBufferTarget);
-    glUseProgram(_lightSh.prog);
+    glBindFramebuffer(GL_FRAMEBUFFER, _postFBO);
+    glUseProgram(_ambSh.prog);
+    CHECK_GL_ERROR(true);
+    
+    // bind texture
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, _deferColMap);
+    CHECK_GL_ERROR(true);
+    
+    // update shader uniforms
+    glUniform3fv(_ambSh.locs["ambCol"], 1, &_deferAmbCol.x);
+    CHECK_GL_ERROR(true);
+    
+    // draw fullscreen quad
+    glBindVertexArray(_quadVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    CHECK_GL_ERROR(true);
+  }
+  
+  ////////////////////////////////////////
+  // RENDERING - (DEFERRED) LIGHTING PASS
+  ////////////////////////////////////////
+  
+  if (_deferredEnabled)
+  {
+    // enable additive blending
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_ONE, GL_ONE);
+    
+    // enable depth testing, but disable writing
+    glEnable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
     
     // bind textures
+    glUseProgram(_lightSh.prog);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, _deferPosMap);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, _deferNormMap);
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, _deferColMap);
-    
-    // update uniform data in shader
-    const float lin  = 0.22f;
-    const float quad = 0.20f;
-    for (int i = 0; i < _lights.size(); ++i)
+    CHECK_GL_ERROR(true);
+
+    // update attenuation uniforms
+    glUniform1i(_lightSh.locs["showQuad"], _deferShowQuads);
+    glUniform1f(_lightSh.locs["attDist"],  _deferAttDist);
+    glUniform1f(_lightSh.locs["attLin"],   _deferAttLin);
+    glUniform1f(_lightSh.locs["attQuad"],  _deferAttQuad);
+    CHECK_GL_ERROR(true);
+
+    // render lighting
+    const mat4 S        = glm::scale(vec3(_deferAttDist));
+    const int numLights = std::min((int)_lights.size(), _deferNumLights);
+    for (int i = 0; i < numLights; ++i)
     {
+      
+      // retrieve light data
       Entity * light = _lights[i];
       auto graphics  = light->graphics();
       const vec3 pos = light->worldPosition();
       const vec3 col = graphics ? graphics->diffuseColor() : vec3(1.0f);
+     
+      // compute quad transform
+      const vec3 cameraDir = normalize(_camera->worldPosition()-pos);
+      const mat4 T         = glm::translate(pos + _deferAttDist*cameraDir);
+      const mat4 R         = glm::toMat4(_camera->worldOrientation());
+      const mat4 PVM       = PV * T * R * S;
       
-      const string prefix   = "lights[" + to_string(i) + "].";
-      const char * posName  = (prefix + "pos").c_str();
-      const char * colName  = (prefix + "col").c_str();
-      const char * linName  = (prefix + "lin").c_str();
-      const char * quadName = (prefix + "quad").c_str();
-      glUniform3fv(_lightSh.locs[posName], 1, &pos.x);
-      glUniform3fv(_lightSh.locs[colName], 1, &col.x);
-      glUniform1f(_lightSh.locs[linName], lin);
-      glUniform1f(_lightSh.locs[quadName], quad);
+      // update shader uniforms
+      glUniformMatrix4fv(_lightSh.locs["PVM"], 1, false, &PVM[0].x);
+      glUniform3fv(_lightSh.locs["lightPos"], 1, &pos.x);
+      glUniform3fv(_lightSh.locs["lightCol"], 1, &col.x);
+      CHECK_GL_ERROR(true);
+
+      // draw quad covering the light volume
+      glBindVertexArray(_quadVAO);
+      glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+      CHECK_GL_ERROR(true);
     }
-    glUniform1i(_lightSh.locs["numLights"], _numLights);
-    
-    // draw fullscreen quad
-    glBindVertexArray(_quadVAO);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    
-    // copy depth data to post processing frame buffer object
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, _deferFBO);
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, frameBufferTarget);
-    glBlitFramebuffer(0, 0, d.x, d.y, 0, 0, d.x, d.y, GL_DEPTH_BUFFER_BIT,
-                      GL_NEAREST);
-    glBindFramebuffer(GL_FRAMEBUFFER, frameBufferTarget);
   }
   
   ////////////////////////////////////////
-  // RENDERING - DEFAULT
+  // RENDERING - ENTITIES
   ////////////////////////////////////////
 
+  // disable blending and enable depth testing
+  glDisable(GL_BLEND);
+  glEnable(GL_DEPTH_TEST);
+  glDepthMask(GL_TRUE);
+  
   // render entities using default shading
-  const mat4 PV     = _projMatrix * _viewMatrix;
-  const mat4 prevPV = _prevProjMatrix * _prevViewMatrix;
   for (int i = 0; i < _entityCount; ++i)
   {
     auto & entity = _entities[i];
@@ -2105,18 +1804,23 @@ bool Core::update()
         glUniform3fv(_defaultSh.locs["diffCol"], 1,
                      &graphics->diffuseColor().x);
       }
+      CHECK_GL_ERROR(true);
       
       // render
       graphics->render(*this);
-
+      CHECK_GL_ERROR(true);
     }
   }
   
   ////////////////////////////////////////
   // RENDERING - PARTICLES
   ////////////////////////////////////////
+  // TODO: render particles after motion blur, with correct depth testing
 
-
+  // enable transparecy blending
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  
   // render particles
   for (int i = 0; i < _entityCount; ++i)
   {
@@ -2127,30 +1831,35 @@ bool Core::update()
     // last rendering pass using models, so advance to next frame
     entity.nextFrame();
   }
+  if (!_swapPostProcessing())
+    return false;
   
   ////////////////////////////////////////
-  // RENDERING - MOTION BLUR
+  // POST-PROCESSING - MOTION BLUR
   ////////////////////////////////////////
+  
+  // disable blending and depth testing
+  glDisable(GL_BLEND);
+  glDisable(GL_DEPTH_TEST);
   
   if (_motionBlurEnabled)
   {
-    // bind frame buffer object and shader program
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    // bind shader program
     glUseProgram(_motionSh.prog);
     
     // bind color textore
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, _postColMap);
+    glBindTexture(GL_TEXTURE_2D, _postColMap[POST_IN]);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, _postVelMap);
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, _postDepthMap);
+    CHECK_GL_ERROR(true);
     
     // construct transforms
     const mat4 currToPrev = prevPV * glm::inverse(PV);
     
     // set shader uniforms
-    glUseProgram(_motionSh.prog);
     glUniformMatrix4fv(_motionSh.locs["currToPrev"], 1, false,
                        &currToPrev[0].x);
     glUniform1f(_motionSh.locs["fps"], 1.0f / _deltaTime);
@@ -2159,20 +1868,38 @@ bool Core::update()
     glUniform1i(_motionSh.locs["adaptVarFPS"], _motionAdaptVarFPS);
     glUniform1i(_motionSh.locs["adaptNumSamples"], _motionAdaptNumSamples);
     glUniform1i(_motionSh.locs["prefNumSamples"], _motionPrefNumSamples);
+    CHECK_GL_ERROR(true);
     
     // draw fullscreen quad
-    glDisable(GL_BLEND);
     glBindVertexArray(_quadVAO);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glEnable(GL_BLEND);
+    CHECK_GL_ERROR(true);
+    if (!_swapPostProcessing())
+      return false;
   }
+  
+  ////////////////////////////////////////
+  // POST-PROCESSING - OUTPUT
+  ////////////////////////////////////////
+  
+  // bind shader program
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glUseProgram(_postOutputSh.prog);
+  CHECK_GL_ERROR(true);
+  
+  // bind textures
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, _postColMap[POST_IN]);
+  CHECK_GL_ERROR(true);
+  
+  // draw fullscreen quad
+  glBindVertexArray(_quadVAO);
+  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+  CHECK_GL_ERROR(true);
   
   ////////////////////////////////////////
   // GUI
   ////////////////////////////////////////
-  
-  // create frame
-  ImGui_ImplSdlGL3_NewFrame(_window);
   
   // calculate frame rate
   static double       frameRate      = 0.0;
@@ -2192,13 +1919,11 @@ bool Core::update()
   // set controls
   ImGui::Text("%0.1f fps", frameRate);
   ImGui::Separator();
-  ImGui::Checkbox("Controls", &_controlsEnabled);
-  ImGui::Separator();
   ImGui::Checkbox("Motion blur", &_motionBlurEnabled);
   if (_motionBlurEnabled)
   {
     ImGui::Indent();
-    ImGui::RadioButton("Camera only", &_motionBlurMode, 0);
+    ImGui::RadioButton("Camera", &_motionBlurMode, 0);
     ImGui::SameLine();
     ImGui::RadioButton("Per object", &_motionBlurMode, 1);
     ImGui::Spacing();
@@ -2214,7 +1939,14 @@ bool Core::update()
   if (_deferredEnabled)
   {
     ImGui::Indent();
-    ImGui::SliderInt("Number of lights", &_numLights, 0, (int)_lights.size());
+    ImGui::Checkbox("Show quads", &_deferShowQuads);
+    ImGui::ColorEdit3("Ambient color", &_deferAmbCol.r);
+    ImGui::SliderInt("Number of lights", &_deferNumLights, 0,
+                     (int)_lights.size());
+    ImGui::Text("Light attenuation");
+    ImGui::SliderFloat("Distance", &_deferAttDist, 0.0f, 10.0f);
+    ImGui::SliderFloat("Linear term", &_deferAttLin, 0.0f, 5.0f);
+    ImGui::SliderFloat("Quadratic term", &_deferAttQuad, 0.0f, 5.0f);
     ImGui::Unindent();
   }
   ImGui::Separator();
@@ -2265,7 +1997,7 @@ bool Core::update()
     else i++;
   }
   
-  return shouldContinue;
+  return true;
 }
 
 void Core::destroy()
@@ -2401,4 +2133,401 @@ ivec2 Core::viewDimensions() const
   ivec2 v;
   SDL_GL_GetDrawableSize(_window, &v.x, &v.y);
   return v;
+}
+
+// MARK: Private
+bool Core::_initFrameworks(const char * title, int scrnW, int scrnH)
+{
+  // initialize SDL
+  if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
+  {
+    SDL_Log("SDL_Init: %s\n", SDL_GetError());
+    return false;
+  }
+  SDL_GL_LoadLibrary(nullptr);
+  
+  // initialize OpenGL
+  const int majorVer = 4;
+#if defined(__APPLE__)
+  const int minorVer = 1;
+  const auto profile = SDL_GL_CONTEXT_PROFILE_CORE;
+#elif defined(_WIN32)
+  const int minorVer = 3;
+  const auto profile = SDL_GL_CONTEXT_PROFILE_COMPATIBILITY;
+#endif
+  SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, majorVer);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, minorVer);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, profile);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
+  SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+  SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+  
+  // create window
+  auto windowOptions = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;
+  _window = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED,
+                             SDL_WINDOWPOS_UNDEFINED, scrnW, scrnH,
+                             windowOptions);
+  if (_window == nullptr)
+  {
+    SDL_Log("SDL_CreateWindow: %s\n", SDL_GetError());
+    return false;
+  }
+  //  SDL_SetRelativeMouseMode(SDL_TRUE);
+  
+  // create context for window
+  _context = SDL_GL_CreateContext(_window);
+  if (_context == nullptr) {
+    cerr << "SDL error: " << SDL_GetError();
+    return false;
+  }
+  
+  // initialize glew
+#ifdef __APPLE__
+  glewExperimental = true;
+#endif
+  glewInit();
+  CHECK_GL_ERROR(false);
+  
+  // initialize ImGUI
+  if (!ImGui_ImplSdlGL3_Init(_window))
+  {
+    cerr << "ImGui error: failed to initialize.";
+    return false;
+  };
+  
+  // enable v-sync
+  SDL_GL_SetSwapInterval(1);
+  
+  // flip textures
+  stbi_set_flip_vertically_on_load(true);
+  
+  // set flags
+  glEnable(GL_CULL_FACE);
+  glEnable(GL_PROGRAM_POINT_SIZE);
+  glBlendEquation(GL_FUNC_ADD);
+  
+  // clear and swap frame
+  glClearColor(_bgColor.r, _bgColor.g, _bgColor.b, 1.0f);
+  glClear(GL_COLOR_BUFFER_BIT);
+  SDL_GL_SwapWindow(_window);
+  
+  return true;
+}
+
+bool _isFBOComplete(const string & name)
+{
+  int status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+  if (status == GL_FRAMEBUFFER_COMPLETE)
+    return true;
+
+  string msg = "(OpenGL) Error: frame buffer object for " + name + " ";
+  switch (status) {
+    case GL_FRAMEBUFFER_UNDEFINED:
+      msg += "is incomplete";
+      break;
+    case GL_FRAMEBUFFER_UNSUPPORTED:
+      msg += "is unsupported.";
+      break;
+    case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+      msg += "has an attachment error.";
+      break;
+    case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+      msg += "has a missing attachment error.";
+      break;
+    case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
+      msg += "has an incomplete draw buffer error.";
+      break;
+    case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
+      msg += "has an incomplete read buffer error.";
+      break;
+    case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
+      msg += "has a multisample error.";
+      break;
+    case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:
+      msg += "has a layer target error.";
+      break;
+    default:
+      return false;
+  }
+  cerr << msg << endl;
+  return false;
+}
+
+bool Core::_generateBuffers()
+{
+  const ivec2 d = viewDimensions();
+  GLuint attachments[3] =
+  {
+    GL_COLOR_ATTACHMENT0,
+    GL_COLOR_ATTACHMENT1,
+    GL_COLOR_ATTACHMENT2
+  };
+  
+  ////////////////////////////////////////
+  // QUAD VERTEX ARRAY OBJECT
+  ////////////////////////////////////////
+  
+  // generate vertex array object
+  glGenVertexArrays(1, &_quadVAO);
+  glBindVertexArray(_quadVAO);
+  CHECK_GL_ERROR(true);
+  
+  // submit vertices to GPU
+  vector<float> quadPos =
+  {
+    -1.0f, -1.0f,
+    1.0f, -1.0f,
+    -1.0f,  1.0f,
+    1.0f,  1.0f
+  };
+  GLuint quadPosBuf;
+  glGenBuffers(1, &quadPosBuf);
+  glBindBuffer(GL_ARRAY_BUFFER, quadPosBuf);
+  glBufferData(GL_ARRAY_BUFFER, quadPos.size()*sizeof(float),
+               &quadPos[0], GL_STATIC_DRAW);
+  glVertexAttribPointer(0, 2, GL_FLOAT, false, 0, 0);
+  glEnableVertexAttribArray(0);
+  CHECK_GL_ERROR(true);
+  
+  ////////////////////////////////////////
+  // POST PROCESSING
+  ////////////////////////////////////////
+  
+  // generate color textures
+  glGenTextures(2, _postColMap);
+  for (auto i : {POST_IN, POST_OUT})
+  {
+    glBindTexture(GL_TEXTURE_2D, _postColMap[i]);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, d.x, d.y, 0, GL_RGBA,
+                 GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    CHECK_GL_ERROR(true);
+  }
+  
+  // generate velocity texture
+  glGenTextures(1, &_postVelMap);
+  glBindTexture(GL_TEXTURE_2D, _postVelMap);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16F, d.x, d.y, 0, GL_RG, GL_FLOAT,
+               nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  CHECK_GL_ERROR(true);
+
+  // generate depth texture
+  glGenTextures(1, &_postDepthMap);
+  glBindTexture(GL_TEXTURE_2D, _postDepthMap);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, d.x, d.y, 0,
+               GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  CHECK_GL_ERROR(true);
+  
+  // generate frame buffer object
+  glGenFramebuffers(1, &_postFBO);
+  glBindFramebuffer(GL_FRAMEBUFFER, _postFBO);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         _postColMap[POST_OUT], 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
+                         _postVelMap, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
+                         _postDepthMap, 0);
+  CHECK_GL_ERROR(true);
+    
+  // attach textures
+  glDrawBuffers(2, attachments);
+  CHECK_GL_ERROR(true);
+    
+  // check frame buffer status
+  if (!_isFBOComplete("post-processing"))
+  {
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    return false;
+  }
+  
+  ////////////////////////////////////////
+  // DEFERRED SHADING
+  ////////////////////////////////////////
+  
+  // generate position texture
+  glGenTextures(1, &_deferPosMap);
+  glBindTexture(GL_TEXTURE_2D, _deferPosMap);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, d.x, d.y, 0, GL_RGB, GL_FLOAT,
+               nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  CHECK_GL_ERROR(true);
+  
+  // generate normal texture
+  glGenTextures(1, &_deferNormMap);
+  glBindTexture(GL_TEXTURE_2D, _deferNormMap);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, d.x, d.y, 0, GL_RGB, GL_FLOAT,
+               nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  CHECK_GL_ERROR(true);
+  
+  // generate color texture
+  glGenTextures(1, &_deferColMap);
+  glBindTexture(GL_TEXTURE_2D, _deferColMap);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, d.x, d.y, 0,
+               GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  CHECK_GL_ERROR(true);
+  
+  // generate frame buffer object
+  glGenFramebuffers(1, &_deferFBO);
+  glBindFramebuffer(GL_FRAMEBUFFER, _deferFBO);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         _deferPosMap, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
+                         _deferNormMap, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D,
+                         _deferColMap, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
+                         _postDepthMap, 0);
+  CHECK_GL_ERROR(true);
+  
+  // attach textures
+  glDrawBuffers(3, attachments);
+  CHECK_GL_ERROR(true);
+  
+  // check frame buffer status
+  if (!_isFBOComplete("deferred shading"))
+  {
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    return false;
+  }
+  
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  return true;
+}
+
+bool Core::_createShader(_Shader & sh, const char * vsfn, const char * fsfn,
+                         const vector<string> & ids)
+{
+  auto result = CreateShaderProgram(vsfn, fsfn);
+  
+  if (!result.isNothing())
+  {
+    sh.prog = result;
+    for (string id : ids)
+      sh.locs[id] = glGetUniformLocation(sh.prog, id.c_str());
+    CHECK_GL_ERROR(true);
+    return true;
+  }
+  
+  return false;
+}
+
+bool Core::_createDefaultShader()
+{
+  const vector<string> ids =
+  {
+    "PVM", "prevPVM", "diffTexMap", "hasDiffTexMap", "diffCol"
+  };
+  return _createShader(_defaultSh, "shaders/default.vert",
+                       "shaders/default.frag", ids);
+}
+
+bool Core::_createDeferredGeometryShader()
+{
+  const vector<string> ids = {"M", "PVM", "N"};
+  return _createShader(_deferSh, "shaders/deferred_geometry.vert",
+                       "shaders/deferred_geometry.frag", ids);
+}
+
+bool Core::_createDeferredLightShader()
+{
+  const vector<string> ids =
+  {
+    "PVM", "posTexMap", "normTexMap", "diffTexMap", "showLightQuad", "lightPos",
+    "lightCol", "attDist", "attLin", "attQuad"
+  };
+  bool success = _createShader(_lightSh, "shaders/deferred_lighting.vert",
+                               "shaders/deferred_lighting.frag", ids);
+  if (success)
+  {
+    // set texture uniforms
+    glUseProgram(_lightSh.prog);
+    glUniform1i(_lightSh.locs["posTexMap"],  0);
+    glUniform1i(_lightSh.locs["normTexMap"], 1);
+    glUniform1i(_lightSh.locs["diffTexMap"], 2);
+    CHECK_GL_ERROR(true);
+  }
+  
+  return success;
+}
+
+bool Core::_createDeferredAmbientShader()
+{
+  return _createShader(_ambSh, "shaders/quad.vert",
+                       "shaders/deferred_ambient.frag",
+                       {"diffTexMap", "ambCol"});
+}
+
+bool Core::_createPostMotionBlurShader()
+{
+  const vector<string> ids =
+  {
+    "diffTexMap", "velTexMap", "depthTexMap", "currToPrev", "fps", "mode",
+    "velScaling", "adaptVarFPS", "adaptNumSamples", "prefNumSamples"
+  };
+  bool success = _createShader(_motionSh, "shaders/quad.vert",
+                               "shaders/post_motion_blur.frag", ids);
+  if (success)
+  {
+    // set texture uniforms
+    glUseProgram(_motionSh.prog);
+    glUniform1i(_motionSh.locs["diffTexMap"],  0);
+    glUniform1i(_motionSh.locs["velTexMap"],   1);
+    glUniform1i(_motionSh.locs["depthTexMap"], 2);
+    CHECK_GL_ERROR(true);
+  }
+  
+  return success;
+}
+
+bool Core::_createPostOutputShader()
+{
+  return _createShader(_postOutputSh, "shaders/quad.vert",
+                       "shaders/post_output.frag", {"diffTexMap"});
+}
+
+inline bool Core::_swapPostProcessing()
+{
+  // swap color textures
+  std::swap(_postColMap[POST_IN], _postColMap[POST_OUT]);
+  
+  // reattach texture
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         _postColMap[POST_OUT], 0);
+  CHECK_GL_ERROR(true);
+  
+  // check FBO completeness
+  if (!_isFBOComplete("post-processing"))
+    return false;
+  return true;
+}
+
+inline bool Core::_clearPostProcessing(const GLfloat * bgClear,
+                                       const GLfloat * blackClear)
+{
+  // clear buffers
+  glClearBufferfv(GL_COLOR, 0, bgClear);
+  glClearBufferfv(GL_COLOR, 1, blackClear);
+  glClear(GL_DEPTH_BUFFER_BIT);
+  CHECK_GL_ERROR(true);
+  if (!_swapPostProcessing())
+    return false;
+  glClearBufferfv(GL_COLOR, 0, bgClear);
+  glClearBufferfv(GL_COLOR, 1, blackClear);
+  glClear(GL_DEPTH_BUFFER_BIT);
+  return true;
 }

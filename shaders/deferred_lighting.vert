@@ -1,12 +1,11 @@
 #version 410
 
-layout(location = 0) in vec2 vPos;
+uniform mat4 PVM;
 
-out vec2 fTexCoords;
+layout(location = 0) in vec2 vPos;
 
 void main()
 {
-  gl_Position = vec4(vPos, 0.0, 1.0);
-  fTexCoords  = 0.5*(vPos + 1.0);
+  gl_Position = PVM * vec4(vPos, 0.0, 1.0);
 }
 

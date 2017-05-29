@@ -46,8 +46,10 @@
 		D2479B5F1E8301F70039DE28 /* deferred_geometry.vert */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; name = deferred_geometry.vert; path = ../shaders/deferred_geometry.vert; sourceTree = "<group>"; };
 		D2569F8A1E6AE1D100637699 /* tinyxml2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 2; name = tinyxml2.h; path = external/tinyxml2/tinyxml2.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		D2569F8B1E6AE1D100637699 /* tinyxml2.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 2; name = tinyxml2.cpp; path = external/tinyxml2/tinyxml2.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
-		D280597D1ED6A45D0020E358 /* motion_blur.frag */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = motion_blur.frag; path = shaders/motion_blur.frag; sourceTree = SOURCE_ROOT; };
-		D280597E1ED6A46B0020E358 /* motion_blur.vert */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = motion_blur.vert; path = shaders/motion_blur.vert; sourceTree = SOURCE_ROOT; };
+		D26E3ABC1EDAEC040030F0A3 /* deferred_ambient.frag */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = deferred_ambient.frag; path = shaders/deferred_ambient.frag; sourceTree = SOURCE_ROOT; };
+		D26E3ABF1EDB0D2C0030F0A3 /* post_output.frag */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = post_output.frag; path = shaders/post_output.frag; sourceTree = SOURCE_ROOT; };
+		D26E3AC01EDB67820030F0A3 /* quad.vert */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = quad.vert; path = shaders/quad.vert; sourceTree = SOURCE_ROOT; };
+		D280597D1ED6A45D0020E358 /* post_motion_blur.frag */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = post_motion_blur.frag; path = shaders/post_motion_blur.frag; sourceTree = SOURCE_ROOT; };
 		D282A1B61EC4D2A200C3E747 /* default.frag */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = default.frag; path = shaders/default.frag; sourceTree = SOURCE_ROOT; };
 		D28DB7F81EC33E170066391E /* stb_image.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = stb_image.h; sourceTree = "<group>"; };
 		D29D666F1E80175100CA60AC /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = main.cpp; path = demo/main.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
@@ -96,14 +98,16 @@
 			children = (
 				D282A1B61EC4D2A200C3E747 /* default.frag */,
 				D2C3FCBE1ECAD45200A3DCBD /* default.vert */,
+				D26E3ABC1EDAEC040030F0A3 /* deferred_ambient.frag */,
 				D2479B5E1E8301F70039DE28 /* deferred_geometry.frag */,
 				D2479B5F1E8301F70039DE28 /* deferred_geometry.vert */,
 				D2C3FCC01ECAFA2D00A3DCBD /* deferred_lighting.frag */,
 				D2C3FCC11ECAFAF100A3DCBD /* deferred_lighting.vert */,
-				D280597D1ED6A45D0020E358 /* motion_blur.frag */,
-				D280597E1ED6A46B0020E358 /* motion_blur.vert */,
 				D231F2381ED0CFFD00D14D4B /* particles.frag */,
 				D231F2391ED0CFFD00D14D4B /* particles.vert */,
+				D280597D1ED6A45D0020E358 /* post_motion_blur.frag */,
+				D26E3ABF1EDB0D2C0030F0A3 /* post_output.frag */,
+				D26E3AC01EDB67820030F0A3 /* quad.vert */,
 			);
 			name = shaders;
 			sourceTree = "<group>";

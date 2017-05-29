@@ -933,11 +933,15 @@ private:
   int    _sampleRate;
   double _maxVolume;
   
-  _Shader _defaultSh, _deferSh, _lightSh, _motionSh;
+  _Shader _defaultSh;
+  _Shader _deferSh, _ambSh, _lightSh;
+  _Shader _motionSh, _postOutputSh;
   GLuint  _quadVAO;
   GLuint  _deferFBO, _postFBO;
   GLuint  _deferPosMap, _deferNormMap, _deferColMap;
-  GLuint  _postColMap, _postVelMap, _postDepthMap;
+  GLuint  _postColMap[2], _postVelMap, _postDepthMap;
+#define POST_IN  0
+#define POST_OUT 1
   
   mat4 _prevViewMatrix, _viewMatrix;
   mat4 _prevProjMatrix, _projMatrix;
@@ -964,17 +968,21 @@ private:
   bool _reset;
   bool _pause;
   
-  bool _controlsEnabled;
-  bool _motionBlurEnabled;
-  int _motionBlurMode;
+  bool  _motionBlurEnabled;
+  int   _motionBlurMode;
   float _motionVelScaling;
-  bool _motionAdaptVarFPS;
-  bool _motionAdaptNumSamples;
-  int _motionPrefNumSamples;
-  bool _deferredEnabled;
-  int _numLights;
-  bool _particlesEnabled;
-  int _particleSpawnRate;
+  bool  _motionAdaptVarFPS;
+  bool  _motionAdaptNumSamples;
+  int   _motionPrefNumSamples;
+  bool  _deferredEnabled;
+  bool  _deferShowQuads;
+  vec3  _deferAmbCol;
+  int   _deferNumLights;
+  float _deferAttDist;
+  float _deferAttLin;
+  float _deferAttQuad;
+  bool  _particlesEnabled;
+  int   _particleSpawnRate;
   float _particleLifeTime;
   float _particleConeSize;
   float _particleVelocity;
@@ -984,7 +992,12 @@ private:
   bool _createShader(_Shader & sh, const char * vsfn, const char * fsfn,
                      const vector<string> & ids);
   bool _createDefaultShader();
-  bool _createDeferredShader();
-  bool _createLightShader();
-  bool _createMotionBlurShader();
+  bool _createDeferredGeometryShader();
+  bool _createDeferredLightShader();
+  bool _createDeferredAmbientShader();
+  bool _createPostMotionBlurShader();
+  bool _createPostOutputShader();
+  inline bool _swapPostProcessing();
+  inline bool _clearPostProcessing(const GLfloat * bgClear,
+                                   const GLfloat * blackClear);
 };
