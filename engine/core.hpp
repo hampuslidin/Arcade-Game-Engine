@@ -12,16 +12,7 @@
 #include <functional>
 #include "types.hpp"
 
-#ifdef __APPLE__
-# include <SDL2/SDL.h>
-# include <SDL2/SDL_audio.h>
-# include <SDL2_image/SDL_image.h>
-#elif defined(_WIN32)
-# include "SDL.h"
-# include "SDL_audio.h"
-# include "SDL_image.h"
-#endif
-
+#include <SDL.h>
 #include <GL/glew.h>
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>

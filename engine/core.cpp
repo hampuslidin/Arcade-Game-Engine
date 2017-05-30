@@ -4,6 +4,7 @@
 //
 
 #include "core.hpp"
+#include <algorithm>
 #include <iostream>
 #include <fstream>
 #define STB_IMAGE_IMPLEMENTATION
@@ -24,14 +25,14 @@ Sprite::Sprite(SDL_Renderer * renderer, SDL_Texture * texture)
 
 Sprite * Sprite::createSprite(SDL_Renderer * renderer, const char * filename)
 {
-  SDL_Surface * loadedSurface = IMG_Load(filename);
+  /*SDL_Surface * loadedSurface = IMG_Load(filename);
   if (!loadedSurface) SDL_Log("IMG_Load: %s\n", IMG_GetError());
   else
   {
     auto texture = SDL_CreateTextureFromSurface(renderer, loadedSurface);
     SDL_FreeSurface(loadedSurface);
     return new Sprite(renderer, texture);
-  }
+  }*/
   return nullptr;
 }
 
@@ -459,7 +460,7 @@ void ParticleSystemComponent::render(const Core & core)
                               core.particleSpawnRate());
   for (int i = 0; i < amount; ++i)
   {
-    const float theta = Core::uniformRandom(0.0f, 2.0f*M_PI);
+    const float theta = Core::uniformRandom(0.0f, 2.0f*(float)M_PI);
     const float u     = Core::uniformRandom(1.0f-core.particleConeSize(), 1.0f);
     const float c     = sqrt(1.0f - u*u);
     const vec4 p = model * vec4(0.0f, 0.0f, 0.0f, 1.0f);
@@ -489,7 +490,7 @@ void ParticleSystemComponent::render(const Core & core)
   // update alive particles
   for (auto & particle : _particles)
   {
-    float dt           = core.deltaTime();
+    float dt           = (float)core.deltaTime();
     particle.age      += dt;
     particle.position += particle.velocity * dt;
   }
@@ -525,8 +526,8 @@ void ParticleSystemComponent::render(const Core & core)
   const ivec2 d         = core.viewDimensions();
   glUseProgram(_shaderProgram);
   glUniformMatrix4fv(_projMatrixLocation, 1, false, &projection[0].x);
-  glUniform1f(_screenWidthLocation, d.x);
-  glUniform1f(_screenHeightLocation, d.y);
+  glUniform1f(_screenWidthLocation, (float)d.x);
+  glUniform1f(_screenHeightLocation, (float)d.y);
   
   // activate color map
   glActiveTexture(GL_TEXTURE0);
@@ -1270,7 +1271,7 @@ bool Core::CheckGLError(bool fatal)
   {
     error = fatal;
     cout << "(OpenGL) " << (fatal ? "Error: " : "Warning: ") <<
-      gluErrorString(err) << endl;
+      /*gluErrorString(err) <<*/ endl;
   }
   return error;
 }
@@ -2124,24 +2125,17 @@ bool Core::_initFrameworks(const char * title, int scrnW, int scrnH)
   SDL_GL_LoadLibrary(nullptr);
   
   // initialize OpenGL
-  const int majorVer = 4;
-#if defined(__APPLE__)
-  const int minorVer = 1;
-  const auto profile = SDL_GL_CONTEXT_PROFILE_CORE;
-#elif defined(_WIN32)
-  const int minorVer = 3;
-  const auto profile = SDL_GL_CONTEXT_PROFILE_COMPATIBILITY;
-#endif
   SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, majorVer);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, minorVer);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, profile);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, 
+                      SDL_GL_CONTEXT_PROFILE_CORE);
   SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
   
   // create window
-  auto windowOptions = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;
+  auto windowOptions = SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | 
+    SDL_WINDOW_ALLOW_HIGHDPI;
   _window = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED,
                              SDL_WINDOWPOS_UNDEFINED, scrnW, scrnH,
                              windowOptions);
@@ -2184,6 +2178,7 @@ bool Core::_initFrameworks(const char * title, int scrnW, int scrnH)
   glBlendEquation(GL_FUNC_ADD);
   
   // clear and swap frame
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
   glClearColor(_bgColor.r, _bgColor.g, _bgColor.b, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
   SDL_GL_SwapWindow(_window);
@@ -2318,8 +2313,8 @@ void _createUnitSphere(vector<float> & verts, int phiDiv = 12,
   }
   
   // create top cap
-  a =  sinf(M_PI-ps);
-  u = -cosf(M_PI-ps);
+  a =  sinf((float)M_PI-ps);
+  u = -cosf((float)M_PI-ps);
   for (int m = 0; m < thetaDiv; ++m, i += 9)
   {
     t = m*ts + offs;

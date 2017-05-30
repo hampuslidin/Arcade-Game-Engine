@@ -224,7 +224,7 @@ public:
     auto interpolate = [](float a, float b, float p) { return (1-p)*a+p*b; };
     
     float r = 0.0f, g = 0.0f, b = 0.0f;
-    float h = (float)arc4random()/RAND_MAX*360.0f, s = 0.75f, l = 0.75f;
+    float h = (float)rand()/RAND_MAX*360.0f, s = 0.75f, l = 0.75f;
     
     // hue
     float x, y;

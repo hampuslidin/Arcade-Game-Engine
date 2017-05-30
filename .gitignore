@@ -18,7 +18,13 @@
 *.pch
 
 # Compiled Dynamic libraries
-Arcade Game Engine/external/
+external/glew/*
+external/glm/*
+external/imgui/*
+external/SDL2/*
+external/stb/*
+external/tinyobjloader/*
+external/tinyxml2/*
 *.so
 *.dylib
 *.dll

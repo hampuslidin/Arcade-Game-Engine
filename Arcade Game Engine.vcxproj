@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -19,32 +19,21 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Arcade Game Engine\engine\animation.cpp" />
-    <ClCompile Include="Arcade Game Engine\engine\audio.cpp" />
-    <ClCompile Include="Arcade Game Engine\engine\core.cpp" />
-    <ClCompile Include="Arcade Game Engine\engine\physics.cpp" />
-    <ClCompile Include="Arcade Game Engine\engine\types.cpp" />
-    <ClCompile Include="Arcade Game Engine\external\tinyxml2\tinyxml2.cpp" />
-    <ClCompile Include="Arcade Game Engine\qbert\Board.cpp" />
-    <ClCompile Include="Arcade Game Engine\qbert\Character.cpp" />
-    <ClCompile Include="Arcade Game Engine\qbert\HUD.cpp" />
-    <ClCompile Include="Arcade Game Engine\qbert\Level.cpp" />
-    <ClCompile Include="Arcade Game Engine\qbert\main.cpp" />
-    <ClCompile Include="Arcade Game Engine\qbert\Player.cpp" />
-    <ClCompile Include="Arcade Game Engine\qbert\Ugg.cpp" />
-    <ClCompile Include="Arcade Game Engine\qbert\Wrongway.cpp" />
+    <ClCompile Include="demo\main.cpp" />
+    <ClCompile Include="engine\animation.cpp" />
+    <ClCompile Include="engine\audio.cpp" />
+    <ClCompile Include="engine\core.cpp" />
+    <ClCompile Include="engine\physics.cpp" />
+    <ClCompile Include="engine\types.cpp" />
+    <ClCompile Include="external\imgui\examples\sdl_opengl3_example\imgui_impl_sdl_gl3.cpp" />
+    <ClCompile Include="external\imgui\imgui.cpp" />
+    <ClCompile Include="external\imgui\imgui_demo.cpp" />
+    <ClCompile Include="external\imgui\imgui_draw.cpp" />
+    <ClCompile Include="external\tinyxml2\tinyxml2.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Arcade Game Engine\engine\core.hpp" />
-    <ClInclude Include="Arcade Game Engine\engine\types.hpp" />
-    <ClInclude Include="Arcade Game Engine\external\tinyxml2\tinyxml2.h" />
-    <ClInclude Include="Arcade Game Engine\qbert\Board.hpp" />
-    <ClInclude Include="Arcade Game Engine\qbert\Character.hpp" />
-    <ClInclude Include="Arcade Game Engine\qbert\HUD.hpp" />
-    <ClInclude Include="Arcade Game Engine\qbert\Level.hpp" />
-    <ClInclude Include="Arcade Game Engine\qbert\Player.hpp" />
-    <ClInclude Include="Arcade Game Engine\qbert\Ugg.hpp" />
-    <ClInclude Include="Arcade Game Engine\qbert\Wrongway.hpp" />
+    <ClInclude Include="engine\core.hpp" />
+    <ClInclude Include="engine\types.hpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{1024E2F1-BC4C-4DFB-89E2-6B75BF530F81}</ProjectGuid>
@@ -56,26 +45,26 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -129,13 +118,13 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>GAME_ENGINE_DEBUG;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>Arcade Game Engine\qbert\textures;Arcade Game Engine\external\SDL2-2.0.5\include;Arcade Game Engine\external\SDL2_image-2.0.1\include;Arcade Game Engine\external\tinyxml2;Arcade Game Engine\engine</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>external\glew\include;external\glm;external\imgui;external\imgui\examples\sdl_opengl3_example;external\SDL2\include;external\stb;external\tinyxml2;external\tinyobjloader;engine</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>SDL2.lib;SDL2main.lib;SDL2_image.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>Arcade Game Engine\external\SDL2-2.0.5\lib\x64;Arcade Game Engine\external\SDL2_image-2.0.1\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>SDL2.lib;SDL2main.lib;opengl32.lib;glew32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>external\SDL2\lib\x64;external\glew\lib\Release\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -164,15 +153,15 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>Arcade Game Engine\qbert\textures;Arcade Game Engine\external\SDL2-2.0.5\include;Arcade Game Engine\external\SDL2_image-2.0.1\include;Arcade Game Engine\external\tinyxml2;Arcade Game Engine\engine</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>external\glew\include;external\glm;external\imgui;external\imgui\examples\sdl_opengl3_example;external\SDL2\include;external\stb;external\tinyxml2;external\tinyobjloader;engine</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>Arcade Game Engine\external\SDL2-2.0.5\lib\x64;Arcade Game Engine\external\SDL2_image-2.0.1\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>SDL2.lib;SDL2main.lib;SDL2_image.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>external\SDL2\lib\x64;external\glew\lib\Release\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>SDL2.lib;SDL2main.lib;glew32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
