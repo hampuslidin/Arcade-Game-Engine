@@ -1,6 +1,6 @@
 #version 410
 
-uniform sampler2D diffTexMap;
+uniform sampler2D colTexMap;
 uniform sampler2D velTexMap;
 uniform sampler2D depthTexMap;
 uniform mat4 currToPrev;
@@ -18,7 +18,7 @@ const float targetFPS = 60;
 void main()
 {
   // calculate texture coordinates
-  vec2 texelSize = 1.0 / vec2(textureSize(diffTexMap, 0));
+  vec2 texelSize = 1.0 / vec2(textureSize(colTexMap, 0));
   vec2 texCoords = gl_FragCoord.xy * texelSize;
   
   vec2 vel;
@@ -54,11 +54,11 @@ void main()
     numSamples = prefNumSamples;
   
   // blur
-  oCol.rgb = texture(diffTexMap, texCoords).rgb;
+  oCol.rgb = texture(colTexMap, texCoords).rgb;
   for (int i = 1; i < numSamples; ++i)
   {
     vec2 offset = vel * (float(i) / float(numSamples-1) - 0.5);
-    oCol.rgb += texture(diffTexMap, texCoords + offset).rgb;
+    oCol.rgb += texture(colTexMap, texCoords + offset).rgb;
   }
   oCol.rgb /= float(numSamples);
   oCol.a    = 1.0;

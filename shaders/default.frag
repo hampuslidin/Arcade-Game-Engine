@@ -2,9 +2,9 @@
 
 precision highp float;
 
-uniform sampler2D diffTexMap; // diffuse texture map
-uniform bool hasDiffTexMap;   // diffuse texture map flag
-uniform vec3 diffCol;         // diffuse color
+uniform sampler2D colTexMap; // diffuse texture map
+uniform bool hasDiffTexMap;  // diffuse texture map flag
+uniform vec3 diffCol;        // diffuse color
 
 in vec2 fTexCoords;
 in vec4 fPVMPos;
@@ -15,6 +15,6 @@ layout(location = 1) out vec2 oVel;
 
 void main()
 {
-  oCol = hasDiffTexMap ? texture(diffTexMap, fTexCoords) : vec4(diffCol, 1.0);
+  oCol = hasDiffTexMap ? texture(colTexMap, fTexCoords) : vec4(diffCol, 1.0);
   oVel = 0.5 * (fPVMPos.xy / fPVMPos.w - fPrevPVMPos.xy / fPrevPVMPos.w);
 }

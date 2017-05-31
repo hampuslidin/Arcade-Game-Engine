@@ -1,6 +1,6 @@
 #version 410
 
-uniform sampler2D diffTexMap;
+uniform sampler2D colTexMap;
 
 in float fLife;
 
@@ -8,7 +8,7 @@ layout(location = 0) out vec4 oCol;
 
 void main()
 {
-  oCol      = texture(diffTexMap, gl_PointCoord);
-  oCol.xyz *= (1.0-fLife);
-  oCol.w    = oCol.w * (1.0-pow(fLife, 4.0)) * 0.05;
+  oCol      = texture(colTexMap, gl_PointCoord);
+  oCol.rgb *= (1.0-fLife);
+  oCol.a   *= (1.0-pow(fLife, 4.0)) * 0.05;
 }

@@ -8,11 +8,11 @@
 #include <iostream>
 #include <fstream>
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include <stb_image.h>
 #define TINYOBJLOADER_IMPLEMENTATION
-#include "tiny_obj_loader.h"
-#include "imgui.h"
-#include "imgui_impl_sdl_gl3.h"
+#include <tiny_obj_loader.h>
+#include <imgui.h>
+#include <imgui_impl_sdl_gl3.h>
 
 using namespace tinyobj;
 
@@ -25,14 +25,6 @@ Sprite::Sprite(SDL_Renderer * renderer, SDL_Texture * texture)
 
 Sprite * Sprite::createSprite(SDL_Renderer * renderer, const char * filename)
 {
-  /*SDL_Surface * loadedSurface = IMG_Load(filename);
-  if (!loadedSurface) SDL_Log("IMG_Load: %s\n", IMG_GetError());
-  else
-  {
-    auto texture = SDL_CreateTextureFromSurface(renderer, loadedSurface);
-    SDL_FreeSurface(loadedSurface);
-    return new Sprite(renderer, texture);
-  }*/
   return nullptr;
 }
 
@@ -229,7 +221,7 @@ void GraphicsComponent::render(const Core & core)
   if (_hasDiffTex)
   {
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, _diffTexMap);
+    glBindTexture(GL_TEXTURE_2D, _colTexMap);
   }
   
   // render
@@ -376,7 +368,7 @@ bool GraphicsComponent::loadTexture(const char * fileName, TextureType texType)
     GLuint * texture = nullptr;
     if (texType == Diffuse)
     {
-      texture     = &_diffTexMap;
+      texture     = &_colTexMap;
       _hasDiffTex = true;
     }
     else
@@ -1383,24 +1375,10 @@ bool Core::init(const CoreOptions & options)
   SDL_PauseAudio(0);
   
   // initialize GUI properties
-  _motionBlurEnabled     = false;
-  _motionBlurMode        = 0;
-  _motionVelScaling      = 0.1f;
-  _motionAdaptVarFPS     = true;
-  _motionAdaptNumSamples = true;
-  _motionPrefNumSamples  = 16;
-  _deferredEnabled       = false;
-  _deferShowLightArea    = false;
-  _deferAmbCol           = {0.3f, 0.3f, 0.3f};
-  _deferNumLights        = (int)_lights.size();
-  _deferAttDist          = 7.0f;
-  _deferAttLin           = 0.12f;
-  _deferAttQuad          = 0.58f;
-  _particlesEnabled      = false;
-  _particleSpawnRate     = 64;
-  _particleLifeTime      = 1.0f;
-  _particleConeSize      = 0.05f;
-  _particleVelocity      = 5.0f;
+  _motionBlurEnabled = false;
+  _deferredEnabled   = false;
+  _particlesEnabled  = false;
+  _resetGUIParameters();
   
   return true;
 }
@@ -1663,15 +1641,17 @@ bool Core::update()
           graphics->deferredShading())
       {
         // construct transforms
-        const mat4 M   = entity.worldTransform();
-        const mat4 PVM = PV * M;
-        const mat3 N   = glm::inverse(mat3(M));
+        const mat4 M       = entity.worldTransform();
+        const mat4 PVM     = PV * M;
+        const mat4 prevPVM = prevPV * M;
+        const mat3 N       = glm::inverse(mat3(M));
         
         // set shader uniforms
         glUseProgram(_deferSh.prog);
-        glUniformMatrix4fv(_deferSh.locs["M"],   1, false, &M[0].x);
-        glUniformMatrix4fv(_deferSh.locs["PVM"], 1, false, &PVM[0].x);
-        glUniformMatrix3fv(_deferSh.locs["N"],   1, true,  &N[0].x);
+        glUniformMatrix4fv(_deferSh.locs["M"],       1, false, &M[0].x);
+        glUniformMatrix4fv(_deferSh.locs["PVM"],     1, false, &PVM[0].x);
+        glUniformMatrix4fv(_deferSh.locs["prevPVM"], 1, false, &prevPVM[0].x);
+        glUniformMatrix3fv(_deferSh.locs["N"],       1, true,  &N[0].x);
         CHECK_GL_ERROR(true);
         
         // render
@@ -1895,7 +1875,10 @@ bool Core::update()
   }
   
   // set controls
-  ImGui::Text("%0.1f fps", frameRate);
+  ImGui::LabelText("Framerate", "%0.1f fps", frameRate);
+  ImGui::LabelText("Resolution", "%ix%i", d.x, d.y);
+  if (ImGui::Button("Reset"))
+    _resetGUIParameters();
   ImGui::Separator();
   ImGui::Checkbox("Motion blur", &_motionBlurEnabled);
   if (_motionBlurEnabled)
@@ -2339,11 +2322,12 @@ void _createUnitSphere(vector<float> & verts, int phiDiv = 12,
 bool Core::_generateBuffers()
 {
   const ivec2 d = viewDimensions();
-  GLuint attachments[3] =
+  GLuint attachments[4] =
   {
     GL_COLOR_ATTACHMENT0,
     GL_COLOR_ATTACHMENT1,
-    GL_COLOR_ATTACHMENT2
+    GL_COLOR_ATTACHMENT2,
+    GL_COLOR_ATTACHMENT3
   };
   
   ////////////////////////////////////////
@@ -2359,9 +2343,9 @@ bool Core::_generateBuffers()
   vector<float> quadVerts =
   {
     -1.0f, -1.0f,
-    1.0f, -1.0f,
+     1.0f, -1.0f,
     -1.0f,  1.0f,
-    1.0f,  1.0f
+     1.0f,  1.0f
   };
   GLuint quadVertsBuf;
   glGenBuffers(1, &quadVertsBuf);
@@ -2496,12 +2480,14 @@ bool Core::_generateBuffers()
                          _deferNormMap, 0);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D,
                          _deferColMap, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D,
+                         _postVelMap, 0);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
                          GL_TEXTURE_2D, _postDepthStencilMap, 0);
   CHECK_GL_ERROR(true);
   
   // attach textures
-  glDrawBuffers(3, attachments);
+  glDrawBuffers(4, attachments);
   CHECK_GL_ERROR(true);
   
   // check frame buffer status
@@ -2536,7 +2522,7 @@ bool Core::_createDefaultShader()
 {
   const vector<string> ids =
   {
-    "PVM", "prevPVM", "diffTexMap", "hasDiffTexMap", "diffCol"
+    "PVM", "prevPVM", "colTexMap", "hasDiffTexMap", "diffCol"
   };
   return _createShader(_defaultSh, "shaders/default.vert",
                        "shaders/default.frag", ids);
@@ -2544,7 +2530,7 @@ bool Core::_createDefaultShader()
 
 bool Core::_createDeferredGeometryShader()
 {
-  const vector<string> ids = {"M", "PVM", "N"};
+  const vector<string> ids = {"M", "PVM", "prevPVM", "N"};
   return _createShader(_deferSh, "shaders/deferred_geometry.vert",
                        "shaders/deferred_geometry.frag", ids);
 }
@@ -2553,7 +2539,7 @@ bool Core::_createDeferredAmbientShader()
 {
   return _createShader(_ambSh, "shaders/quad.vert",
                        "shaders/deferred_ambient.frag",
-                       {"diffTexMap", "ambCol"});
+                       {"colTexMap", "ambCol"});
 }
 
 bool Core::_createDeferredNullShader()
@@ -2566,7 +2552,7 @@ bool Core::_createDeferredLightShader()
 {
   const vector<string> ids =
   {
-    "PVM", "posTexMap", "normTexMap", "diffTexMap", "showLightArea", "lightPos",
+    "PVM", "posTexMap", "normTexMap", "colTexMap", "showLightArea", "lightPos",
     "lightCol", "attLin", "attQuad"
   };
   bool success = _createShader(_lightSh, "shaders/PVM.vert",
@@ -2577,7 +2563,7 @@ bool Core::_createDeferredLightShader()
     glUseProgram(_lightSh.prog);
     glUniform1i(_lightSh.locs["posTexMap"],  0);
     glUniform1i(_lightSh.locs["normTexMap"], 1);
-    glUniform1i(_lightSh.locs["diffTexMap"], 2);
+    glUniform1i(_lightSh.locs["colTexMap"], 2);
     CHECK_GL_ERROR(true);
   }
   
@@ -2588,7 +2574,7 @@ bool Core::_createPostMotionBlurShader()
 {
   const vector<string> ids =
   {
-    "diffTexMap", "velTexMap", "depthTexMap", "currToPrev", "fps", "mode",
+    "colTexMap", "velTexMap", "depthTexMap", "currToPrev", "fps", "mode",
     "velScaling", "adaptVarFPS", "adaptNumSamples", "prefNumSamples"
   };
   bool success = _createShader(_motionSh, "shaders/quad.vert",
@@ -2597,7 +2583,7 @@ bool Core::_createPostMotionBlurShader()
   {
     // set texture uniforms
     glUseProgram(_motionSh.prog);
-    glUniform1i(_motionSh.locs["diffTexMap"],  0);
+    glUniform1i(_motionSh.locs["colTexMap"],  0);
     glUniform1i(_motionSh.locs["velTexMap"],   1);
     glUniform1i(_motionSh.locs["depthTexMap"], 2);
     CHECK_GL_ERROR(true);
@@ -2609,7 +2595,7 @@ bool Core::_createPostMotionBlurShader()
 bool Core::_createPostOutputShader()
 {
   return _createShader(_postOutputSh, "shaders/quad.vert",
-                       "shaders/post_output.frag", {"diffTexMap"});
+                       "shaders/post_output.frag", {"colTexMap"});
 }
 
 inline bool Core::_swapPostProcessing()
@@ -2713,4 +2699,23 @@ inline void Core::_deferredLightingPass(const Entity * light, const mat4 & PVM)
   glBindVertexArray(_sphereVAO);
   glDrawArrays(GL_TRIANGLES, 0, _numSphereVerts);
   CHECK_GL_ERROR(true);
+}
+
+inline void Core::_resetGUIParameters()
+{
+  _motionBlurMode        = 0;
+  _motionVelScaling      = 0.1f;
+  _motionAdaptVarFPS     = true;
+  _motionAdaptNumSamples = true;
+  _motionPrefNumSamples  = 16;
+  _deferShowLightArea    = false;
+  _deferAmbCol           = {0.3f, 0.3f, 0.3f};
+  _deferNumLights        = (int)_lights.size();
+  _deferAttDist          = 7.0f;
+  _deferAttLin           = 0.12f;
+  _deferAttQuad          = 0.58f;
+  _particleSpawnRate     = 128;
+  _particleLifeTime      = 2.0f;
+  _particleConeSize      = 0.3f;
+  _particleVelocity      = 5.0f;
 }

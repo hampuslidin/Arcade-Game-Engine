@@ -2,7 +2,7 @@
 
 uniform sampler2D posTexMap;
 uniform sampler2D normTexMap;
-uniform sampler2D diffTexMap;
+uniform sampler2D colTexMap;
 uniform int showLightArea;
 uniform vec3 lightPos;
 uniform vec3 lightCol;
@@ -14,10 +14,10 @@ layout(location = 0) out vec4 oCol;
 void main()
 {
   // sample data from geometry pass
-  vec2 texCoords = gl_FragCoord.xy / vec2(textureSize(diffTexMap, 0));
+  vec2 texCoords = gl_FragCoord.xy / vec2(textureSize(colTexMap, 0));
   vec3 pos       = texture(posTexMap,  texCoords).rgb;
   vec3 norm      = texture(normTexMap, texCoords).rgb;
-  vec3 col       = texture(diffTexMap, texCoords).rgb;
+  vec3 col       = texture(colTexMap, texCoords).rgb;
   
   // calculate distance to light source
   vec3 lightDir = lightPos-pos;

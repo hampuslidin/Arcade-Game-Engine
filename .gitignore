@@ -13,6 +13,9 @@
 *.o
 *.obj
 
+# Unignore 3D model objects
+!objects/*
+
 # Precompiled Headers
 *.gch
 *.pch

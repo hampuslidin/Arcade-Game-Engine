@@ -9,12 +9,7 @@
 #include <string>
 #include <functional>
 
-#ifdef __APPLE__
-# include <SDL2/SDL.h>
-#elif defined(_WIN32)
-# include "SDL.h"
-#endif
-
+#include <SDL.h>
 #include <glm/glm.hpp>
 
 using namespace std;

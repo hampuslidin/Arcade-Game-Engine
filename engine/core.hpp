@@ -12,7 +12,7 @@
 #include <functional>
 #include "types.hpp"
 
-#include <SDL.h>
+#include <SDL2/SDL.h>
 #include <GL/glew.h>
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
@@ -488,7 +488,7 @@ private:
   bool _deferShading;         // deferred shading flag
   
   GLuint _vao;                // vertex array object
-  GLuint _diffTexMap;         // diffuse texture map
+  GLuint _colTexMap;         // diffuse texture map
   GLint  _prevMLoc, _MLoc;    // current and previous model matrix locations
   GLuint _VLoc, _PLoc, _NLoc; // view, projection and normal matrix locations
   GLuint _diffColLoc;         // diffuse color location
@@ -995,4 +995,5 @@ private:
                                    const GLfloat * blackClear);
   inline void _deferredStencilPass(const Entity * light, const mat4 & PVM);
   inline void _deferredLightingPass(const Entity * light, const mat4 & PVM);
+  inline void _resetGUIParameters();
 };
