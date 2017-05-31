@@ -4,7 +4,6 @@
 //
 
 #include "core.hpp"
-#include <fstream>
 
 
 // MARK: Properties

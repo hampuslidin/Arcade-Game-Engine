@@ -3,9 +3,9 @@
 //  Arcade Game Engine
 //
 
-#include "core.hpp"
-#include <glm/gtx/transform.hpp>
 #include <random>
+
+#include "core.hpp"
 
 #define FILE(d, f, e) (string() + d + f + e).c_str()
 #define OBJ(f)     FILE("objects/", f, ".obj")

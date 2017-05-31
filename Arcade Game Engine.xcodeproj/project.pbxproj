@@ -10,6 +10,10 @@
 		D23716CF1E6CA0E000C9D798 /* demo in CopyFiles */ = {isa = PBXBuildFile; fileRef = D29DC52B1E509D120005EC95 /* demo */; };
 		D2518A5B1EDEAB0A00D348F2 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D2518A5A1EDEAB0A00D348F2 /* main.cpp */; };
 		D2518A5C1EDEAB2D00D348F2 /* SDL2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D25732531EDDDA850080EAB8 /* SDL2.framework */; };
+		D2518A5E1EDEBC7900D348F2 /* entity.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D2518A5D1EDEBC7900D348F2 /* entity.cpp */; };
+		D2518A601EDEBC7F00D348F2 /* graphics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D2518A5F1EDEBC7F00D348F2 /* graphics.cpp */; };
+		D2518A631EDEBFDC00D348F2 /* stb_image.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D2518A621EDEBFDC00D348F2 /* stb_image.cpp */; };
+		D2518A651EDEC1CE00D348F2 /* particles.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D2518A641EDEC1CE00D348F2 /* particles.cpp */; };
 		D257326B1EDDDB2B0080EAB8 /* animation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D25732661EDDDB2B0080EAB8 /* animation.cpp */; };
 		D257326C1EDDDB2B0080EAB8 /* audio.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D25732671EDDDB2B0080EAB8 /* audio.cpp */; };
 		D257326D1EDDDB2B0080EAB8 /* core.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D25732681EDDDB2B0080EAB8 /* core.cpp */; };
@@ -39,6 +43,10 @@
 /* Begin PBXFileReference section */
 		D23716CD1E6C9EAB00C9D798 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
 		D2518A5A1EDEAB0A00D348F2 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = main.cpp; path = demo_src/main.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		D2518A5D1EDEBC7900D348F2 /* entity.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = entity.cpp; path = engine/entity.cpp; sourceTree = SOURCE_ROOT; };
+		D2518A5F1EDEBC7F00D348F2 /* graphics.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = graphics.cpp; path = engine/graphics.cpp; sourceTree = SOURCE_ROOT; };
+		D2518A621EDEBFDC00D348F2 /* stb_image.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = stb_image.cpp; path = external/stb/stb_image.cpp; sourceTree = SOURCE_ROOT; };
+		D2518A641EDEC1CE00D348F2 /* particles.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = particles.cpp; path = engine/particles.cpp; sourceTree = SOURCE_ROOT; };
 		D25732531EDDDA850080EAB8 /* SDL2.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SDL2.framework; path = external/SDL2/SDL2.framework; sourceTree = "<group>"; };
 		D25732551EDDDAFD0080EAB8 /* default.frag */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; lineEnding = 0; name = default.frag; path = shaders/default.frag; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.glsl; };
 		D25732561EDDDAFD0080EAB8 /* deferred_ambient.frag */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; lineEnding = 0; name = deferred_ambient.frag; path = shaders/deferred_ambient.frag; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.glsl; };
@@ -104,9 +112,18 @@
 			name = shaders;
 			sourceTree = "<group>";
 		};
+		D2518A611EDEBFAE00D348F2 /* stb */ = {
+			isa = PBXGroup;
+			children = (
+				D2518A621EDEBFDC00D348F2 /* stb_image.cpp */,
+			);
+			name = stb;
+			sourceTree = "<group>";
+		};
 		D2569F881E6AE1B900637699 /* external */ = {
 			isa = PBXGroup;
 			children = (
+				D2518A611EDEBFAE00D348F2 /* stb */,
 				D25732831EDDDF350080EAB8 /* glew */,
 				D2C4E8B31ED3010300F36B60 /* imgui */,
 				D2569F891E6AE1BF00637699 /* tinyxml2 */,
@@ -174,6 +191,9 @@
 				D25732661EDDDB2B0080EAB8 /* animation.cpp */,
 				D25732671EDDDB2B0080EAB8 /* audio.cpp */,
 				D25732681EDDDB2B0080EAB8 /* core.cpp */,
+				D2518A5D1EDEBC7900D348F2 /* entity.cpp */,
+				D2518A5F1EDEBC7F00D348F2 /* graphics.cpp */,
+				D2518A641EDEC1CE00D348F2 /* particles.cpp */,
 				D25732691EDDDB2B0080EAB8 /* physics.cpp */,
 				D257326A1EDDDB2B0080EAB8 /* types.cpp */,
 			);
@@ -274,11 +294,15 @@
 				D2518A5B1EDEAB0A00D348F2 /* main.cpp in Sources */,
 				D25732871EDDDF470080EAB8 /* glew.c in Sources */,
 				D257326E1EDDDB2B0080EAB8 /* physics.cpp in Sources */,
+				D2518A651EDEC1CE00D348F2 /* particles.cpp in Sources */,
 				D25732821EDDDF110080EAB8 /* tinyxml2.cpp in Sources */,
+				D2518A601EDEBC7F00D348F2 /* graphics.cpp in Sources */,
 				D257327F1EDDDF060080EAB8 /* imgui_draw.cpp in Sources */,
 				D257326D1EDDDB2B0080EAB8 /* core.cpp in Sources */,
 				D25732731EDDDD090080EAB8 /* imgui_impl_sdl_gl3.cpp in Sources */,
+				D2518A5E1EDEBC7900D348F2 /* entity.cpp in Sources */,
 				D257327E1EDDDF060080EAB8 /* imgui_demo.cpp in Sources */,
+				D2518A631EDEBFDC00D348F2 /* stb_image.cpp in Sources */,
 				D257326F1EDDDB2B0080EAB8 /* types.cpp in Sources */,
 				D25732801EDDDF060080EAB8 /* imgui.cpp in Sources */,
 			);

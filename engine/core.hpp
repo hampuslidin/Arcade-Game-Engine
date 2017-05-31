@@ -10,13 +10,14 @@
 #include <vector>
 #include <string>
 #include <functional>
-#include "types.hpp"
 
 #include <SDL2/SDL.h>
 #include <GL/glew.h>
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
 #include <glm/gtx/quaternion.hpp>
+
+#include "types.hpp"
 
 using namespace std;
 using namespace glm;
