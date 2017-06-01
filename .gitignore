@@ -14,20 +14,13 @@
 *.obj
 
 # Unignore 3D model objects
-!objects/*
+!data/objects/*.obj
 
 # Precompiled Headers
 *.gch
 *.pch
 
 # Compiled Dynamic libraries
-external/glew/*
-external/glm/*
-external/imgui/*
-external/SDL2/*
-external/stb/*
-external/tinyobjloader/*
-external/tinyxml2/*
 *.so
 *.dylib
 *.dll
@@ -48,20 +41,34 @@ external/tinyxml2/*
 *.app
 
 # Other
+external/*
+build/*
+bin/*
+lib/*
 *.ini
 
 # macOS
 *.DS_Store
 
+# CMake
+CMakeFiles/*
+CMakeScripts/*
+*.cmake
+*CMakeCache.txt
+Debug/*
+Release/*
+MinSizeRel/*
+RelWithDebInfo/*
+*.build/*
+
 # Xcode
-*.xcodeproj/xcuserdata
-*.xcodeproj/project.xcworkspace
+*.xcodeproj
+*.build/*
 
 # Visual Studio
 Debug/
 x64/
-.vs/
-*.VC.db
-*.VC.opendb
-*.vcxproj.filters
-*.vcxproj.user
+*.sln
+*.vcxproj
+*.vcxproj.*
+*.VC.*
