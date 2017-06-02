@@ -11,6 +11,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+#include "engineConfig.h"
 #include "core.hpp"
 
 
@@ -1639,28 +1640,28 @@ bool Core::_createDefaultShader()
   {
     "PVM", "prevPVM", "colTexMap", "hasDiffTexMap", "diffCol"
   };
-  return _createShader(_defaultSh, "shaders/default.vert",
-                       "shaders/default.frag", ids);
+  return _createShader(_defaultSh, ROOT_DIR"/data/shaders/default.vert",
+                       ROOT_DIR"/data/shaders/default.frag", ids);
 }
 
 bool Core::_createDeferredGeometryShader()
 {
   const vector<string> ids = {"M", "PVM", "prevPVM", "N"};
-  return _createShader(_deferSh, "shaders/deferred_geometry.vert",
-                       "shaders/deferred_geometry.frag", ids);
+  return _createShader(_deferSh, ROOT_DIR"/data/shaders/deferred_geometry.vert",
+                       ROOT_DIR"/data/shaders/deferred_geometry.frag", ids);
 }
 
 bool Core::_createDeferredAmbientShader()
 {
-  return _createShader(_ambSh, "shaders/quad.vert",
-                       "shaders/deferred_ambient.frag",
+  return _createShader(_ambSh, ROOT_DIR"/data/shaders/quad.vert",
+                       ROOT_DIR"/data/shaders/deferred_ambient.frag",
                        {"colTexMap", "ambCol"});
 }
 
 bool Core::_createDeferredNullShader()
 {
-  return _createShader(_stencilSh, "shaders/PVM.vert", "shaders/null.frag",
-                       {"PVM"});
+  return _createShader(_stencilSh, ROOT_DIR"/data/shaders/PVM.vert",
+                       ROOT_DIR"/data/shaders/null.frag", {"PVM"});
 }
 
 bool Core::_createDeferredLightShader()
@@ -1670,8 +1671,9 @@ bool Core::_createDeferredLightShader()
     "PVM", "posTexMap", "normTexMap", "colTexMap", "showLightArea", "lightPos",
     "lightCol", "attLin", "attQuad"
   };
-  bool success = _createShader(_lightSh, "shaders/PVM.vert",
-                               "shaders/deferred_lighting.frag", ids);
+  bool success = _createShader(_lightSh, ROOT_DIR"/data/shaders/PVM.vert",
+                               ROOT_DIR"/data/shaders/deferred_lighting.frag",
+                               ids);
   if (success)
   {
     // set texture uniforms
@@ -1692,8 +1694,9 @@ bool Core::_createPostMotionBlurShader()
     "colTexMap", "velTexMap", "depthTexMap", "currToPrev", "fps", "mode",
     "velScaling", "adaptVarFPS", "adaptNumSamples", "prefNumSamples"
   };
-  bool success = _createShader(_motionSh, "shaders/quad.vert",
-                               "shaders/post_motion_blur.frag", ids);
+  bool success = _createShader(_motionSh, ROOT_DIR"/data/shaders/quad.vert",
+                               ROOT_DIR"/data/shaders/post_motion_blur.frag",
+                               ids);
   if (success)
   {
     // set texture uniforms
@@ -1709,8 +1712,8 @@ bool Core::_createPostMotionBlurShader()
 
 bool Core::_createPostOutputShader()
 {
-  return _createShader(_postOutputSh, "shaders/quad.vert",
-                       "shaders/post_output.frag", {"colTexMap"});
+  return _createShader(_postOutputSh, ROOT_DIR"/data/shaders/quad.vert",
+                       ROOT_DIR"/data/shaders/post_output.frag", {"colTexMap"});
 }
 
 inline bool Core::_swapPostProcessing()

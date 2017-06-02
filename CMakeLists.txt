@@ -1,56 +1,56 @@
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required (VERSION 3.0)
 project ("RAW Engine")
 set(CMAKE_CXX_STANDARD 14)
 
 # directory variables
-set(BIN_DIR ${PROJECT_SOURCE_DIR}/bin)
-set(EXTERNAL_DIR ${PROJECT_SOURCE_DIR}/lib/src)
-set(INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
-set(SRC_DIR ${PROJECT_SOURCE_DIR}/src)
-set(TMP_DIR ${EXTERNAL_DIR}/.tmp)
+set(BIN_DIR "${PROJECT_SOURCE_DIR}/bin")
+set(DATA_DIR "${PROJECT_SOURCE_DIR}/data")
+set(LIB_DIR "${PROJECT_SOURCE_DIR}/lib")
+set(EXTERNAL_SRC_DIR "${LIB_DIR}/external")
+set(CONFIG_DIR "${PROJECT_SOURCE_DIR}/config")
+set(INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
+set(EXTERNAL_INCLUDE_DIR "${INCLUDE_DIR}/external")
+set(SRC_DIR "${PROJECT_SOURCE_DIR}/src")
+set(TMP_DIR "${EXTERNAL_SRC_DIR}/.tmp")
 
 # glew variables
-set(GLEW_URL https://github.com/nigels-com/glew/releases/download/glew-2.0.0/glew-2.0.0.zip)
-set(GLEW_NAME glew-2.0.0)
+set(GLEW_URL "https://github.com/nigels-com/glew/releases/download/glew-2.0.0/glew-2.0.0.zip")
+set(GLEW_NAME "glew-2.0.0")
 
 # glm variables
-set(GLM_URL https://github.com/g-truc/glm/releases/download/0.9.8.4/glm-0.9.8.4.zip)
-set(GLM_NAME glm-0.9.8.4)
+set(GLM_URL "https://github.com/g-truc/glm/releases/download/0.9.8.4/glm-0.9.8.4.zip")
+set(GLM_NAME "glm-0.9.8.4")
 
 # imgui variables
-set(IMGUI_URL https://github.com/ocornut/imgui/archive/v1.49.zip)
-set(IMGUI_NAME imgui-1.49)
+set(IMGUI_URL "https://github.com/ocornut/imgui/archive/v1.49.zip")
+set(IMGUI_NAME "imgui-1.49")
 
 # SDL2 variables
 if(APPLE)
-  set(SDL2_URL https://www.libsdl.org/release/SDL2-2.0.5.dmg)
+  set(SDL2_URL "https://www.libsdl.org/release/SDL2-2.0.5.dmg")
 elseif(WIN32)
-  set(SDL2_URL https://www.libsdl.org/release/SDL2-devel-2.0.5-VC.zip)
+  set(SDL2_URL "https://www.libsdl.org/release/SDL2-devel-2.0.5-VC.zip")
 endif()
-set(SDL2_NAME SDL2-2.0.5)
+set(SDL2_NAME "SDL2-2.0.5")
 
 # stb variables
-set(STB_URL https://github.com/nothings/stb/archive/master.zip)
-set(STB_NAME stb)
+set(STB_URL "https://github.com/nothings/stb/archive/master.zip")
+set(STB_NAME "stb")
 
 # tinyobjloader variables
-set(TINYOBJLOADER_URL https://github.com/syoyo/tinyobjloader/archive/v1.0.6.zip)
-set(TINYOBJLOADER_NAME tinyobjloader-1.0.6)
+set(TINYOBJLOADER_URL "https://github.com/syoyo/tinyobjloader/archive/v1.0.6.zip")
+set(TINYOBJLOADER_NAME "tinyobjloader-1.0.6")
 
 # tinyxml2 variables
-set(TINYXML2_URL https://github.com/leethomason/tinyxml2/archive/4.0.1.zip)
-set(TINYXML2_NAME tinyxml2-4.0.1)
-
-# set(STB_IMAGE_IMPL_PATH ${SRC_DIR}/stb_image.cpp)
-# set(STB_IMAGE_IMPL_SRC "#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>\n")
+set(TINYXML2_URL "https://github.com/leethomason/tinyxml2/archive/4.0.1.zip")
+set(TINYXML2_NAME "tinyxml2-4.0.1")
 
 # macro for downloading dependencies
 set(TYPE_ZIP 0)
 set(TYPE_DMG 1)
 macro(download_dependency url framework_name type)
   # check if directory already exists
-  set(FRAMEWORK_DIR ${EXTERNAL_DIR}/${framework_name})
+  set(FRAMEWORK_DIR ${EXTERNAL_SRC_DIR}/${framework_name})
   if (NOT EXISTS ${FRAMEWORK_DIR})
     if(${type} EQUAL ${TYPE_ZIP})
       # download
@@ -127,34 +127,36 @@ download_dependency(${TINYOBJLOADER_URL} ${TINYOBJLOADER_NAME} ${TYPE_ZIP})
 download_dependency(${TINYXML2_URL} ${TINYXML2_NAME} ${TYPE_ZIP})
 file(REMOVE_RECURSE ${TMP_DIR})
 
-# create stb_image implementation file
-# if (NOT EXISTS ${STB_IMAGE_IMPL_PATH})
-#   file(WRITE ${STB_IMAGE_IMPL_PATH} ${STB_IMAGE_IMPL_SRC})
-# endif()
+# configure file
+configure_file(
+  "${CONFIG_DIR}/engineConfig.h.in"
+  "${INCLUDE_DIR}/engineConfig.h")
 
 # include files
-if(APPLE)
-  find_path(SDL_INCLUDE_DIR SDL.h)
-endif()
-include_directories(${INCLUDE_DIR}
-  ${EXTERNAL_DIR}/${GLEW_NAME}/include
-  ${EXTERNAL_DIR}/${GLM_NAME}
-  ${EXTERNAL_DIR}/${IMGUI_NAME}
-  ${SDL_INCLUDE_DIR}
-  ${EXTERNAL_DIR}/${STB_NAME}
-  ${EXTERNAL_DIR}/${TINYOBJLOADER_NAME}
-  ${EXTERNAL_DIR}/${TINYXML2_NAME})
+file(COPY
+  "${EXTERNAL_SRC_DIR}/${GLEW_NAME}/include/GL"
+  "${EXTERNAL_SRC_DIR}/${GLM_NAME}/glm"
+  "${EXTERNAL_SRC_DIR}/${IMGUI_NAME}/imgui.h"
+  "${EXTERNAL_SRC_DIR}/${IMGUI_NAME}/imconfig.h"
+  "${EXTERNAL_SRC_DIR}/${STB_NAME}/stb_image.h"
+  "${EXTERNAL_SRC_DIR}/${TINYOBJLOADER_NAME}/tiny_obj_loader.h"
+  "${EXTERNAL_SRC_DIR}/${TINYXML2_NAME}/tinyxml2.h"
+  DESTINATION "${EXTERNAL_INCLUDE_DIR}")
+include_directories("${INCLUDE_DIR}" "${EXTERNAL_INCLUDE_DIR}" "${LIB_DIR}")
 
 # add glew, imgui and tinysml2 as external library
 add_library(external
-  ${EXTERNAL_DIR}/${GLEW_NAME}/src/glew.c
-  ${EXTERNAL_DIR}/${IMGUI_NAME}/imgui.cpp
-  ${EXTERNAL_DIR}/${IMGUI_NAME}/imgui_draw.cpp
-  ${EXTERNAL_DIR}/${TINYXML2_NAME}/tinyxml2.cpp)
+  "${EXTERNAL_SRC_DIR}/${GLEW_NAME}/src/glew.c"
+  "${EXTERNAL_SRC_DIR}/${IMGUI_NAME}/imgui.cpp"
+  "${EXTERNAL_SRC_DIR}/${IMGUI_NAME}/imgui_draw.cpp"
+  "${EXTERNAL_SRC_DIR}/${TINYXML2_NAME}/tinyxml2.cpp")
 
-# find SDL2 library
+# add SDL2 library
 if(APPLE)
-  find_library(SDL2_LIBRARY SDL2 REQUIRED)
+  file(COPY "${EXTERNAL_SRC_DIR}/${SDL2_NAME}/SDL2.framework"
+    DESTINATION "${LIB_DIR}")
+  set(SDL2_LIBRARY "${LIB_DIR}/SDL2.framework")
+  include_directories("${SDL2_LIBRARY}/Headers")
   mark_as_advanced(SDL2_LIBRARY)
 endif()
 
@@ -163,8 +165,10 @@ find_package(OpenGL REQUIRED)
 include_directories(${OPENGL_INCLUDE_DIRS})
 
 # add executable
-file(GLOB SOURCE_FILES ${SRC_DIR}/*.cpp)
-add_executable(demo ${GUI_TYPE} ${SOURCE_FILES})
+file(GLOB SOURCE_FILES "${SRC_DIR}/*.cpp")
+file(GLOB INCLUDE_FILES "${INCLUDE_DIR}/*.h*")
+message("${INCLUDE_FILES}")
+add_executable(demo ${SOURCE_FILES} ${INCLUDE_FILES})
 
 # link libraries
 target_link_libraries(demo
@@ -172,5 +176,6 @@ target_link_libraries(demo
   ${SDL2_LIBRARY}
   ${OPENGL_LIBRARY})
 
-# install
-install(TARGET demo DESTINATION ${BIN_DIR})
+# target properties
+set_property(TARGET demo PROPERTY RUNTIME_OUTPUT_DIRECTORY "${BIN_DIR}")
+set_property(TARGET external PROPERTY ARCHIVE_OUTPUT_DIRECTORY "${LIB_DIR}")

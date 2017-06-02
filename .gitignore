@@ -41,32 +41,31 @@
 *.app
 
 # Other
-external/*
-build/*
-bin/*
-lib/*
+bin/
+build/
+include/external/
+lib/
 *.ini
 
 # macOS
 *.DS_Store
 
 # CMake
-CMakeFiles/*
-CMakeScripts/*
+CMakeFiles/
+CMakeScripts/
+CMakeCache.txt
 *.cmake
-*CMakeCache.txt
-Debug/*
-Release/*
-MinSizeRel/*
-RelWithDebInfo/*
-*.build/*
+
+# Building
+Debug/
+Release/
+MinSizeRel/
+RelWithDebInfo/
 
 # Xcode
 *.xcodeproj
-*.build/*
 
 # Visual Studio
-Debug/
 x64/
 *.sln
 *.vcxproj
