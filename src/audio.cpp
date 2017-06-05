@@ -3,6 +3,8 @@
 //  Arcade Game Engine
 //
 
+#include <algorithm>
+
 #include <tinyxml2.h>
 
 #include "core.hpp"

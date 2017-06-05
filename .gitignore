@@ -44,6 +44,7 @@
 bin/
 build/
 include/external/
+include/engineConfig.h
 lib/
 *.ini
 
@@ -67,6 +68,7 @@ RelWithDebInfo/
 
 # Visual Studio
 x64/
+*.dir/
 *.sln
 *.vcxproj
 *.vcxproj.*

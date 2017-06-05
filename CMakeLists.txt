@@ -14,7 +14,11 @@ set(SRC_DIR "${PROJECT_SOURCE_DIR}/src")
 set(TMP_DIR "${EXTERNAL_SRC_DIR}/.tmp")
 
 # glew variables
-set(GLEW_URL "https://github.com/nigels-com/glew/releases/download/glew-2.0.0/glew-2.0.0.zip")
+if(APPLE)
+  set(GLEW_URL "https://github.com/nigels-com/glew/releases/download/glew-2.0.0/glew-2.0.0.zip")
+elseif(WIN32)
+  set(GLEW_URL "https://sourceforge.net/projects/glew/files/glew/2.0.0/glew-2.0.0-win32.zip/download")
+endif()
 set(GLEW_NAME "glew-2.0.0")
 
 # glm variables
@@ -121,7 +125,11 @@ endif()
 download_dependency(${GLEW_URL} ${GLEW_NAME} ${TYPE_ZIP})
 download_dependency(${GLM_URL} ${GLM_NAME} ${TYPE_ZIP})
 download_dependency(${IMGUI_URL} ${IMGUI_NAME} ${TYPE_ZIP})
-download_dependency(${SDL2_URL} ${SDL2_NAME} ${TYPE_DMG})
+if(APPLE)
+  download_dependency(${SDL2_URL} ${SDL2_NAME} ${TYPE_DMG})
+elseif(WIN32)
+  download_dependency(${SDL2_URL} ${SDL2_NAME} ${TYPE_ZIP})
+endif()
 download_dependency(${STB_URL} ${STB_NAME} ${TYPE_ZIP})
 download_dependency(${TINYOBJLOADER_URL} ${TINYOBJLOADER_NAME} ${TYPE_ZIP})
 download_dependency(${TINYXML2_URL} ${TINYXML2_NAME} ${TYPE_ZIP})
@@ -129,7 +137,7 @@ file(REMOVE_RECURSE ${TMP_DIR})
 
 # configure file
 configure_file(
-  "${CONFIG_DIR}/engineConfig.h.in"
+  "${CONFIG_DIR}/engineConfig.h.in" 
   "${INCLUDE_DIR}/engineConfig.h")
 
 # include files
@@ -144,12 +152,22 @@ file(COPY
   DESTINATION "${EXTERNAL_INCLUDE_DIR}")
 include_directories("${INCLUDE_DIR}" "${EXTERNAL_INCLUDE_DIR}" "${LIB_DIR}")
 
-# add glew, imgui and tinysml2 as external library
-add_library(external
-  "${EXTERNAL_SRC_DIR}/${GLEW_NAME}/src/glew.c"
+set(EXTERNAL_LIBRARY_SOURCES
   "${EXTERNAL_SRC_DIR}/${IMGUI_NAME}/imgui.cpp"
   "${EXTERNAL_SRC_DIR}/${IMGUI_NAME}/imgui_draw.cpp"
   "${EXTERNAL_SRC_DIR}/${TINYXML2_NAME}/tinyxml2.cpp")
+
+# add glew library
+if(APPLE)
+  list(APPEND ${EXTERNAL_LIBRARY_SOURCES}
+    "${EXTERNAL_SRC_DIR}/${GLEW_NAME}/src/glew.c")
+elseif(WIN32)
+  file(COPY
+    "${EXTERNAL_SRC_DIR}/${GLEW_NAME}/lib/Release/x64/glew32.lib"
+    DESTINATION "${LIB_DIR}")
+  set(GLEW_LIBRARY "${LIB_DIR}/glew32.lib")
+  mark_as_advanced(GLEW_LIBRARY)
+endif()
 
 # add SDL2 library
 if(APPLE)
@@ -157,8 +175,19 @@ if(APPLE)
     DESTINATION "${LIB_DIR}")
   set(SDL2_LIBRARY "${LIB_DIR}/SDL2.framework")
   include_directories("${SDL2_LIBRARY}/Headers")
-  mark_as_advanced(SDL2_LIBRARY)
+elseif(WIN32)
+  file(COPY
+    "${EXTERNAL_SRC_DIR}/${SDL2_NAME}/lib/x64/SDL2.lib"
+    "${EXTERNAL_SRC_DIR}/${SDL2_NAME}/lib/x64/SDL2main.lib"
+    DESTINATION "${LIB_DIR}")
+  file(GLOB SDL_INCLUDE_FILES "${EXTERNAL_SRC_DIR}/${SDL2_NAME}/include/*")
+  file(COPY ${SDL_INCLUDE_FILES} DESTINATION "${EXTERNAL_INCLUDE_DIR}")
+  set(SDL2_LIBRARY "${LIB_DIR}/SDL2.lib" "${LIB_DIR}/SDL2main.lib")
 endif()
+mark_as_advanced(SDL2_LIBRARY)
+
+# add external library
+add_library(external ${EXTERNAL_LIBRARY_SOURCES})
 
 # find OpenGL package
 find_package(OpenGL REQUIRED)
@@ -167,15 +196,28 @@ include_directories(${OPENGL_INCLUDE_DIRS})
 # add executable
 file(GLOB SOURCE_FILES "${SRC_DIR}/*.cpp")
 file(GLOB INCLUDE_FILES "${INCLUDE_DIR}/*.h*")
-message("${INCLUDE_FILES}")
 add_executable(demo ${SOURCE_FILES} ${INCLUDE_FILES})
 
 # link libraries
 target_link_libraries(demo
   external
+  ${GLEW_LIBRARY}
   ${SDL2_LIBRARY}
   ${OPENGL_LIBRARY})
 
 # target properties
-set_property(TARGET demo PROPERTY RUNTIME_OUTPUT_DIRECTORY "${BIN_DIR}")
-set_property(TARGET external PROPERTY ARCHIVE_OUTPUT_DIRECTORY "${LIB_DIR}")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${BIN_DIR}")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${LIB_DIR}")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${LIB_DIR}")
+
+# copy dll's (if on Windows)
+if(WIN32)
+  add_custom_command(TARGET demo POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+      ${EXTERNAL_SRC_DIR}/${GLEW_NAME}/bin/Release/x64/glew32.dll
+      $<TARGET_FILE_DIR:demo>)
+  add_custom_command(TARGET demo POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+      ${EXTERNAL_SRC_DIR}/${SDL2_NAME}/lib/x64/SDL2.dll
+      $<TARGET_FILE_DIR:demo>)
+endif()

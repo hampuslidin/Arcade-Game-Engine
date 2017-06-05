@@ -3,6 +3,8 @@
 //  Game Engine
 //
 
+#include <algorithm>
+
 #include <stb_image.h>
 
 #include "core.hpp"
