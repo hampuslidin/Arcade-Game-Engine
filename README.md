@@ -1,11 +1,21 @@
-# Arcade-Game-Engine
-A game engine specifically designed for making classic 80's-style arcade games. The work originated from the course **TDA572 Game Engine Architecture VT17** held at Chalmers University of Technology.
+# RAW Engine
+The *Render-A-World Engine* is a 3D game engine written in C++. The engine uses class inheritence to allow for game-specific behavior to easily be integrated into the engine pipeline. It first started out as a 2D engine for the course **TDA572 - Game Engine Architecture**, and then transformed into a 3D engine for another course **DAT205 - Advanced Computer Graphics**; both courses were held at *Chalmers University of Technology*.
 
 ## Setup
-To get the project up and running, you need to include the [SDL2](https://www.libsdl.org/download-2.0.php) and [SDL_image](https://www.libsdl.org/projects/SDL_image/) libraries into the project folder. Additionaly, [TinyXML-2](https://github.com/leethomason/tinyxml2) is used for reading XML files used in the audio synthesizer for the game engine.
+Just run the included CMake script (preferably in a separate *build* directory) and it will download all dependencies automatically. 
 
 ### macOS
-Download the development libraries for SDL2 and SDL_image for macOS, and place them in the path *Arcade Game Engine/external* relative the project path. In *external*, also create a folder called *tinyxml2* and put the files *tinyxml2.cpp* and *tinyxml2.h* in there from the TinyXML-2 project.
+To generate an Xcode project file, open up the Terminal and run the following:
+
+    $ cd /path/to/project
+    $ mkdir build
+    $ cd build
+    $ cmake -G Xcode ..
 
 ### Windows
-Download the Visual Studio development libraries for SDL2 and SDL_image for Windows, and place them in the path *Arcade Game Engine/external* relative the project path. Extract all the .dll files from the respective *lib* paths of the libraries, and place them in the root of the project path. In *external*, also create a folder called *tinyxml2* and put the files *tinyxml2.cpp* and *tinyxml2.h* in there from the TinyXML-2 project.
+To generate a Visual Studio 15 solution file, open up the Command Prompt and run the following:
+
+    > cd /path/to/project
+    > mkdir build
+    > cd build
+    > cmake -G "Visual Studio 15" -A Win64 ..
