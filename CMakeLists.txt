@@ -159,7 +159,7 @@ set(EXTERNAL_LIBRARY_SOURCES
 
 # add glew library
 if(APPLE)
-  list(APPEND ${EXTERNAL_LIBRARY_SOURCES}
+  list(APPEND EXTERNAL_LIBRARY_SOURCES
     "${EXTERNAL_SRC_DIR}/${GLEW_NAME}/src/glew.c")
 elseif(WIN32)
   file(COPY
@@ -206,9 +206,9 @@ target_link_libraries(demo
   ${OPENGL_LIBRARY})
 
 # target properties
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${BIN_DIR}")
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${LIB_DIR}")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${LIB_DIR}")
+set_property(TARGET demo PROPERTY RUNTIME_OUTPUT_DIRECTORY "${BIN_DIR}")
+set_property(TARGET external PROPERTY ARCHIVE_OUTPUT_DIRECTORY "${LIB_DIR}")
+set_property(TARGET external PROPERTY LIBRARY_OUTPUT_DIRECTORY "${LIB_DIR}")
 
 # copy dll's (if on Windows)
 if(WIN32)
